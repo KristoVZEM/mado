@@ -1,0 +1,11 @@
+{
+  "name": "ukiku-pc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"spike/**/*.test.ts\"",
+    "run": "node spike/run.ts",
+    "inspect": "node spike/inspect.ts",
+    "check": "node spike/check.ts"
+  }
+}
