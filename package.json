@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"spike/**/*.test.ts\"",
-    "run": "node spike/run.ts",
-    "inspect": "node spike/inspect.ts",
-    "check": "node spike/check.ts"
+    "run": "node --env-file-if-exists=.env spike/run.ts",
+    "inspect": "node --env-file-if-exists=.env spike/inspect.ts",
+    "check": "node --env-file-if-exists=.env spike/check.ts"
   }
 }
