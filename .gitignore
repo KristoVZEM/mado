@@ -1,0 +1,14 @@
+# Planes y specs temporales (nunca se commitean)
+PLAN.md
+SPEC.md
+
+# Secretos
+.env
+
+# Dependencias y artefactos de build
+node_modules/
+target/
+dist/
+
+# Datos personales del usuario (copias de seguridad de Ukiku)
+*.backup
