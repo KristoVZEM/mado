@@ -111,4 +111,46 @@ async function autotest() {
   }
 }
 
-main().then(autotest);
+// MP4Upload con WebView oculto (UPNShare devuelve 404 en 4/5 títulos: enlaces caídos).
+async function autotestWebview() {
+  const ua = (await (await fetch('/playable.json')).json()).userAgent as string;
+  const list = (await (await fetch('/playables.json')).json()) as { slug: string; url: string | null }[];
+  for (const t of list) {
+    if (!t.url) {
+      await report(t.slug + ': sin MP4Upload');
+      continue;
+    }
+    const t0 = Date.now();
+    try {
+      const url = await invoke<string>('resolve_webview', {
+        label: 'wv-mp4',
+        url: t.url,
+        timeoutMs: 20000,
+        visible: false,
+      });
+      const tc = Date.now() - t0;
+      await setProperty('user-agent', ua);
+      await setProperty('http-header-fields', 'referer: https://www.mp4upload.com/');
+      await command('loadfile', [url]);
+      let w: unknown = null;
+      for (let i = 0; i < 40 && w == null; i++) {
+        await sleep(500);
+        w = await getProperty('width', 'int64').catch(() => null);
+      }
+      if (w == null) {
+        const idle = await getProperty('idle-active', 'flag').catch((e) => String(e));
+        throw new Error('mpv no cargó en 20 s (idle=' + idle + ') url=' + url);
+      }
+      const h = await getProperty('height', 'int64');
+      const codec = await getProperty('video-codec', 'string');
+      const tp = (await getProperty('time-pos', 'double')) as number | null;
+      await report(t.slug.slice(0, 24) + ': captura ' + tc + ' ms, mpv ' + w + 'x' + h + ' ' + codec + ' t=' + tp + (tp && tp > 2 ? ' OK' : ' FALLA'));
+    } catch (err) {
+      await report(t.slug.slice(0, 24) + ': ERROR ' + err);
+    }
+    await sleep(1500);
+  }
+  await report('webview terminado');
+}
+
+main().then(autotestWebview);

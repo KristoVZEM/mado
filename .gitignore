@@ -16,3 +16,4 @@ dist/
 # spike-libmpv: DLLs descargables con setup-lib y Playable efímero
 spike-libmpv/src-tauri/lib/
 spike-libmpv/playable.json
+spike-libmpv/playables.json
