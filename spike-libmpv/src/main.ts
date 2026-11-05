@@ -123,7 +123,7 @@ async function autotestWebview() {
     const t0 = Date.now();
     try {
       const url = await invoke<string>('resolve_webview', {
-        label: 'wv-mp4',
+        server: 'mp4upload',
         url: t.url,
         timeoutMs: 20000,
         visible: false,
