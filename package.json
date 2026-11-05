@@ -1,0 +1,11 @@
+{
+  "name": "ukiku-pc",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"spike/**/*.test.ts\"",
+    "run": "node --env-file-if-exists=.env spike/run.ts",
+    "inspect": "node --env-file-if-exists=.env spike/inspect.ts",
+    "check": "node --env-file-if-exists=.env spike/check.ts"
+  }
+}
