@@ -12,3 +12,5 @@ dist/
 
 # Datos personales del usuario (copias de seguridad de Ukiku)
 *.backup
+lab/data/
+lab/results-mp4upload.log
