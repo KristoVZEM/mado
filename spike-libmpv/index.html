@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>spike-libmpv</title>
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+  <body>
+    <div id="bar">
+      <input id="playable" placeholder='Pega el JSON de spike/playable.ts' />
+      <button id="play">Reproducir</button>
+      <button id="toggle">Pausa</button>
+      <input id="seek" type="range" min="0" max="1" step="0.1" value="0" />
+      <span id="time">0:00 / 0:00</span>
+      <span id="status"></span>
+    </div>
+  </body>
+</html>
