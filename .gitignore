@@ -12,5 +12,12 @@ dist/
 
 # Datos personales del usuario (copias de seguridad de Ukiku)
 *.backup
+
+# spike-libmpv: DLLs descargables con setup-lib y Playable efímero
+spike-libmpv/src-tauri/lib/
+spike-libmpv/playable.json
+spike-libmpv/playables.json
+
+# lab: resultados del chequeo diario
 lab/data/
 lab/results-mp4upload.log
