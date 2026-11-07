@@ -24,8 +24,10 @@ export function desofuscarVoe(texto: string): unknown {
       .join('');
     const bytes = Uint8Array.from(atob(intermedio), (c) => c.charCodeAt(0));
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  } catch (e) {
-    throw new FuenteCambio('voe: la receta de desofuscación ya no sirve', { cause: e });
+  } catch {
+    // No se adjunta la causa: el SyntaxError de JSON.parse copia en su mensaje un trozo del texto
+    // ya descifrado, que puede llevar el token del stream, y acabaría en logs y en SinServidor.causas.
+    throw new FuenteCambio('voe: la receta de desofuscación ya no sirve');
   }
 }
 

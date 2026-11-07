@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { desofuscarVoe, extraerOfuscado, extraerRedireccion } from './voe.ts';
-import { ofuscarVoe, paginaRedireccionVoe, paginaVoe } from './voe.testutil.ts';
+import { ofuscarVoe, ofuscarVoeTextoPlano, paginaRedireccionVoe, paginaVoe } from './voe.testutil.ts';
 import { FuenteCambio } from './errors.ts';
 
 // Vector independiente: generado con otro codificador (Python) y contrastado con el decodificador
@@ -22,6 +22,20 @@ test('desofuscarVoe lanza FuenteCambio con una cadena que no sigue la receta', (
 
 test('desofuscarVoe lanza FuenteCambio con una cadena truncada', () => {
   assert.throws(() => desofuscarVoe(ofuscarVoe('no es un objeto').slice(0, -4)), FuenteCambio);
+});
+
+test('desofuscarVoe no adjunta la causa ni filtra el texto descifrado al fallar el JSON', () => {
+  const ofuscado = ofuscarVoeTextoPlano('{"source":"https://x.test/?t=SECRETO');
+  assert.throws(
+    () => desofuscarVoe(ofuscado),
+    (e: unknown) => {
+      assert.ok(e instanceof FuenteCambio);
+      assert.equal(e.cause, undefined);
+      assert.ok(!e.message.includes('SECRETO'));
+      assert.ok(!String(e).includes('SECRETO'));
+      return true;
+    },
+  );
 });
 
 test('extraerOfuscado devuelve la cadena del bloque JSON', () => {

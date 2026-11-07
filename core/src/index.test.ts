@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearFuentes, SinServidor } from './index.ts';
+import { crearFuentes, SinRed, SinServidor } from './index.ts';
 import type { Http } from './index.ts';
 import { paginaRedireccionVoe, paginaVoe } from './voe.testutil.ts';
 
@@ -129,13 +129,16 @@ test('sin capturarStream, MP4Upload no entra en la cadena y se cae a Voe (720p)'
 });
 
 test('si MP4Upload falla, la cadena sigue con Voe', async () => {
+  let llamadas = 0;
   const f = crearFuentes({
     http: httpConVoe([MP4, VOE]),
     capturarStream: async () => {
+      llamadas++;
       throw 'sin captura válida (timeout)';
     },
   });
   assert.equal((await f.resolver('one-piece', 1)).servidor, 'Voe');
+  assert.equal(llamadas, 1);
 });
 
 test('si ningún servidor sirve, SinServidor explica por qué falló cada uno', async () => {
@@ -148,6 +151,7 @@ test('si ningún servidor sirve, SinServidor explica por qué falló cada uno', 
   await assert.rejects(f.resolver('one-piece', 1), (e: unknown) => {
     assert.ok(e instanceof SinServidor);
     assert.equal(e.causas.length, 1);
+    assert.ok(e.causas[0] instanceof SinRed);
     return true;
   });
 });

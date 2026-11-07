@@ -8,8 +8,9 @@ function rot13(texto: string): string {
   });
 }
 
-export function ofuscarVoe(datos: unknown): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(datos));
+/** Como `ofuscarVoe`, pero sin pasar por JSON: sirve para ofuscar un texto que no es JSON válido. */
+export function ofuscarVoeTextoPlano(texto: string): string {
+  const bytes = new TextEncoder().encode(texto);
   const base64 = btoa(String.fromCharCode(...bytes));
   const invertida = [...base64].reverse().join('');
   const desplazada = [...invertida].map((c) => String.fromCharCode(c.charCodeAt(0) + 3)).join('');
@@ -21,6 +22,10 @@ export function ofuscarVoe(datos: unknown): string {
     salida += base64b[i];
   }
   return rot13(salida);
+}
+
+export function ofuscarVoe(datos: unknown): string {
+  return ofuscarVoeTextoPlano(JSON.stringify(datos));
 }
 
 /** Página del reproductor de Voe: un bloque JSON con la cadena ofuscada. */

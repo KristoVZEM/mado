@@ -50,8 +50,32 @@ test('un fallo de la captura se reporta como SinRed con la causa original', asyn
 });
 
 test('una captura que no es una URL https lanza FuenteCambio', async () => {
-  for (const capturada of ['', 'javascript:alert(1)', 'http://x.test/v.mp4', 'no es url', 42 as unknown as string]) {
+  for (const capturada of ['', 'javascript:alert(1)', 'http://x.test/v.mp4', 'no es url', 'https://', 'https://a b', 42 as unknown as string]) {
     const resolver = crearResolverMP4Upload(async () => capturada);
     await assert.rejects(resolver(EMBED, 'UA'), FuenteCambio);
   }
+});
+
+test('acepta una captura https con el esquema en mayúsculas y devuelve la cadena original', async () => {
+  const capturada = 'HTTPS://x.test/v.mp4';
+  const resolver = crearResolverMP4Upload(async () => capturada);
+  assert.equal((await resolver(EMBED, 'UA'))?.url, capturada);
+});
+
+test('el embed debe terminar en .html: sufijos y ids vacíos se ignoran, el query se acepta', async () => {
+  const pedidos: string[] = [];
+  const resolver = crearResolverMP4Upload(async (url) => {
+    pedidos.push(url);
+    return 'https://x.test/v.mp4';
+  });
+  for (const url of [
+    'https://www.mp4upload.com/embed-abc.htmlx',
+    'https://www.mp4upload.com/embed-.html',
+  ]) {
+    assert.equal(await resolver({ server: 'X', url }, 'UA'), null);
+  }
+  assert.deepEqual(pedidos, []);
+  const conQuery = 'https://www.mp4upload.com/embed-abc.html?x=1';
+  assert.ok(await resolver({ server: 'X', url: conQuery }, 'UA'));
+  assert.deepEqual(pedidos, [conQuery]);
 });

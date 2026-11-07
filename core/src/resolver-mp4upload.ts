@@ -10,6 +10,16 @@ export type CapturarStream = (embedUrl: string) => Promise<string>;
 const EMBED_MP4UPLOAD = /^https:\/\/www\.mp4upload\.com\/embed-[A-Za-z0-9]+\.html(?=[?#]|$)/;
 const REFERER = 'https://www.mp4upload.com/';
 
+function esUrlHttps(url: unknown): url is string {
+  if (typeof url !== 'string') return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname !== '';
+  } catch {
+    return false;
+  }
+}
+
 /** MP4Upload (1080p por WebView). La calidad real no está garantizada, por eso no se declara. */
 export function crearResolverMP4Upload(capturar: CapturarStream): ResolverServidor {
   return async (embed, userAgent) => {
@@ -21,9 +31,7 @@ export function crearResolverMP4Upload(capturar: CapturarStream): ResolverServid
       // Lo más común es un timeout (red bloqueada o página lenta); también puede ser que la página cambiara.
       throw new SinRed('mp4upload: no se capturó el stream (timeout o la página cambió)', { cause: e });
     }
-    if (typeof url !== 'string' || !url.startsWith('https://')) {
-      throw new FuenteCambio('mp4upload: la captura no es una URL https');
-    }
+    if (!esUrlHttps(url)) throw new FuenteCambio('mp4upload: la captura no es una URL https');
     return { url, headers: { referer: REFERER }, userAgent };
   };
 }

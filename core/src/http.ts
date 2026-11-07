@@ -22,6 +22,16 @@ export interface HttpOptions {
   backoffMs?: number;
 }
 
+/** Quita el query y el fragmento: la URL de Voe lleva un token en el query que no debe llegar a los mensajes. */
+function sinQuery(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.origin + u.pathname;
+  } catch {
+    return 'la URL';
+  }
+}
+
 export function assertNoChallenge(res: Response): void {
   const mitigated = res.headers.get('cf-mitigated') === 'challenge';
   // Cloudflare pone `server: cloudflare` en toda respuesta que pasa por su proxy, así que un
@@ -29,7 +39,7 @@ export function assertNoChallenge(res: Response): void {
   // `cf-mitigated: challenge` o si es un 403 servido por Cloudflare; un 503 lo trata `get` como 5xx.
   const cloudflare = /cloudflare/i.test(res.headers.get('server') ?? '');
   if (mitigated || (res.status === 403 && cloudflare)) {
-    throw new Desafio(`Cloudflare pide un desafío (HTTP ${res.status}) en ${res.url || 'la fuente'}`);
+    throw new Desafio(`Cloudflare pide un desafío (HTTP ${res.status}) en ${res.url ? sinQuery(res.url) : 'la fuente'}`);
   }
 }
 
@@ -84,7 +94,7 @@ export function createHttp(opts: HttpOptions = {}): Http {
         assertNoChallenge(res);
         if (res.status >= 500) {
           await res.body?.cancel().catch(() => {});
-          throw new SinRed(`HTTP ${res.status} en ${url}`);
+          throw new SinRed(`HTTP ${res.status} en ${sinQuery(url)}`);
         }
         return res;
       } catch (e) {
@@ -92,7 +102,7 @@ export function createHttp(opts: HttpOptions = {}): Http {
         const err =
           e instanceof SinRed
             ? e
-            : new SinRed(`sin respuesta de ${url}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
+            : new SinRed(`sin respuesta de ${sinQuery(url)}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
         if (intento >= retries) throw err;
         await sleep(backoffMs * 2 ** intento);
       }

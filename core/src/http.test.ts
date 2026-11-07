@@ -204,3 +204,40 @@ test('leerJson lanza SinRed si falla la lectura del cuerpo', async () => {
   const cuerpo = new ReadableStream({ start: (c) => c.error(new Error('abortado')) });
   await assert.rejects(leerJson(new Response(cuerpo), 'prueba'), SinRed);
 });
+
+test('los mensajes de error no incluyen el query de la URL', async () => {
+  const url = 'https://x.test/master.m3u8?t=SECRETO';
+  const fallos = [
+    async () => {
+      throw new TypeError('fetch failed');
+    },
+    async () => new Response('x', { status: 502 }),
+  ];
+  for (const fetchFalso of fallos) {
+    const http = createHttp({ ...relojFalso(), gapMs: 0, retries: 1, backoffMs: 10, fetch: fetchFalso });
+    await assert.rejects(http.get(url), (e: unknown) => {
+      assert.ok(e instanceof SinRed);
+      assert.ok(!e.message.includes('SECRETO'));
+      assert.ok(e.message.includes('x.test/master.m3u8'));
+      return true;
+    });
+  }
+});
+
+test('el mensaje del desafío no incluye el query de la URL', async () => {
+  const http = createHttp({
+    ...relojFalso(),
+    gapMs: 0,
+    fetch: async () => {
+      const res = new Response('x', { status: 403, headers: { 'cf-mitigated': 'challenge' } });
+      Object.defineProperty(res, 'url', { value: 'https://x.test/a?t=SECRETO' });
+      return res;
+    },
+  });
+  await assert.rejects(http.get('https://x.test/a?t=SECRETO'), (e: unknown) => {
+    assert.ok(e instanceof Desafio);
+    assert.ok(!e.message.includes('SECRETO'));
+    assert.ok(e.message.includes('x.test/a'));
+    return true;
+  });
+});
