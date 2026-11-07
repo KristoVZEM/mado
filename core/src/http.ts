@@ -24,9 +24,11 @@ export interface HttpOptions {
 
 export function assertNoChallenge(res: Response): void {
   const mitigated = res.headers.get('cf-mitigated') === 'challenge';
-  // Un 403/503 solo cuenta como desafío si lo sirve Cloudflare; los demás son errores normales.
+  // Cloudflare pone `server: cloudflare` en toda respuesta que pasa por su proxy, así que un
+  // 503 con esa cabecera no distingue un desafío de una caída del origen. Es desafío si trae
+  // `cf-mitigated: challenge` o si es un 403 servido por Cloudflare; un 503 lo trata `get` como 5xx.
   const cloudflare = /cloudflare/i.test(res.headers.get('server') ?? '');
-  if (mitigated || ((res.status === 503 || res.status === 403) && cloudflare)) {
+  if (mitigated || (res.status === 403 && cloudflare)) {
     throw new Desafio(`Cloudflare pide un desafío (HTTP ${res.status}) en ${res.url || 'la fuente'}`);
   }
 }
@@ -34,8 +36,14 @@ export function assertNoChallenge(res: Response): void {
 /** Lee el JSON de una respuesta de la fuente; si no es 2xx o no es JSON, la fuente cambió. */
 export async function leerJson(res: Response, contexto: string): Promise<any> {
   if (!res.ok) throw new FuenteCambio(`${contexto}: HTTP ${res.status}`);
+  let texto: string;
   try {
-    return await res.json();
+    texto = await res.text();
+  } catch (e) {
+    throw new SinRed(`${contexto}: se cortó la lectura de la respuesta`, { cause: e });
+  }
+  try {
+    return JSON.parse(texto);
   } catch {
     throw new FuenteCambio(`${contexto}: la respuesta no es JSON`);
   }
@@ -74,7 +82,10 @@ export function createHttp(opts: HttpOptions = {}): Http {
           signal: AbortSignal.timeout(timeoutMs),
         });
         assertNoChallenge(res);
-        if (res.status >= 500) throw new SinRed(`HTTP ${res.status} en ${url}`);
+        if (res.status >= 500) {
+          await res.body?.cancel().catch(() => {});
+          throw new SinRed(`HTTP ${res.status} en ${url}`);
+        }
         return res;
       } catch (e) {
         if (e instanceof Desafio) throw e;

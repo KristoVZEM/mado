@@ -14,7 +14,7 @@ export const ZILLA_HEADERS: Record<string, string> = {
 };
 
 export function resolverZilla(embed: Embed, userAgent: string): Playable | null {
-  const m = embed.url.match(/^https:\/\/player\.zilla-networks\.com\/play\/([0-9a-f]+)/i);
+  const m = embed.url.match(/^https:\/\/player\.zilla-networks\.com\/play\/([0-9a-f]+)(?=[/?#]|$)/i);
   if (!m) return null;
   return { url: `${ZILLA}/m3u8/${m[1]}`, headers: { ...ZILLA_HEADERS }, userAgent };
 }

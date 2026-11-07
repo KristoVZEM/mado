@@ -9,12 +9,18 @@ export interface ResultadoBusqueda {
   slug: string;
 }
 
+function leerAid(id: unknown): number | null {
+  if (typeof id === 'number' && Number.isInteger(id) && id > 0) return id;
+  if (typeof id === 'string' && /^[1-9]\d*$/.test(id)) return Number(id);
+  return null;
+}
+
 export function parseBusqueda(payload: Parameters<typeof decodePage>[0]): ResultadoBusqueda[] {
   const page = decodePage(payload);
   if (!Array.isArray(page.results)) throw new FuenteCambio('búsqueda: la respuesta no trae "results"');
   return page.results.map((r: any, i: number): ResultadoBusqueda => {
-    const aid = Number(r?.id);
-    if (typeof r?.slug !== 'string' || typeof r?.title !== 'string' || !Number.isInteger(aid)) {
+    const aid = leerAid(r?.id);
+    if (typeof r?.slug !== 'string' || typeof r?.title !== 'string' || aid === null) {
       throw new FuenteCambio(`búsqueda: el resultado ${i} no trae "id", "title" y "slug" válidos`);
     }
     return { aid, title: r.title, slug: r.slug };

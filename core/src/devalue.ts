@@ -50,10 +50,17 @@ export function unflatten(table: unknown[]): unknown {
 }
 
 export function decodePage(payload: { nodes: Array<SvelteNode | null> }): Record<string, any> {
+  if (!payload || !Array.isArray(payload.nodes)) {
+    throw new FuenteCambio('devalue: la respuesta no trae "nodes"');
+  }
   const dataNodes = payload.nodes.filter(
     (n): n is SvelteNode => n?.type === 'data' && Array.isArray(n.data),
   );
   const last = dataNodes.at(-1);
   if (!last) throw new FuenteCambio('devalue: la respuesta no trae nodo de datos');
-  return unflatten(last.data as unknown[]) as Record<string, any>;
+  const page = unflatten(last.data as unknown[]);
+  if (page === null || typeof page !== 'object' || Array.isArray(page)) {
+    throw new FuenteCambio('devalue: la página decodificada no es un objeto');
+  }
+  return page as Record<string, any>;
 }

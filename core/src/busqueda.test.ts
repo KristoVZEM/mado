@@ -58,3 +58,18 @@ test('buscar pide el catálogo con el texto codificado', async () => {
   assert.equal(pedida, 'https://animeav1.com/catalogo/__data.json?search=one%20piece');
   assert.equal(r.length, 2);
 });
+
+function conId(valor: unknown) {
+  return { nodes: [null, { type: 'data', data: [{ results: 1 }, [2], { id: 3, title: 4, slug: 5 }, valor, 'X', 'x'] }] };
+}
+
+test('rechaza ids que no son un entero positivo', () => {
+  for (const basura of [null, true, '', '0', '0x15', '1e3', ' 21 ', 0, -5, 1.5]) {
+    assert.throws(() => parseBusqueda(conId(basura)), FuenteCambio, `id ${JSON.stringify(basura)}`);
+  }
+});
+
+test('acepta el id como string de dígitos o como número entero', () => {
+  assert.equal(parseBusqueda(conId('21'))[0].aid, 21);
+  assert.equal(parseBusqueda(conId(21))[0].aid, 21);
+});

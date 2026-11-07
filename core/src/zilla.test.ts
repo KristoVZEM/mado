@@ -31,3 +31,22 @@ test('el Playable no comparte el objeto de cabeceras con la constante', () => {
 test('ignora otras URLs', () => {
   assert.equal(resolverZilla({ server: 'Voe', url: 'https://voe.sx/e/abc' }, 'UA'), null);
 });
+
+test('no resuelve URLs que no son del host exacto o no terminan limpio en el ID', () => {
+  const malas = [
+    `https://player.zilla-networks.com.evil.com/play/${ID}`,
+    `https://player.zilla-networks.com@evil.com/play/${ID}`,
+    `http://player.zilla-networks.com/play/${ID}`,
+    'https://player.zilla-networks.com/play/',
+    'https://player.zilla-networks.com/play/abc123ZZZ',
+    'https://player.zilla-networks.com/play/a1b2Zq9',
+  ];
+  for (const url of malas) assert.equal(resolverZilla({ server: 'HLS', url }, 'UA'), null, url);
+});
+
+test('acepta el ID seguido de query o de barra', () => {
+  for (const sufijo of ['?x=1', '/', '#f']) {
+    const p = resolverZilla({ server: 'HLS', url: `https://player.zilla-networks.com/play/${ID}${sufijo}` }, 'UA');
+    assert.equal(p?.url, `https://player.zilla-networks.com/m3u8/${ID}`, sufijo);
+  }
+});

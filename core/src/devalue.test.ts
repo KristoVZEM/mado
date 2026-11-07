@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { unflatten, decodePage } from './devalue.ts';
+import { FuenteCambio } from './errors.ts';
 
 test('resuelve referencias por índice', () => {
   const r = unflatten([{ a: 1, b: 2 }, 'x', [1, 1]]) as any;
@@ -49,9 +50,18 @@ test('una clave __proto__ remota no cambia el prototipo del resultado', () => {
   assert.ok(Object.keys(r).includes('__proto__'));
   assert.equal(r.x, undefined);
 });
-import { FuenteCambio } from './errors.ts';
 
 test('los fallos de forma lanzan FuenteCambio', () => {
   assert.throws(() => unflatten([['Date', '2020-01-01']]), FuenteCambio);
   assert.throws(() => decodePage({ nodes: [null] }), FuenteCambio);
+});
+
+test('decodePage lanza FuenteCambio si la respuesta no trae nodes', () => {
+  assert.throws(() => decodePage({ type: 'redirect', location: '/x' } as any), FuenteCambio);
+  assert.throws(() => decodePage(null as any), FuenteCambio);
+});
+
+test('decodePage lanza FuenteCambio si el nodo de datos no decodifica a un objeto', () => {
+  assert.throws(() => decodePage({ nodes: [null, { type: 'data', data: [null] }] }), FuenteCambio);
+  assert.throws(() => decodePage({ nodes: [null, { type: 'data', data: [[]] }] }), FuenteCambio);
 });

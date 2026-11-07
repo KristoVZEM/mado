@@ -62,3 +62,10 @@ test('episodios pide la ficha por slug', async () => {
   assert.equal(pedida, 'https://animeav1.com/media/one-piece/__data.json');
   assert.equal(ficha.episodes.length, 2);
 });
+
+test('lanza FuenteCambio si el número del episodio es NaN', () => {
+  const nan = {
+    nodes: [null, { type: 'data', data: [{ media: 1 }, { episodes: 2, title: 4 }, [3], { id: 5, number: -3 }, 'X', 101] }],
+  };
+  assert.throws(() => parseEpisodios(nan), FuenteCambio);
+});

@@ -7,8 +7,13 @@ test('una respuesta 200 pasa', () => {
   assert.doesNotThrow(() => assertNoChallenge(new Response('ok', { status: 200 })));
 });
 
-test('un 503 servido por Cloudflare es un desafío', () => {
+test('un 503 de Cloudflare sin cf-mitigated no es desafío', () => {
   const res = new Response('x', { status: 503, headers: { server: 'cloudflare' } });
+  assert.doesNotThrow(() => assertNoChallenge(res));
+});
+
+test('un 403 servido por Cloudflare es un desafío', () => {
+  const res = new Response('x', { status: 403, headers: { server: 'cloudflare' } });
   assert.throws(() => assertNoChallenge(res), Desafio);
 });
 
@@ -123,11 +128,43 @@ test('un desafío de Cloudflare no se reintenta', async () => {
     retries: 3,
     fetch: async () => {
       llamadas++;
-      return new Response('x', { status: 503, headers: { server: 'cloudflare' } });
+      return new Response('x', { status: 403, headers: { server: 'cloudflare' } });
     },
   });
   await assert.rejects(http.get('https://x.test/'), Desafio);
   assert.equal(llamadas, 1);
+});
+
+test('un 503 con server cloudflare se reintenta y acaba en SinRed', async () => {
+  const reloj = relojFalso();
+  let llamadas = 0;
+  const http = createHttp({
+    ...reloj,
+    gapMs: 0,
+    retries: 2,
+    backoffMs: 10,
+    fetch: async () => {
+      llamadas++;
+      return new Response('x', { status: 503, headers: { server: 'cloudflare' } });
+    },
+  });
+  await assert.rejects(http.get('https://x.test/'), SinRed);
+  assert.equal(llamadas, 3);
+});
+
+test('el timeout aborta una petición que no responde y lanza SinRed', async () => {
+  const reloj = relojFalso();
+  const http = createHttp({
+    ...reloj,
+    gapMs: 0,
+    retries: 0,
+    timeoutMs: 20,
+    fetch: (_url, init) =>
+      new Promise((_, rechazar) => {
+        init!.signal!.addEventListener('abort', () => rechazar(init!.signal!.reason));
+      }),
+  });
+  await assert.rejects(http.get('https://x.test/'), SinRed);
 });
 
 test('un 404 se devuelve tal cual, sin reintentos', async () => {
@@ -161,4 +198,9 @@ test('leerJson devuelve el JSON de una respuesta 2xx', async () => {
 test('leerJson lanza FuenteCambio si no es 2xx o no es JSON', async () => {
   await assert.rejects(leerJson(new Response('x', { status: 404 }), 'prueba'), FuenteCambio);
   await assert.rejects(leerJson(new Response('<html>', { status: 200 }), 'prueba'), FuenteCambio);
+});
+
+test('leerJson lanza SinRed si falla la lectura del cuerpo', async () => {
+  const cuerpo = new ReadableStream({ start: (c) => c.error(new Error('abortado')) });
+  await assert.rejects(leerJson(new Response(cuerpo), 'prueba'), SinRed);
 });

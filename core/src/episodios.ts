@@ -19,7 +19,8 @@ export function parseEpisodios(payload: Parameters<typeof decodePage>[0]): Ficha
   if (!media || typeof media !== 'object') throw new FuenteCambio('ficha: la respuesta no trae "media"');
   if (!Array.isArray(media.episodes)) throw new FuenteCambio('ficha: "media" no trae "episodes"');
   const episodes = media.episodes.map((e: any, i: number): Episodio => {
-    if (typeof e?.id !== 'number' || typeof e?.number !== 'number') {
+    if (typeof e?.id !== 'number' || typeof e?.number !== 'number' ||
+      !Number.isFinite(e.id) || !Number.isFinite(e.number)) {
       throw new FuenteCambio(`ficha: el episodio ${i} no trae "id" y "number" numéricos`);
     }
     return { id: e.id, number: e.number };
