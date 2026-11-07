@@ -50,9 +50,30 @@ test('sin embeds o sin resolutores válidos lanza SinServidor', async () => {
   await assert.rejects(resolverPrimero([e1], [() => null], 'UA'), SinServidor);
 });
 
-test('un Desafío no se traga: sube tal cual', async () => {
+test('un Desafio de un resolutor (un espejo) se acumula como causa y la cadena sigue', async () => {
+  const causa = new Desafio('cloudflare en el espejo');
   const reto: ResolverServidor = () => {
-    throw new Desafio('cloudflare');
+    throw causa;
   };
-  await assert.rejects(resolverPrimero([e1], [reto, () => playable('x')], 'UA'), Desafio);
+  const ok: ResolverServidor = () => playable('ok');
+  assert.equal((await resolverPrimero([e1], [reto, ok], 'UA')).playable.url, 'ok');
+  await assert.rejects(resolverPrimero([e1], [reto], 'UA'), (e: unknown) => {
+    assert.ok(e instanceof SinServidor);
+    assert.deepEqual(e.causas, [causa]);
+    return true;
+  });
+});
+
+test('un error ajeno al dominio (un TypeError) sube tal cual y no se disfraza de SinServidor', async () => {
+  const bug: ResolverServidor = () => {
+    throw new TypeError('bug del resolutor');
+  };
+  await assert.rejects(resolverPrimero([e1], [bug, () => playable('x')], 'UA'), TypeError);
+});
+
+test('el Playable devuelto dice qué servidor ganó', async () => {
+  const soloB: ResolverServidor = (e) => (e.server === 'B' ? playable('b') : null);
+  const r = await resolverPrimero([e1, e2], [soloB], 'UA');
+  assert.equal(r.playable.servidor, 'B');
+  assert.equal(r.playable.url, 'b');
 });
