@@ -4,6 +4,9 @@ import { episodio } from './episodio.ts';
 import { episodios } from './episodios.ts';
 import { createHttp } from './http.ts';
 import type { Http, HttpOptions } from './http.ts';
+import { crearResolverMP4Upload } from './resolver-mp4upload.ts';
+import type { CapturarStream } from './resolver-mp4upload.ts';
+import { crearResolverVoe } from './resolver-voe.ts';
 import { resolverZilla } from './zilla.ts';
 import type { Idioma, Playable, ResolverServidor } from './types.ts';
 
@@ -12,18 +15,30 @@ export type { Embed, Idioma, Playable, ResolverServidor } from './types.ts';
 export type { Http, HttpOptions } from './http.ts';
 export type { ResultadoBusqueda } from './busqueda.ts';
 export type { Episodio, Ficha } from './episodios.ts';
+export { crearResolverMP4Upload } from './resolver-mp4upload.ts';
+export type { CapturarStream } from './resolver-mp4upload.ts';
+export { crearResolverVoe } from './resolver-voe.ts';
 
 export interface OpcionesFuentes {
   /** Cliente ya construido (tests). Si falta, se crea uno con `httpOptions`. */
   http?: Http;
   httpOptions?: HttpOptions;
-  /** Cadena de servidores en orden de prioridad. Por defecto, solo Zilla. */
+  /**
+   * Carga un embed en un WebView oculto y devuelve la URL del stream (en la app, el comando
+   * `resolve_webview`). Sin ella, MP4Upload no entra en la cadena por defecto.
+   */
+  capturarStream?: CapturarStream;
+  /** Cadena de servidores en orden de prioridad. Por defecto: Zilla, MP4Upload (si hay captura) y Voe. */
   resolvers?: ResolverServidor[];
 }
 
 export function crearFuentes(opts: OpcionesFuentes = {}) {
   const http = opts.http ?? createHttp(opts.httpOptions);
-  const resolvers = opts.resolvers ?? [resolverZilla];
+  const resolvers = opts.resolvers ?? [
+    resolverZilla,
+    ...(opts.capturarStream ? [crearResolverMP4Upload(opts.capturarStream)] : []),
+    crearResolverVoe(http),
+  ];
   return {
     buscar: (query: string) => buscar(http, query),
     episodios: (slug: string) => episodios(http, slug),

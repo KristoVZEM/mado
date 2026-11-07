@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearFuentes, SinServidor } from './index.ts';
 import type { Http } from './index.ts';
+import { paginaRedireccionVoe, paginaVoe } from './voe.testutil.ts';
 
 const busqueda = {
   nodes: [
@@ -70,4 +71,83 @@ test('acepta resolutores propios, en orden de prioridad', async () => {
     resolvers: [propio],
   });
   assert.equal((await f.resolver('one-piece', 1)).calidad, 720);
+});
+
+// Arma un payload de episodio con los embeds dados (tabla devalue calculada, no a mano).
+function payloadEpisodio(embeds: { server: string; url: string }[]) {
+  const n = embeds.length;
+  const tabla: unknown[] = [{ episode: 1, embeds: 2 }, { number: 3, variants: 4 }, { SUB: 5 }, 1, { SUB: 3 }];
+  tabla.push(Array.from({ length: n }, (_, i) => 6 + i));
+  embeds.forEach((_, i) => tabla.push({ server: 6 + n + 2 * i, url: 7 + n + 2 * i }));
+  embeds.forEach((e) => tabla.push(e.server, e.url));
+  return { nodes: [null, { type: 'data', data: tabla }] };
+}
+
+const ZILLA = { server: 'HLS', url: 'https://player.zilla-networks.com/play/abc' };
+const MP4 = { server: 'MP4Upload', url: 'https://www.mp4upload.com/embed-abc123.html' };
+const VOE = { server: 'Voe', url: 'https://voe.sx/e/abc123' };
+const DESTINO_VOE = 'https://espejo.test/e/abc123';
+const MASTER_VOE = 'https://cdn.test/engine/master.m3u8?t=tok';
+
+// Cliente falso que sirve la ficha del episodio y las páginas de Voe.
+function httpConVoe(embeds: { server: string; url: string }[]): Http {
+  const rutas: Record<string, string> = {
+    [VOE.url]: paginaRedireccionVoe(DESTINO_VOE),
+    [DESTINO_VOE]: paginaVoe({ source: MASTER_VOE }),
+    [MASTER_VOE]: '#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720\nb.m3u8\n',
+  };
+  return {
+    userAgent: 'UA-test',
+    get: async (url) => {
+      if (url.includes('/media/one-piece/1/__data.json')) return new Response(JSON.stringify(payloadEpisodio(embeds)));
+      return rutas[url] !== undefined ? new Response(rutas[url]) : new Response('no', { status: 404 });
+    },
+  };
+}
+
+test('la cadena por defecto prefiere Zilla sobre MP4Upload y Voe, y marca el servidor', async () => {
+  const f = crearFuentes({ http: httpConVoe([VOE, MP4, ZILLA]), capturarStream: async () => 'https://mp4.test/v.mp4' });
+  const p = await f.resolver('one-piece', 1);
+  assert.equal(p.servidor, 'HLS');
+  assert.equal(p.url, 'https://player.zilla-networks.com/m3u8/abc');
+});
+
+test('sin Zilla, usa MP4Upload cuando hay capturarStream', async () => {
+  const f = crearFuentes({ http: httpConVoe([VOE, MP4]), capturarStream: async () => 'https://mp4.test/v.mp4' });
+  const p = await f.resolver('one-piece', 1);
+  assert.equal(p.servidor, 'MP4Upload');
+  assert.equal(p.url, 'https://mp4.test/v.mp4');
+  assert.equal(p.headers.referer, 'https://www.mp4upload.com/');
+});
+
+test('sin capturarStream, MP4Upload no entra en la cadena y se cae a Voe (720p)', async () => {
+  const f = crearFuentes({ http: httpConVoe([MP4, VOE]) });
+  const p = await f.resolver('one-piece', 1);
+  assert.equal(p.servidor, 'Voe');
+  assert.equal(p.url, MASTER_VOE);
+  assert.equal(p.calidad, 720);
+});
+
+test('si MP4Upload falla, la cadena sigue con Voe', async () => {
+  const f = crearFuentes({
+    http: httpConVoe([MP4, VOE]),
+    capturarStream: async () => {
+      throw 'sin captura válida (timeout)';
+    },
+  });
+  assert.equal((await f.resolver('one-piece', 1)).servidor, 'Voe');
+});
+
+test('si ningún servidor sirve, SinServidor explica por qué falló cada uno', async () => {
+  const f = crearFuentes({
+    http: httpConVoe([MP4]),
+    capturarStream: async () => {
+      throw 'sin captura válida (timeout)';
+    },
+  });
+  await assert.rejects(f.resolver('one-piece', 1), (e: unknown) => {
+    assert.ok(e instanceof SinServidor);
+    assert.equal(e.causas.length, 1);
+    return true;
+  });
 });
