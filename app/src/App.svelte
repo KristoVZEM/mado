@@ -4,6 +4,7 @@
   import Biblioteca from './pantallas/Biblioteca.svelte';
   import Catalogo from './pantallas/Catalogo.svelte';
   import Inicio from './pantallas/Inicio.svelte';
+  import Historial from './pantallas/Historial.svelte';
   import Ficha from './pantallas/Ficha.svelte';
   import Reproductor from './pantallas/Reproductor.svelte';
   import { nav } from './lib/navegacion.svelte.ts';
@@ -30,6 +31,8 @@
       <Catalogo />
     {:else if nav.seccion === 'biblioteca'}
       <Biblioteca />
+    {:else if nav.seccion === 'historial'}
+      <Historial />
     {:else if nav.seccion === 'ajustes'}
       <Ajustes />
     {/if}

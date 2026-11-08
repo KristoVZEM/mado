@@ -2,7 +2,7 @@
 //! SQL; aquí solo se toma la conexión, se llama a la función y se traduce el error a `String`.
 
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
-use super::progreso::{self, EntradaContinuar, Serie};
+use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
 use super::{ajustes, Resultado};
 use super::biblioteca::{self, Biblioteca};
 use rusqlite::Connection;
@@ -82,6 +82,16 @@ pub fn progreso_de(datos: State<'_, Datos>, aid: i64, numero: f64) -> Result<Opt
 #[tauri::command(async)]
 pub fn continuar_viendo(datos: State<'_, Datos>, limite: u32) -> Result<Vec<EntradaContinuar>, String> {
     con(&datos, |c| progreso::continuar_viendo(c, limite.clamp(1, 50)))
+}
+
+/// El límite se acota a 1–100: el historial puede tener miles de filas y se pide por páginas.
+#[tauri::command(async)]
+pub fn listar_historial(
+    datos: State<'_, Datos>,
+    limite: u32,
+    desplazamiento: u32,
+) -> Result<Vec<EntradaHistorial>, String> {
+    con(&datos, |c| progreso::listar_historial(c, limite.clamp(1, 100), desplazamiento))
 }
 
 #[tauri::command(async)]

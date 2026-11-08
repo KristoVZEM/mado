@@ -114,6 +114,7 @@ pub fn run() {
             datos::comandos::es_favorito,
             datos::comandos::alternar_favorito,
             datos::comandos::listar_biblioteca,
+            datos::comandos::listar_historial,
             datos::comandos::previsualizar_copia,
             datos::comandos::importar_copia,
         ])

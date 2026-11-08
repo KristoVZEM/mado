@@ -200,6 +200,38 @@ pub fn continuar_viendo(conn: &Connection, limite: u32) -> Resultado<Vec<Entrada
     Ok(filas.collect::<Result<Vec<_>, _>>()?)
 }
 
+/// Un episodio visto, para la pantalla Historial. `visto_en` va en milisegundos.
+#[derive(Debug, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EntradaHistorial {
+    pub aid: i64,
+    pub slug: String,
+    pub titulo: String,
+    pub numero: f64,
+    pub visto_en: i64,
+}
+
+/// Episodios vistos, del más reciente al más antiguo, paginados. Solo las series con ficha en
+/// `anime` (todas las que registran las escrituras e importaciones).
+pub fn listar_historial(conn: &Connection, limite: u32, desplazamiento: u32) -> Resultado<Vec<EntradaHistorial>> {
+    let mut st = conn.prepare(
+        "SELECT a.aid, a.slug, a.titulo, h.numero, h.visto_en
+         FROM historial h JOIN anime a ON a.aid = h.aid
+         ORDER BY h.visto_en DESC, h.aid DESC, h.numero DESC
+         LIMIT ?1 OFFSET ?2",
+    )?;
+    let filas = st.query_map(params![limite, desplazamiento], |f| {
+        Ok(EntradaHistorial {
+            aid: f.get(0)?,
+            slug: f.get(1)?,
+            titulo: f.get(2)?,
+            numero: f.get(3)?,
+            visto_en: f.get(4)?,
+        })
+    })?;
+    Ok(filas.collect::<Result<Vec<_>, _>>()?)
+}
+
 /// Quita de "Continuar viendo" todo el progreso pendiente de una serie. El historial no se toca.
 pub fn descartar_progreso(conn: &Connection, aid: i64) -> Resultado<()> {
     conn.execute("DELETE FROM progreso WHERE aid = ?1", params![aid])?;
@@ -212,6 +244,46 @@ mod pruebas {
     use crate::datos::abrir_en_memoria;
 
     const ONE_PIECE: Serie<'static> = Serie { aid: 10, slug: "one-piece", titulo: "One Piece" };
+
+    /// Marca como vistos (aid, número, instante) con series sintéticas.
+    fn sembrar_historial(conn: &Connection, vistos: &[(i64, f64, i64)]) {
+        for &(aid, numero, ahora) in vistos {
+            let slug = format!("serie-{aid}");
+            let titulo = format!("Serie {aid}");
+            let serie = Serie { aid, slug: &slug, titulo: &titulo };
+            marcar_visto(conn, ahora, &serie, numero, None, &[]).unwrap();
+        }
+    }
+
+    #[test]
+    fn listar_historial_ordena_por_fecha_descendente_y_desempata() {
+        let conn = abrir_en_memoria().unwrap();
+        sembrar_historial(&conn, &[(1, 1.0, 100), (2, 5.0, 300), (1, 2.0, 300), (3, 1.0, 200)]);
+        let h = listar_historial(&conn, 10, 0).unwrap();
+        let claves: Vec<(i64, f64)> = h.iter().map(|e| (e.aid, e.numero)).collect();
+        assert_eq!(claves, vec![(2, 5.0), (1, 2.0), (3, 1.0), (1, 1.0)]);
+        assert_eq!(h[0].visto_en, 300);
+        assert_eq!(h[0].titulo, "Serie 2");
+        assert_eq!(h[0].slug, "serie-2");
+    }
+
+    #[test]
+    fn listar_historial_pagina_sin_repetir_ni_saltarse_filas() {
+        let conn = abrir_en_memoria().unwrap();
+        sembrar_historial(&conn, &[(1, 1.0, 10), (1, 2.0, 20), (1, 3.0, 30), (1, 4.0, 40), (1, 5.0, 50)]);
+        let a = listar_historial(&conn, 2, 0).unwrap();
+        let b = listar_historial(&conn, 2, 2).unwrap();
+        let c = listar_historial(&conn, 2, 4).unwrap();
+        let numeros: Vec<f64> = a.iter().chain(&b).chain(&c).map(|e| e.numero).collect();
+        assert_eq!(numeros, vec![5.0, 4.0, 3.0, 2.0, 1.0]);
+        assert!(listar_historial(&conn, 2, 6).unwrap().is_empty());
+    }
+
+    #[test]
+    fn listar_historial_de_una_base_vacia_es_vacio() {
+        let conn = abrir_en_memoria().unwrap();
+        assert!(listar_historial(&conn, 50, 0).unwrap().is_empty());
+    }
 
     #[test]
     fn guardar_y_leer_el_progreso_de_un_episodio() {

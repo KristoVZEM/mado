@@ -10,6 +10,7 @@ export const CARRIL: readonly ElementoCarril[] = [
   { id: 'inicio', nombre: 'Inicio' },
   { id: 'catalogo', nombre: 'Catálogo' },
   { id: 'biblioteca', nombre: 'Biblioteca' },
+  { id: 'historial', nombre: 'Historial' },
   { id: 'ajustes', nombre: 'Ajustes' },
 ];
 

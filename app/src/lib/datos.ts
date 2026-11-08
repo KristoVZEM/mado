@@ -141,3 +141,16 @@ export const previsualizarCopia = (carpeta: string) => invoke<ResumenCopia>('pre
 
 export const importarCopia = (carpeta: string, modo: ModoImportacion) =>
   invoke<ResultadoCopia>('importar_copia', { carpeta, modo });
+
+/** Un episodio visto tal como lo devuelve Rust (camelCase); `vistoEn` en milisegundos. */
+export interface EntradaHistorial {
+  aid: number;
+  slug: string;
+  titulo: string;
+  numero: number;
+  vistoEn: number;
+}
+
+/** Del más reciente al más antiguo; páginas con `limite` (Rust lo acota a 1–100) y `desplazamiento`. */
+export const listarHistorial = (limite: number, desplazamiento: number) =>
+  invoke<EntradaHistorial[]>('listar_historial', { limite, desplazamiento });
