@@ -90,7 +90,8 @@
   /** Cambia de episodio conservando idioma y pantalla completa; solo actúa una vez por pantalla. */
   function irAEpisodio(destino: number | undefined) {
     if (destino === undefined || yaSaltado) return;
-    if (destino === siguiente) marcarComoVisto();
+    // Saltar de episodio no lo marca como visto: eso lo decide el umbral del 85 % (o el final del
+    // vídeo). Si se avanza con ⏭ antes de llegar, el episodio queda a medias, no visto.
     yaSaltado = true;
     irA({ tipo: 'reproducir', anime, numeros, numero: destino, idioma });
   }
