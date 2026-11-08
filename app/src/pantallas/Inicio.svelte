@@ -163,10 +163,10 @@
 <style>
   .continuar {
     position: relative;
-    flex: 0 0 280px;
+    flex: 0 0 var(--ancho-captura);
   }
   .poster {
-    flex: 0 0 150px;
+    flex: 0 0 var(--ancho-poster);
   }
   .abrir {
     width: 100%;

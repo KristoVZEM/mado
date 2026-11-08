@@ -48,7 +48,7 @@
     margin: 0;
     padding: 0 0 8px;
     display: flex;
-    gap: 16px;
+    gap: var(--espacio);
     overflow-x: auto;
     scrollbar-width: none;
   }

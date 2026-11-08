@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Portada from '../lib/componentes/Portada.svelte';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { abrir, cerrarSuperior } from '../lib/navegacion.svelte.ts';
@@ -22,6 +23,11 @@
   let favorito = $state(false);
   let guardando = $state(false);
   let avisoBiblioteca = $state('');
+
+  let sinopsisAbierta = $state(false);
+  /** Estado de emisión y géneros, en una sola línea. */
+  const meta = $derived(ficha ? [ficha.status, ...ficha.genres].filter(Boolean) : []);
+  const larga = $derived((ficha?.synopsis.length ?? 0) > 280);
 
   const numeros = $derived(ficha ? ficha.episodes.map((e) => e.number).sort((a, b) => a - b) : []);
   const serie = $derived({ aid: anime.aid, slug: anime.slug, titulo: ficha?.title || anime.title });
@@ -92,26 +98,39 @@
 
 <main class="pantalla">
   <button onclick={cerrarSuperior}>← Volver</button>
-  <h1>{ficha?.title || anime.title}</h1>
-
-  {#if bibliotecaOk}
-    <p class="biblioteca">
-      <label>
-        Estado:
-        <select value={estado} onchange={cambiarEstado} disabled={guardando}>
-          <option value={0}>Ninguno</option>
-          {#each ESTADOS as e (e.valor)}<option value={e.valor}>{e.nombre}</option>{/each}
-        </select>
-      </label>
-      <button
-        onclick={alternar}
-        disabled={guardando}
-        aria-pressed={favorito}
-        aria-label={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}>{favorito ? '★' : '☆'}</button
-      >
-    </p>
-    {#if avisoBiblioteca}<p class="error" role="alert">{avisoBiblioteca}</p>{/if}
-  {/if}
+  <div class="cabecera">
+    <div class="portada-ficha"><Portada aid={anime.aid} titulo={ficha?.title || anime.title} /></div>
+    <div class="datos">
+      <h1>{ficha?.title || anime.title}</h1>
+      {#if meta.length > 0}<p class="meta">{meta.join(' · ')}</p>{/if}
+      {#if ficha?.synopsis}
+        <p class="sinopsis" class:recortada={larga && !sinopsisAbierta}>{ficha.synopsis}</p>
+        {#if larga}
+          <button class="enlace" aria-expanded={sinopsisAbierta} onclick={() => (sinopsisAbierta = !sinopsisAbierta)}>
+            {sinopsisAbierta ? 'Ver menos' : 'Ver más'}
+          </button>
+        {/if}
+      {/if}
+      {#if bibliotecaOk}
+        <p class="biblioteca">
+          <label>
+            Estado:
+            <select value={estado} onchange={cambiarEstado} disabled={guardando}>
+              <option value={0}>Ninguno</option>
+              {#each ESTADOS as e (e.valor)}<option value={e.valor}>{e.nombre}</option>{/each}
+            </select>
+          </label>
+          <button
+            onclick={alternar}
+            disabled={guardando}
+            aria-pressed={favorito}
+            aria-label={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}>{favorito ? '★' : '☆'}</button
+          >
+        </p>
+        {#if avisoBiblioteca}<p class="error" role="alert">{avisoBiblioteca}</p>{/if}
+      {/if}
+    </div>
+  </div>
 
   {#if cargando}<p>Cargando episodios…</p>{/if}
   {#if error}<p class="error">{error}</p>{/if}
@@ -134,6 +153,39 @@
 </main>
 
 <style>
+  .cabecera {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 24px;
+    align-items: start;
+    margin: 16px 0 24px;
+  }
+  .datos h1 {
+    margin: 0 0 4px;
+  }
+  .meta {
+    margin: 0 0 12px;
+    color: var(--texto-suave);
+  }
+  .sinopsis {
+    margin: 0 0 4px;
+    max-width: 70ch;
+    line-height: 1.55;
+  }
+  .sinopsis.recortada {
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .enlace {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--acento);
+    margin-bottom: 12px;
+  }
   .biblioteca {
     display: flex;
     align-items: center;

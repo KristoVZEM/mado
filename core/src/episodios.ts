@@ -11,6 +11,21 @@ export interface Episodio {
 export interface Ficha {
   title: string;
   episodes: Episodio[];
+  /** Sinopsis; vacía si la fuente no la trae. Es decoración: nunca provoca FuenteCambio. */
+  synopsis: string;
+  genres: string[];
+  /** Estado de emisión tal como lo escribe la fuente; vacío si no viene. */
+  status: string;
+}
+
+const texto = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+
+/** Géneros como cadenas o como objetos con `name` o `title`; lo que no sea texto se descarta. */
+function generos(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((g: any) => texto(typeof g === 'string' ? g : (g?.name ?? g?.title)))
+    .filter((g) => g !== '');
 }
 
 export function parseEpisodios(payload: Parameters<typeof decodePage>[0]): Ficha {
@@ -25,7 +40,13 @@ export function parseEpisodios(payload: Parameters<typeof decodePage>[0]): Ficha
     }
     return { id: e.id, number: e.number };
   });
-  return { title: String(media.title ?? ''), episodes };
+  return {
+    title: String(media.title ?? ''),
+    episodes,
+    synopsis: texto(media.synopsis),
+    genres: generos(media.genres),
+    status: texto(media.status),
+  };
 }
 
 export async function episodios(http: Http, slug: string): Promise<Ficha> {

@@ -32,7 +32,56 @@ test('extrae el título y los episodios con id y número', () => {
       { id: 101, number: 1 },
       { id: 102, number: 2 },
     ],
+    synopsis: '',
+    genres: [],
+    status: '',
   });
+});
+
+const payloadConDetalle = {
+  nodes: [
+    null,
+    {
+      type: 'data',
+      data: [
+        { media: 1 },
+        { episodes: 2, title: 4, synopsis: 5, genres: 6, status: 7 },
+        [3],
+        { id: 8, number: 9 },
+        'One Piece',
+        '  Un pirata busca el tesoro.  ',
+        [10, 11],
+        'Emitiéndose',
+        101,
+        1,
+        'Aventura',
+        'Acción',
+      ],
+    },
+  ],
+};
+
+test('extrae sinopsis, géneros y estado cuando vienen', () => {
+  const f = parseEpisodios(payloadConDetalle);
+  assert.equal(f.synopsis, 'Un pirata busca el tesoro.');
+  assert.deepEqual(f.genres, ['Aventura', 'Acción']);
+  assert.equal(f.status, 'Emitiéndose');
+});
+
+test('géneros como objetos con name y valores raros no rompen la ficha', () => {
+  const raro = {
+    nodes: [
+      null,
+      {
+        type: 'data',
+        data: [{ media: 1 }, { episodes: 2, title: 4, synopsis: 5, genres: 6, status: 5 }, [], 3, 'X', 42, [7, 8, 9], { name: 10 }, 99, null, 'Drama'],
+      },
+    ],
+  };
+  const f = parseEpisodios(raro);
+  assert.equal(f.synopsis, '');
+  assert.equal(f.status, '');
+  assert.deepEqual(f.genres, ['Drama']);
 });
 
 test('lanza FuenteCambio si falta media o episodes', () => {
