@@ -54,9 +54,10 @@ pub type Resultado<T> = Result<T, Error>;
 const V1: &str = "
 CREATE TABLE anime (
     aid    INTEGER PRIMARY KEY,
-    slug   TEXT NOT NULL UNIQUE,
+    slug   TEXT NOT NULL,
     titulo TEXT NOT NULL
 );
+CREATE INDEX anime_slug ON anime(slug);
 CREATE TABLE progreso (
     aid         INTEGER NOT NULL REFERENCES anime(aid) ON DELETE CASCADE,
     numero      REAL    NOT NULL,
@@ -78,6 +79,7 @@ CREATE TABLE ajustes (
 );
 ";
 
+// Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
 const MIGRACIONES: &[&str] = &[V1];
 

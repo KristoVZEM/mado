@@ -109,6 +109,9 @@ pub fn marcar_visto(
     if let Some(s) = siguiente {
         validar_numero("siguiente", s)?;
     }
+    if siguiente == Some(numero) {
+        return Err(Error::Invalido("el siguiente episodio no puede ser el mismo".into()));
+    }
     let tx = conn.unchecked_transaction()?;
     registrar_anime(&tx, serie)?;
     tx.execute("DELETE FROM progreso WHERE aid = ?1 AND numero = ?2", params![serie.aid, numero])?;
@@ -121,7 +124,7 @@ pub fn marcar_visto(
         tx.execute(
             "INSERT INTO progreso (aid, numero, posicion_s, duracion_s, actualizado)
              VALUES (?1, ?2, 0, 0, ?3)
-             ON CONFLICT(aid, numero) DO NOTHING",
+             ON CONFLICT(aid, numero) DO UPDATE SET actualizado = excluded.actualizado",
             params![serie.aid, s, ahora],
         )?;
     }
@@ -141,7 +144,7 @@ pub fn continuar_viendo(conn: &Connection, limite: u32) -> Resultado<Vec<Entrada
              FROM progreso p JOIN anime a ON a.aid = p.aid
          )
          WHERE n = 1
-         ORDER BY actualizado DESC
+         ORDER BY actualizado DESC, aid DESC
          LIMIT ?1",
     )?;
     let filas = st.query_map(params![limite], |f| {
@@ -307,6 +310,45 @@ mod pruebas {
         assert_eq!(v[0].slug, "one-piece");
         assert_eq!(v[0].posicion_s, 20.0);
         assert_eq!(v[0].duracion_s, 100.0);
+    }
+
+    #[test]
+    fn dos_series_con_aid_distinto_pueden_compartir_slug() {
+        let conn = abrir_en_memoria().unwrap();
+        let otra = Serie { aid: 99, slug: "one-piece", titulo: "Otra" };
+        guardar_progreso(&conn, 1, &ONE_PIECE, 1.0, 10.0, 100.0).unwrap();
+        guardar_progreso(&conn, 2, &otra, 1.0, 20.0, 100.0).unwrap();
+        assert_eq!(progreso_de(&conn, 99, 1.0).unwrap(), Some(20.0));
+    }
+
+    #[test]
+    fn marcar_visto_sube_la_serie_en_continuar_viendo_sin_pisar_el_siguiente() {
+        let conn = abrir_en_memoria().unwrap();
+        guardar_progreso(&conn, 1000, &ONE_PIECE, 5.0, 50.0, 100.0).unwrap();
+        guardar_progreso(&conn, 2000, &NARUTO, 1.0, 10.0, 100.0).unwrap();
+        marcar_visto(&conn, 3000, &ONE_PIECE, 4.0, Some(5.0)).unwrap();
+        let v = continuar_viendo(&conn, 10).unwrap();
+        assert_eq!((v[0].aid, v[0].numero, v[0].actualizado), (10, 5.0, 3000));
+        assert_eq!(v[0].posicion_s, 50.0);
+        assert_eq!(v[0].duracion_s, 100.0);
+    }
+
+    #[test]
+    fn marcar_visto_rechaza_que_el_siguiente_sea_el_mismo_episodio() {
+        let conn = abrir_en_memoria().unwrap();
+        guardar_progreso(&conn, 1, &ONE_PIECE, 3.0, 10.0, 100.0).unwrap();
+        assert!(marcar_visto(&conn, 2, &ONE_PIECE, 3.0, Some(3.0)).is_err());
+        assert_eq!(progreso_de(&conn, 10, 3.0).unwrap(), Some(10.0));
+        assert_eq!(contar(&conn, "historial"), 0);
+    }
+
+    #[test]
+    fn continuar_viendo_desempata_series_por_aid_mayor() {
+        let conn = abrir_en_memoria().unwrap();
+        guardar_progreso(&conn, 1000, &ONE_PIECE, 1.0, 10.0, 100.0).unwrap();
+        guardar_progreso(&conn, 1000, &NARUTO, 1.0, 10.0, 100.0).unwrap();
+        let v = continuar_viendo(&conn, 10).unwrap();
+        assert_eq!((v[0].aid, v[1].aid), (20, 10));
     }
 
     #[test]
