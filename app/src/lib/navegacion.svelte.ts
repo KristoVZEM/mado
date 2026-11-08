@@ -2,6 +2,7 @@ import type { Idioma, ResultadoBusqueda } from '../../../core/src/index.ts';
 
 export type Pantalla =
   | { tipo: 'buscar' }
+  | { tipo: 'biblioteca' }
   | { tipo: 'ficha'; anime: ResultadoBusqueda }
   | {
       tipo: 'reproducir';

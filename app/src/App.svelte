@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Biblioteca from './pantallas/Biblioteca.svelte';
   import Buscar from './pantallas/Buscar.svelte';
   import Ficha from './pantallas/Ficha.svelte';
   import Reproductor from './pantallas/Reproductor.svelte';
@@ -7,6 +8,8 @@
 
 {#if nav.pantalla.tipo === 'buscar'}
   <Buscar />
+{:else if nav.pantalla.tipo === 'biblioteca'}
+  <Biblioteca />
 {:else if nav.pantalla.tipo === 'ficha'}
   {#key nav.pantalla.anime.aid}
     <Ficha anime={nav.pantalla.anime} />

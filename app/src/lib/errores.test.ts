@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mensajeDeError } from './errores.ts';
+import { mensajeDeError, textoDeError } from './errores.ts';
 import { Desafio, FuenteCambio, SinRed, SinServidor } from '../../../core/src/errors.ts';
 
 test('cada error del núcleo tiene su propio mensaje, todos en español', () => {
@@ -35,4 +35,9 @@ test('SinServidor sin causas (no había servidores en ese idioma) tiene su propi
   assert.notEqual(sin, con);
   assert.ok(!/\d/.test(sin));
   assert.match(sin, /idioma/);
+});
+
+test('textoDeError usa el texto de un rechazo de invoke y traduce el resto', () => {
+  assert.equal(textoDeError('estado inválido: 9'), 'estado inválido: 9');
+  assert.equal(textoDeError(new SinRed('x')), mensajeDeError(new SinRed('x')));
 });

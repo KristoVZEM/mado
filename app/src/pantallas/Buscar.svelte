@@ -93,6 +93,7 @@
 <main class="pantalla">
   <header class="cabecera">
     <h1>ukiku-pc</h1>
+    <button onclick={() => irA({ tipo: 'biblioteca' })}>Biblioteca</button>
     <button onclick={() => (verAjustes = !verAjustes)} aria-label="Ajustes" aria-expanded={verAjustes}>⚙</button>
   </header>
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
