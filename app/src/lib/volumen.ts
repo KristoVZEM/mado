@@ -22,12 +22,3 @@ export function leerVolumen(almacen: Almacen | undefined): number {
     return VOLUMEN_INICIAL;
   }
 }
-
-/** Guarda el volumen; si el almacén no está disponible o está lleno, no pasa nada. */
-export function guardarVolumen(almacen: Almacen | undefined, volumen: number): void {
-  try {
-    almacen?.setItem(CLAVE, String(limitarVolumen(volumen)));
-  } catch {
-    // Es una comodidad: sin almacén simplemente no se recuerda.
-  }
-}

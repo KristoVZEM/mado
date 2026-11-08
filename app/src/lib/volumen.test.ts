@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { VOLUMEN_INICIAL, VOLUMEN_PASO, guardarVolumen, leerVolumen, limitarVolumen } from './volumen.ts';
+import { VOLUMEN_INICIAL, VOLUMEN_PASO, leerVolumen, limitarVolumen } from './volumen.ts';
 
 function almacenFalso(inicial?: string) {
   const datos = new Map<string, string>();
@@ -43,13 +43,4 @@ test('leerVolumen usa el inicial si no hay nada, es basura o no hay almacén', (
 test('leerVolumen tolera un almacén que lanza', () => {
   const roto = { getItem: () => { throw new Error('bloqueado'); }, setItem: () => {} };
   assert.equal(leerVolumen(roto), VOLUMEN_INICIAL);
-});
-
-test('guardarVolumen guarda el valor recortado y tolera fallos', () => {
-  const a = almacenFalso();
-  guardarVolumen(a, 250);
-  assert.equal(a.datos.get('ukiku.volumen'), '100');
-  const roto = { getItem: () => null, setItem: () => { throw new Error('lleno'); } };
-  assert.doesNotThrow(() => guardarVolumen(roto, 50));
-  assert.doesNotThrow(() => guardarVolumen(undefined, 50));
 });

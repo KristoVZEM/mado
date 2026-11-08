@@ -10,7 +10,8 @@ import { cabecerasMpv } from './cabeceras.ts';
 import { crearCola } from './cola.ts';
 import { argumentosLoadfile } from './idioma.ts';
 import { validarUrlDeStream } from './url.ts';
-import { VOLUMEN_PASO, guardarVolumen, leerVolumen, limitarVolumen } from './volumen.ts';
+import { VOLUMEN_PASO, limitarVolumen } from './volumen.ts';
+import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from './ajustes.svelte.ts';
 
 const OBSERVADAS = [
   ['pause', 'flag'],
@@ -28,17 +29,9 @@ export const reproductor = $state({
   duracion: 0,
   terminado: false,
   volumen: 100,
+  velocidad: 1,
   silencio: false,
 });
-
-/** localStorage puede faltar o lanzar (ventana privada, datos bloqueados): se trata como ausente. */
-function almacenLocal(): Storage | undefined {
-  try {
-    return globalThis.localStorage;
-  } catch {
-    return undefined;
-  }
-}
 
 let iniciado: Promise<void> | null = null;
 const enSerie = crearCola();
@@ -62,7 +55,8 @@ function iniciarMpv(): Promise<void> {
         observedProperties: OBSERVADAS,
       });
       mpvCreado = true;
-      reproductor.volumen = leerVolumen(almacenLocal());
+      await asegurarAjustes();
+      reproductor.volumen = ajustes.volumen;
       await setProperty('volume', reproductor.volumen);
     }
     await observeProperties(OBSERVADAS, ({ name, data }) => {
@@ -108,7 +102,8 @@ export function alternarPausa(): Promise<void> {
 /** Fija el volumen (0-100), lo recuerda para el próximo arranque y quita el silencio si sube. */
 export async function fijarVolumen(n: number): Promise<void> {
   const v = limitarVolumen(n);
-  guardarVolumen(almacenLocal(), v);
+  ajustes.volumen = v;
+  guardarAjusteSilencioso('volumen', String(v));
   await setProperty('volume', v);
   if (reproductor.silencio && v > 0) await setProperty('mute', false);
 }

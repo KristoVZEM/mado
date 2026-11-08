@@ -22,7 +22,8 @@
   } from '../lib/reproductor.svelte.ts';
   import { cambiarIdioma } from '../lib/idioma.ts';
   import { estadoSiguiente } from '../lib/siguiente.ts';
-  import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
+  import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
   let {
@@ -89,6 +90,7 @@
 
   onMount(async () => {
     try {
+      await asegurarAjustes();
       const p = await fuentes.resolver(anime.slug, numero, idioma);
       if (destruido) return;
       playable = p;
@@ -225,11 +227,11 @@
         break;
       case 'ArrowLeft':
         e.preventDefault();
-        void saltarRelativo(-SALTO_CORTO_S);
+        void saltarRelativo(-ajustes.saltoCorto);
         break;
       case 'ArrowRight':
         e.preventDefault();
-        void saltarRelativo(SALTO_CORTO_S);
+        void saltarRelativo(ajustes.saltoCorto);
         break;
       case 'ArrowUp':
         e.preventDefault();
@@ -243,7 +245,7 @@
         void alternarSilencio();
         break;
       case 'KeyS':
-        void saltarRelativo(SALTO_LARGO_S);
+        void saltarRelativo(ajustes.saltoLargo);
         break;
       case 'KeyF':
         void alternarPantallaCompleta();
@@ -337,10 +339,10 @@
           aria-label="Episodio anterior"
           title={anterior === undefined ? 'No hay episodio anterior' : `Episodio ${anterior}`}>⏮</button
         >
-        <button onclick={() => saltarRelativo(-SALTO_CORTO_S)}>−{SALTO_CORTO_S}</button>
+        <button onclick={() => saltarRelativo(-ajustes.saltoCorto)}>−{ajustes.saltoCorto}</button>
         <button onclick={alternarPausa}>{reproductor.pausa ? '▶' : '⏸'}</button>
-        <button onclick={() => saltarRelativo(SALTO_CORTO_S)}>+{SALTO_CORTO_S}</button>
-        <button onclick={() => saltarRelativo(SALTO_LARGO_S)}>+{SALTO_LARGO_S} s</button>
+        <button onclick={() => saltarRelativo(ajustes.saltoCorto)}>+{ajustes.saltoCorto}</button>
+        <button onclick={() => saltarRelativo(ajustes.saltoLargo)}>+{ajustes.saltoLargo} s</button>
         <button
           onclick={irAlSiguiente}
           disabled={siguiente === undefined}
