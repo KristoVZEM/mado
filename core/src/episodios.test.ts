@@ -35,6 +35,7 @@ test('extrae el título y los episodios con id y número', () => {
     synopsis: '',
     genres: [],
     status: '',
+    anio: null,
   });
 });
 
@@ -66,6 +67,17 @@ test('extrae sinopsis, géneros y estado cuando vienen', () => {
   assert.equal(f.synopsis, 'Un pirata busca el tesoro.');
   assert.deepEqual(f.genres, ['Aventura', 'Acción']);
   assert.equal(f.status, 'Emitiéndose');
+});
+
+test('la ficha trae el año de inicio cuando viene en texto, número u objeto', () => {
+  // [media] [episodes, title, startDate] [] 3 'X' <valor>
+  const con = (valor: unknown) => ({
+    nodes: [null, { type: 'data', data: [{ media: 1 }, { episodes: 2, title: 4, startDate: 5 }, [], 3, 'X', valor] }],
+  });
+  assert.equal(parseEpisodios(con('2023-04-01')).anio, 2023);
+  assert.equal(parseEpisodios(con(2019)).anio, 2019);
+  assert.equal(parseEpisodios(con('sin fecha')).anio, null);
+  assert.equal(parseEpisodios(con(5)).anio, null);
 });
 
 test('géneros como objetos con name y valores raros no rompen la ficha', () => {

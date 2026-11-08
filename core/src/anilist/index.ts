@@ -1,0 +1,10 @@
+export { crearClienteAnilist, URL_ANILIST } from './cliente.ts';
+export type { ClienteAnilist, OpcionesCliente } from './cliente.ts';
+export { crearLimitador } from './limitador.ts';
+export type { Reloj } from './limitador.ts';
+export { agendaSemana, aCandidato, buscarCandidatos, parseMedia } from './consultas.ts';
+export type { ItemAgenda } from './consultas.ts';
+export { confianza, decidir, mejorParecido, ordenar, UMBRAL_AUTO, UMBRAL_MINIMO } from './emparejar.ts';
+export type { CandidatoAnilist, Decision, Propuesta, SerieABuscar } from './emparejar.ts';
+export { normalizar, parecido } from './titulos.ts';
+export type { MediaAnilist, RelacionAnilist } from './tipos.ts';

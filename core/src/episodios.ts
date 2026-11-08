@@ -16,6 +16,14 @@ export interface Ficha {
   genres: string[];
   /** Estado de emisión tal como lo escribe la fuente; vacío si no viene. */
   status: string;
+  /** Año de inicio; `null` si no viene o no se entiende. */
+  anio: number | null;
+}
+
+/** Año de inicio: texto que empieza por 4 dígitos, número entre 1900 y 2100, u objeto con `year`. */
+function anioDe(v: unknown): number | null {
+  const n = typeof v === 'string' ? Number(/^(\d{4})/.exec(v.trim())?.[1]) : typeof v === 'number' ? v : (v as any)?.year;
+  return Number.isInteger(n) && n >= 1900 && n <= 2100 ? n : null;
 }
 
 const texto = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
@@ -46,6 +54,7 @@ export function parseEpisodios(payload: Parameters<typeof decodePage>[0]): Ficha
     synopsis: texto(media.synopsis),
     genres: generos(media.genres),
     status: texto(media.status),
+    anio: anioDe(media.startDate),
   };
 }
 
