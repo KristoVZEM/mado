@@ -8,6 +8,7 @@ import {
 import type { Playable } from '../../../core/src/index.ts';
 import { cabecerasMpv } from './cabeceras.ts';
 import { crearCola } from './cola.ts';
+import { validarUrlDeStream } from './url.ts';
 
 const OBSERVADAS = [
   ['pause', 'flag'],
@@ -41,6 +42,7 @@ function iniciarMpv(): Promise<void> {
           hwdec: 'auto-safe',
           'keep-open': 'yes',
           'force-window': 'yes',
+          ytdl: 'no',
         },
         observedProperties: OBSERVADAS,
       });
@@ -66,13 +68,14 @@ export function cargar(p: Playable): Promise<void> {
 
 /** Cuerpo de `cargar` sin serializar; solo lo llama `cargar`. */
 async function cargarAhora(p: Playable): Promise<void> {
+  const url = validarUrlDeStream(p.url);
   await iniciarMpv();
   reproductor.terminado = false;
   reproductor.posicion = 0;
   reproductor.duracion = 0;
   await setProperty('user-agent', p.userAgent);
   await setProperty('http-header-fields', cabecerasMpv(p.headers));
-  await command('loadfile', [p.url]);
+  await command('loadfile', [url]);
   await setProperty('pause', false);
 }
 

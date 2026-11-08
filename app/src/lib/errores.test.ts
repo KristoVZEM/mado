@@ -28,3 +28,11 @@ test('un valor que no es un Error también produce un mensaje', () => {
   assert.ok(mensajeDeError('texto').length > 0);
   assert.ok(mensajeDeError(undefined).length > 0);
 });
+
+test('SinServidor sin causas (no había servidores en ese idioma) tiene su propio mensaje', () => {
+  const sin = mensajeDeError(new SinServidor('x', []));
+  const con = mensajeDeError(new SinServidor('x', [new SinRed('a')]));
+  assert.notEqual(sin, con);
+  assert.ok(!/\d/.test(sin));
+  assert.match(sin, /idioma/);
+});

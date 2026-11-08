@@ -15,6 +15,9 @@ export function mensajeDeError(e: unknown): string {
     return 'La fuente cambió su formato. Hay que actualizar el cliente.';
   }
   if (e instanceof SinServidor) {
+    if (e.causas.length === 0) {
+      return 'Este episodio no tiene servidores disponibles en el idioma elegido.';
+    }
     return `Ningún servidor pudo reproducir este episodio (${e.causas.length} intentos fallidos).`;
   }
   return 'Error inesperado. Mira la consola para ver el detalle.';
