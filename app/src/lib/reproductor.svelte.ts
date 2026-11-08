@@ -7,6 +7,7 @@ import {
 } from 'tauri-plugin-libmpv-api';
 import type { Playable } from '../../../core/src/index.ts';
 import { cabecerasMpv } from './cabeceras.ts';
+import { crearCola } from './cola.ts';
 
 const OBSERVADAS = [
   ['pause', 'flag'],
@@ -24,6 +25,8 @@ export const reproductor = $state({
 });
 
 let iniciado: Promise<void> | null = null;
+const enSerie = crearCola();
+let mpvCreado = false;
 
 /**
  * Inicializa mpv una sola vez (la primera reproducción) y no se destruye: la ventana es
@@ -31,15 +34,18 @@ let iniciado: Promise<void> | null = null;
  */
 function iniciarMpv(): Promise<void> {
   iniciado ??= (async () => {
-    await init({
-      initialOptions: {
-        vo: 'gpu-next',
-        hwdec: 'auto-safe',
-        'keep-open': 'yes',
-        'force-window': 'yes',
-      },
-      observedProperties: OBSERVADAS,
-    });
+    if (!mpvCreado) {
+      await init({
+        initialOptions: {
+          vo: 'gpu-next',
+          hwdec: 'auto-safe',
+          'keep-open': 'yes',
+          'force-window': 'yes',
+        },
+        observedProperties: OBSERVADAS,
+      });
+      mpvCreado = true;
+    }
     await observeProperties(OBSERVADAS, ({ name, data }) => {
       if (name === 'pause') reproductor.pausa = Boolean(data);
       else if (name === 'duration') reproductor.duracion = Number(data ?? 0);
@@ -53,8 +59,13 @@ function iniciarMpv(): Promise<void> {
   return iniciado;
 }
 
-/** Carga un Playable y empieza a reproducir. */
-export async function cargar(p: Playable): Promise<void> {
+/** Carga un Playable y empieza a reproducir. Se serializa con `detener` para que no se crucen. */
+export function cargar(p: Playable): Promise<void> {
+  return enSerie(() => cargarAhora(p));
+}
+
+/** Cuerpo de `cargar` sin serializar; solo lo llama `cargar`. */
+async function cargarAhora(p: Playable): Promise<void> {
   await iniciarMpv();
   reproductor.terminado = false;
   reproductor.posicion = 0;
@@ -79,7 +90,12 @@ export function saltarAbsoluto(segundos: number): Promise<void> {
 }
 
 /** Detiene la reproducción y vacía la lista; mpv sigue vivo para el siguiente episodio. */
-export async function detener(): Promise<void> {
+export function detener(): Promise<void> {
+  return enSerie(detenerAhora);
+}
+
+/** Cuerpo de `detener` sin serializar; solo lo llama `detener`. */
+async function detenerAhora(): Promise<void> {
   if (!iniciado) return;
   await command('stop');
   reproductor.posicion = 0;
