@@ -15,12 +15,14 @@
     cambiarVolumen,
     cargar,
     detener,
+    fijarVelocidad,
     fijarVolumen,
     reproductor,
     saltarAbsoluto,
     saltarRelativo,
   } from '../lib/reproductor.svelte.ts';
   import { cambiarIdioma } from '../lib/idioma.ts';
+  import { VELOCIDADES, etiquetaVelocidad } from '../lib/velocidad.ts';
   import { estadoSiguiente } from '../lib/siguiente.ts';
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
   import { formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
@@ -45,6 +47,8 @@
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
   let menuIdioma = $state(false);
   let contenedorIdioma = $state<HTMLElement>();
+  let menuVelocidad = $state(false);
+  let contenedorVelocidad = $state<HTMLElement>();
   let pista = $state<HTMLElement>();
   /** Con el cursor sobre la barra: x en píxeles desde su borde izquierdo y segundo que señala. */
   let cursor = $state<{ x: number; t: number } | null>(null);
@@ -116,7 +120,7 @@
     controlesVisibles = true;
     clearTimeout(temporizador);
     temporizador = setTimeout(() => {
-      if (!reproductor.pausa && !menuIdioma && arrastre === null) controlesVisibles = false;
+      if (!reproductor.pausa && !menuIdioma && !menuVelocidad && arrastre === null) controlesVisibles = false;
     }, 3000);
   }
 
@@ -188,6 +192,9 @@
 
   function alClicFuera(e: PointerEvent) {
     if (menuIdioma && contenedorIdioma && !contenedorIdioma.contains(e.target as Node)) menuIdioma = false;
+    if (menuVelocidad && contenedorVelocidad && !contenedorVelocidad.contains(e.target as Node)) {
+      menuVelocidad = false;
+    }
   }
 
   function volver() {
@@ -214,9 +221,11 @@
 
   function teclas(e: KeyboardEvent) {
     if (e.code === 'Escape') {
-      // Esc cierra primero el desplegable de idioma; solo sin él abierto vuelve a la ficha.
-      if (menuIdioma) menuIdioma = false;
-      else volver();
+      // Esc cierra primero cualquier desplegable abierto; solo sin ninguno vuelve a la ficha.
+      if (menuIdioma || menuVelocidad) {
+        menuIdioma = false;
+        menuVelocidad = false;
+      } else volver();
       return;
     }
     if (estado !== 'listo') return;
@@ -363,6 +372,29 @@
           value={reproductor.silencio ? 0 : reproductor.volumen}
           oninput={(e) => fijarVolumen(Number(e.currentTarget.value))}
         />
+        <div class="menu-velocidad" bind:this={contenedorVelocidad}>
+          <button
+            aria-haspopup="menu"
+            aria-expanded={menuVelocidad}
+            aria-label="Velocidad de reproducción"
+            onclick={() => (menuVelocidad = !menuVelocidad)}>{etiquetaVelocidad(reproductor.velocidad)} ▾</button
+          >
+          {#if menuVelocidad}
+            <div class="opciones" role="menu">
+              {#each VELOCIDADES as v (v)}
+                <button
+                  role="menuitemradio"
+                  aria-checked={v === reproductor.velocidad}
+                  class:activo={v === reproductor.velocidad}
+                  onclick={() => {
+                    menuVelocidad = false;
+                    void fijarVelocidad(v);
+                  }}>{v === reproductor.velocidad ? '✓ ' : ''}{etiquetaVelocidad(v)}</button
+                >
+              {/each}
+            </div>
+          {/if}
+        </div>
         <div class="menu-idioma" bind:this={contenedorIdioma}>
           <button
             aria-haspopup="menu"
@@ -541,7 +573,8 @@
     pointer-events: none;
     white-space: nowrap;
   }
-  .menu-idioma {
+  .menu-idioma,
+  .menu-velocidad {
     position: relative;
   }
   .opciones {

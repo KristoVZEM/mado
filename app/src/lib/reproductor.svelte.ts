@@ -20,6 +20,7 @@ const OBSERVADAS = [
   ['eof-reached', 'flag', 'none'],
   ['volume', 'double'],
   ['mute', 'flag'],
+  ['speed', 'double'],
 ] as const satisfies MpvObservableProperty[];
 
 /** Estado reactivo del reproductor, alimentado por los eventos de mpv. */
@@ -58,6 +59,7 @@ function iniciarMpv(): Promise<void> {
       await asegurarAjustes();
       reproductor.volumen = ajustes.volumen;
       await setProperty('volume', reproductor.volumen);
+      await setProperty('speed', ajustes.velocidad);
     }
     await observeProperties(OBSERVADAS, ({ name, data }) => {
       if (name === 'pause') reproductor.pausa = Boolean(data);
@@ -66,6 +68,7 @@ function iniciarMpv(): Promise<void> {
       else if (name === 'eof-reached') reproductor.terminado = Boolean(data);
       else if (name === 'volume' && data != null) reproductor.volumen = Number(data);
       else if (name === 'mute') reproductor.silencio = Boolean(data);
+      else if (name === 'speed' && data != null) reproductor.velocidad = Number(data);
     });
   })().catch((e) => {
     iniciado = null; // permite reintentar si falló
@@ -106,6 +109,13 @@ export async function fijarVolumen(n: number): Promise<void> {
   guardarAjusteSilencioso('volumen', String(v));
   await setProperty('volume', v);
   if (reproductor.silencio && v > 0) await setProperty('mute', false);
+}
+
+/** Fija la velocidad de reproducción y la recuerda para los próximos episodios. */
+export async function fijarVelocidad(v: number): Promise<void> {
+  await setProperty('speed', v);
+  ajustes.velocidad = v;
+  guardarAjusteSilencioso('velocidad', String(v));
 }
 
 /** Sube o baja el volumen un paso; `direccion` es 1 o -1. */
