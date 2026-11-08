@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { onDestroy, onMount } from 'svelte';
+  import { onDestroy, onMount, untrack } from 'svelte';
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError } from '../lib/errores.ts';
@@ -24,7 +24,9 @@
   import { cambiarIdioma } from '../lib/idioma.ts';
   import { VELOCIDADES, etiquetaVelocidad } from '../lib/velocidad.ts';
   import { estadoSiguiente } from '../lib/siguiente.ts';
-  import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
+  import { guardarProgreso, marcarVisto, progresoDe, type SerieRef } from '../lib/datos.ts';
+  import { debeGuardar, esVisto, posicionDeRetoma } from '../lib/progreso.ts';
   import { formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
@@ -42,6 +44,12 @@
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   let destruido = false;
   let yaSaltado = false;
+  const serie: SerieRef = $derived({ aid: anime.aid, slug: anime.slug, titulo: anime.title });
+  /** Ya se marcó este episodio como visto: no se vuelve a guardar su progreso. */
+  let visto = false;
+  let ultimoGuardadoMs = Date.now();
+  let ultimaPosicionGuardada = 0;
+  let avisoDatosDado = false;
   let cambiandoIdioma = $state(false);
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
@@ -81,6 +89,7 @@
   /** Cambia de episodio conservando idioma y pantalla completa; solo actúa una vez por pantalla. */
   function irAEpisodio(destino: number | undefined) {
     if (destino === undefined || yaSaltado) return;
+    if (destino === siguiente) marcarComoVisto();
     yaSaltado = true;
     irA({ tipo: 'reproducir', anime, numeros, numero: destino, idioma });
   }
@@ -92,15 +101,38 @@
     if (proximo?.saltar) irAlSiguiente();
   });
 
+  // Guarda mientras se reproduce (con límite) y marca visto al cruzar el umbral o al terminar.
+  $effect(() => {
+    const posicion = reproductor.posicion;
+    const duracion = reproductor.duracion;
+    const terminado = reproductor.terminado;
+    if (estado !== 'listo') return;
+    if (terminado || esVisto(posicion, duracion)) {
+      marcarComoVisto();
+      return;
+    }
+    untrack(() => guardarAhora());
+  });
+
+  // Al pausar, guardar al momento.
+  $effect(() => {
+    if (reproductor.pausa) untrack(() => guardarAhora(true));
+  });
+
   onMount(async () => {
     try {
       await asegurarAjustes();
       const p = await fuentes.resolver(anime.slug, numero, idioma);
       if (destruido) return;
       playable = p;
-      await cargar(p);
+      // Retomar donde se dejó; si la base falla o no hay punto válido, se empieza en 0:00.
+      const inicio = posicionDeRetoma(await progresoDe(anime.aid, numero).catch(() => null));
+      await cargar(p, inicio > 0 ? inicio : undefined);
       if (destruido) return;
+      ultimoGuardadoMs = Date.now();
+      ultimaPosicionGuardada = inicio;
       estado = 'listo';
+      guardarAjusteSilencioso(`idioma:${anime.aid}`, idioma);
       mostrarControles();
     } catch (e) {
       console.error(e);
@@ -113,6 +145,7 @@
     destruido = true;
     clearTimeout(temporizador);
     clearTimeout(temporizadorAviso);
+    guardarAhora(true);
     void detener();
   });
 
@@ -135,6 +168,44 @@
     temporizadorAviso = setTimeout(() => (aviso = ''), 5000);
   }
 
+  /** Los datos nunca bloquean la reproducción: se registra el fallo y se avisa una sola vez. */
+  function falloDeDatos(e: unknown) {
+    console.error(e);
+    if (avisoDatosDado || destruido) return;
+    avisoDatosDado = true;
+    avisar('No se pudo guardar el progreso de este episodio.');
+  }
+
+  /** Guarda la posición actual si toca (o siempre, con `forzar`). No hace nada si ya está visto. */
+  function guardarAhora(forzar = false) {
+    if (visto || estado !== 'listo' || reproductor.duracion <= 0) return;
+    const posicion = reproductor.posicion;
+    const ahoraMs = Date.now();
+    if (
+      !forzar &&
+      !debeGuardar({
+        ahoraMs,
+        ultimoMs: ultimoGuardadoMs,
+        posicion,
+        ultimaPosicion: ultimaPosicionGuardada,
+        velocidad: reproductor.velocidad,
+      })
+    ) {
+      return;
+    }
+    if (!(posicion > 0)) return;
+    ultimoGuardadoMs = ahoraMs;
+    ultimaPosicionGuardada = posicion;
+    guardarProgreso(serie, numero, posicion, reproductor.duracion).catch(falloDeDatos);
+  }
+
+  /** Marca el episodio como visto una sola vez (y deja listo el siguiente en 0:00 en la base). */
+  function marcarComoVisto() {
+    if (visto) return;
+    visto = true;
+    marcarVisto(serie, numero, siguiente).catch(falloDeDatos);
+  }
+
   /** Cambia SUB/DUB conservando el segundo; si el idioma nuevo falla, el vídeo actual sigue. */
   async function elegirIdioma(nuevo: Idioma) {
     menuIdioma = false;
@@ -151,6 +222,9 @@
       playable = p;
       // La pantalla se identifica por el número de episodio, así que esto no la remonta.
       irA({ tipo: 'reproducir', anime, numeros, numero, idioma: nuevo });
+      guardarAjusteSilencioso(`idioma:${anime.aid}`, nuevo);
+      ultimoGuardadoMs = Date.now();
+      ultimaPosicionGuardada = reproductor.posicion;
     } catch (e) {
       console.error(e);
       if (!destruido) avisar(`No se pudo cambiar a ${nuevo}: ${mensajeDeError(e)}`);
