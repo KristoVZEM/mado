@@ -5,9 +5,19 @@ los mismos datos que usa la app Android [Ukiku](https://github.com/jordyamc/UKIK
 
 ## Estado
 
-Idea aprobada, sin implementar. Falta el spike: un script sin interfaz, en
-Node, que resuelva un episodio a una URL reproducible (con mpv como
-reproductor de referencia). No hay código todavía.
+En desarrollo. El spike de resolución (`spike/`) y el de libmpv en Tauri
+validaron la técnica. Hoy hay:
+
+- `core/`: núcleo de fuentes en TypeScript (buscar, episodios y resolver
+  Zilla, MP4Upload y Voe, con errores tipados).
+- `app/`: aplicación de escritorio (Tauri + Svelte + libmpv) que busca,
+  muestra la ficha y reproduce con controles flotantes.
+- `lab/`: chequeo diario de que las fuentes siguen sirviendo (corre en un
+  servidor propio).
+- `spike/`: el spike original; lo usa `lab/` hasta migrar a `core/`.
+
+Pendiente: datos locales (favoritos, historial, progreso), importar el
+`.backup` de Ukiku y el resto de la interfaz.
 
 ## Plan general
 

@@ -1,0 +1,54 @@
+/* El fondo del documento es transparente: solo la pantalla del Reproductor deja ver el vídeo de mpv. */
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  color: #eee;
+  font: 14px/1.4 system-ui, sans-serif;
+}
+
+#app {
+  height: 100%;
+}
+
+/* Pantallas normales (Buscar, Ficha): fondo opaco, tapan el vídeo de mpv que hay detrás. */
+.pantalla {
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 16px 20px;
+  background: #14141a;
+}
+
+button {
+  padding: 6px 12px;
+  border: 1px solid #3a3a46;
+  border-radius: 6px;
+  background: #23232d;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #2d2d3a;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+input[type='text'],
+input:not([type]) {
+  padding: 6px 10px;
+  border: 1px solid #3a3a46;
+  border-radius: 6px;
+  background: #1c1c24;
+  color: inherit;
+  font: inherit;
+}
+
+.error {
+  color: #ff8a8a;
+}

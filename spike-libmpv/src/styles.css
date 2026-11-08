@@ -1,6 +1,0 @@
-html, body { margin: 0; height: 100%; background: transparent; font: 14px system-ui, sans-serif; color: #eee; }
-#bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; align-items: center;
-  padding: 10px 14px; background: rgba(20, 20, 24, 0.92); }
-#playable { flex: 1; min-width: 0; }
-#seek { flex: 2; }
-#status { color: #f90; }
