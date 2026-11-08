@@ -1,10 +1,11 @@
 mod resolver;
+mod datos;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::webview::NewWindowResponse;
-use tauri::{AppHandle, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 const CAPTURE_SCRIPT: &str = include_str!("capture.js");
 const MAX_TIMEOUT_MS: u64 = 60_000;
@@ -78,7 +79,35 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_libmpv::init())
         .plugin(tauri_plugin_http::init())
-        .invoke_handler(tauri::generate_handler![resolve_webview])
+        .setup(|app| {
+            // La base vive en el directorio de datos locales de la app (no Roaming). Si no se puede
+            // abrir (p. ej. es de una versión más nueva), la app arranca igual y cada comando de
+            // datos devuelve ese motivo: los datos nunca impiden ver un episodio.
+            let conexion = app
+                .path()
+                .app_local_data_dir()
+                .map_err(|e| e.to_string())
+                .and_then(|dir| {
+                    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+                    datos::abrir(&dir.join("ukiku.db")).map_err(|e| e.to_string())
+                });
+            if let Err(motivo) = &conexion {
+                eprintln!("[datos] no disponible: {motivo}");
+            }
+            app.manage(datos::comandos::Datos(Mutex::new(conexion)));
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            resolve_webview,
+            datos::comandos::estado_datos,
+            datos::comandos::guardar_progreso,
+            datos::comandos::marcar_visto,
+            datos::comandos::progreso_de,
+            datos::comandos::continuar_viendo,
+            datos::comandos::descartar_progreso,
+            datos::comandos::leer_ajuste,
+            datos::comandos::guardar_ajuste,
+        ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicación de Tauri");
 }
