@@ -126,7 +126,13 @@
       if (destruido) return;
       playable = p;
       // Retomar donde se dejó; si la base falla o no hay punto válido, se empieza en 0:00.
-      const inicio = posicionDeRetoma(await progresoDe(anime.aid, numero).catch(() => null));
+      const inicio = posicionDeRetoma(
+        await progresoDe(anime.aid, numero).catch((e) => {
+          console.error(e);
+          return null;
+        }),
+      );
+      if (destruido) return;
       await cargar(p, inicio > 0 ? inicio : undefined);
       if (destruido) return;
       ultimoGuardadoMs = Date.now();
