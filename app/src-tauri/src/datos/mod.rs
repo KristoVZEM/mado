@@ -119,21 +119,33 @@ fn ruta_copia(ruta: &Path, version: u32) -> PathBuf {
     PathBuf::from(nombre)
 }
 
+/// Ruta donde se escribe la copia antes de renombrarla sobre `ruta_copia`.
+fn ruta_copia_temporal(ruta: &Path, version: u32) -> PathBuf {
+    let mut nombre = ruta_copia(ruta, version).into_os_string();
+    nombre.push(".tmp");
+    PathBuf::from(nombre)
+}
+
 /// Abre (o crea) la base en `ruta`, la configura y la migra. Si ya existía con datos y hay
 /// migraciones pendientes, antes guarda una copia con `VACUUM INTO`.
 pub fn abrir(ruta: &Path) -> Resultado<Connection> {
     let mut conn = Connection::open(ruta)?;
-    configurar(&conn)?;
+    // Antes de comprobar la versión no se escribe nada: cambiar a WAL reescribe la cabecera.
+    conn.busy_timeout(Duration::from_secs(5))?;
     let actual = version_actual(&conn)?;
     if actual > VERSION {
         return Err(Error::BaseMasNueva { encontrada: actual, conocida: VERSION });
     }
+    configurar(&conn)?;
     if actual > 0 && actual < VERSION {
         let copia = ruta_copia(ruta, actual);
-        if copia.exists() {
-            std::fs::remove_file(&copia)?;
+        let temporal = ruta_copia_temporal(ruta, actual);
+        if temporal.exists() {
+            std::fs::remove_file(&temporal)?;
         }
-        conn.execute("VACUUM INTO ?1", [copia.to_string_lossy().as_ref()])?;
+        conn.execute("VACUUM INTO ?1", [temporal.to_string_lossy().as_ref()])?;
+        // La copia anterior solo se sustituye cuando la nueva ya está completa.
+        std::fs::rename(&temporal, &copia)?;
     }
     migrar(&mut conn)?;
     Ok(conn)
@@ -221,6 +233,31 @@ mod pruebas {
     fn la_ruta_de_la_copia_lleva_la_version_de_origen() {
         let r = ruta_copia(Path::new("C:/datos/ukiku.db"), 1);
         assert_eq!(r, PathBuf::from("C:/datos/ukiku.db.v1.bak"));
+    }
+
+    #[test]
+    fn la_ruta_temporal_de_la_copia_termina_en_tmp() {
+        let r = ruta_copia_temporal(Path::new("C:/datos/ukiku.db"), 1);
+        assert_eq!(r, PathBuf::from("C:/datos/ukiku.db.v1.bak.tmp"));
+    }
+
+    #[test]
+    fn abrir_una_base_mas_nueva_no_modifica_el_archivo() {
+        let ruta = ruta_temporal("nueva.db");
+        {
+            let conn = Connection::open(&ruta).unwrap();
+            conn.execute_batch("PRAGMA user_version = 99;").unwrap();
+        }
+        let antes = std::fs::read(&ruta).unwrap();
+        let err = abrir(&ruta).unwrap_err();
+        assert!(matches!(err, Error::BaseMasNueva { encontrada: 99, conocida: VERSION }));
+        let despues = std::fs::read(&ruta).unwrap();
+        assert_eq!(antes[18..20], despues[18..20], "el modo de journal de la cabecera cambió");
+        assert_eq!(antes, despues);
+        for sufijo in ["-wal", "-shm"] {
+            assert!(!Path::new(&format!("{}{sufijo}", ruta.display())).exists());
+        }
+        let _ = std::fs::remove_file(&ruta);
     }
 
     #[test]
