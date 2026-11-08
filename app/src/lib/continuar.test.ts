@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { formatoTiempo, fraccionVista, idiomaGuardado, textoTarjeta, validarSalto } from './continuar.ts';
+import { formatoTiempo, fraccionVista, idiomaGuardado, textoRestante, textoTarjeta, validarSalto } from './continuar.ts';
 
 test('formatoTiempo', () => {
   assert.equal(formatoTiempo(0), '0:00');
@@ -39,4 +39,10 @@ test('validarSalto', () => {
   assert.equal(validarSalto('7.5', 5, 60), null);
   assert.equal(validarSalto('', 5, 60), null);
   assert.equal(validarSalto('abc', 5, 60), null);
+});
+
+test('textoRestante', () => {
+  assert.equal(textoRestante(3, 245, 1420), 'Ep. 3 · quedan 19:35');
+  assert.equal(textoRestante(1.5, 0, 0), 'Ep. 1.5');
+  assert.equal(textoRestante(2, 1500, 1400), 'Ep. 2 · quedan 0:00');
 });

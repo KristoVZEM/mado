@@ -11,3 +11,8 @@ test('los ids del carril son únicos y la sección inicial está en él', () => 
 test('Ajustes va siempre el último', () => {
   assert.equal(CARRIL.at(-1)?.id, 'ajustes');
 });
+
+test('Inicio es el primero y la sección de arranque', () => {
+  assert.equal(CARRIL[0]?.id, 'inicio');
+  assert.equal(SECCION_INICIAL, 'inicio');
+});

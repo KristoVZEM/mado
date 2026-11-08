@@ -36,3 +36,10 @@ export function validarSalto(texto: string, min: number, max: number): number | 
   const n = Number(t);
   return Number.isInteger(n) && n >= min && n <= max ? n : null;
 }
+
+/** Texto de la tarjeta de Inicio: `Ep. 3 · quedan 19:35` (solo `Ep. 3` si no se conoce la duración). */
+export function textoRestante(numero: number, posicionS: number, duracionS: number): string {
+  if (!Number.isFinite(duracionS) || duracionS <= 0) return `Ep. ${numero}`;
+  const pos = Number.isFinite(posicionS) && posicionS > 0 ? posicionS : 0;
+  return `Ep. ${numero} · quedan ${formatoTiempo(Math.max(0, duracionS - pos))}`;
+}

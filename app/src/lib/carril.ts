@@ -7,9 +7,10 @@ export interface ElementoCarril {
 
 /** Orden del carril. Cada sección se añade cuando existe; Emisión no aparece hasta entonces. */
 export const CARRIL: readonly ElementoCarril[] = [
+  { id: 'inicio', nombre: 'Inicio' },
   { id: 'catalogo', nombre: 'Catálogo' },
   { id: 'biblioteca', nombre: 'Biblioteca' },
   { id: 'ajustes', nombre: 'Ajustes' },
 ];
 
-export const SECCION_INICIAL: Seccion = 'catalogo';
+export const SECCION_INICIAL: Seccion = 'inicio';

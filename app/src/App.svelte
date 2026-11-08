@@ -3,6 +3,7 @@
   import Ajustes from './pantallas/Ajustes.svelte';
   import Biblioteca from './pantallas/Biblioteca.svelte';
   import Catalogo from './pantallas/Catalogo.svelte';
+  import Inicio from './pantallas/Inicio.svelte';
   import Ficha from './pantallas/Ficha.svelte';
   import Reproductor from './pantallas/Reproductor.svelte';
   import { nav } from './lib/navegacion.svelte.ts';
@@ -23,6 +24,8 @@
       {#key nav.superior.anime.aid}
         <Ficha anime={nav.superior.anime} />
       {/key}
+    {:else if nav.seccion === 'inicio'}
+      <Inicio />
     {:else if nav.seccion === 'catalogo'}
       <Catalogo />
     {:else if nav.seccion === 'biblioteca'}
