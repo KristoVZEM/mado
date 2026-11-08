@@ -5,6 +5,7 @@ import {
   MIN_RETOMAR_S,
   SALTO_GRANDE_S,
   UMBRAL_VISTO,
+  anterioresDe,
   debeGuardar,
   esVisto,
   posicionDeRetoma,
@@ -77,4 +78,19 @@ test('debeGuardar: con velocidad 2× la posición esperada avanza el doble', () 
 test('debeGuardar: posición cero o no finita nunca guarda', () => {
   assert.equal(debeGuardar({ ...base, posicion: 0 }), false);
   assert.equal(debeGuardar({ ...base, posicion: Number.NaN }), false);
+});
+
+test('anterioresDe: los episodios con número menor, ordenados y sin repetidos', () => {
+  assert.deepEqual(anterioresDe([1, 2, 3, 4, 5], 4), [1, 2, 3]);
+  assert.deepEqual(anterioresDe([5, 3, 1, 3, 2], 4), [1, 2, 3]);
+  assert.deepEqual(anterioresDe([1, 2, 12.5, 13], 13), [1, 2, 12.5]);
+});
+
+test('anterioresDe: sin anteriores da una lista vacía', () => {
+  assert.deepEqual(anterioresDe([1, 2, 3], 1), []);
+  assert.deepEqual(anterioresDe([], 5), []);
+});
+
+test('anterioresDe: ignora valores no finitos y negativos', () => {
+  assert.deepEqual(anterioresDe([Number.NaN, -1, 1, 2], 3), [1, 2]);
 });

@@ -35,14 +35,18 @@ export const guardarProgreso = (serie: SerieRef, numero: number, posicionS: numb
     duracionS,
   });
 
-export const marcarVisto = (serie: SerieRef, numero: number, siguiente?: number) =>
+export const marcarVisto = (serie: SerieRef, numero: number, siguiente?: number, anteriores: number[] = []) =>
   invoke<void>('marcar_visto', {
     aid: serie.aid,
     slug: serie.slug,
     titulo: serie.titulo,
     numero,
     siguiente: siguiente ?? null,
+    anteriores,
   });
+
+/** Números de episodio vistos de una serie, de menor a mayor. */
+export const episodiosVistos = (aid: number) => invoke<number[]>('episodios_vistos', { aid });
 
 export const progresoDe = (aid: number, numero: number) => invoke<number | null>('progreso_de', { aid, numero });
 

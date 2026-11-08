@@ -57,11 +57,17 @@ pub fn marcar_visto(
     titulo: String,
     numero: f64,
     siguiente: Option<f64>,
+    anteriores: Option<Vec<f64>>,
 ) -> Result<(), String> {
     con(&datos, |c| {
         let serie = Serie { aid, slug: &slug, titulo: &titulo };
-        progreso::marcar_visto(c, ahora_ms(), &serie, numero, siguiente)
+        progreso::marcar_visto(c, ahora_ms(), &serie, numero, siguiente, &anteriores.unwrap_or_default())
     })
+}
+
+#[tauri::command(async)]
+pub fn episodios_vistos(datos: State<'_, Datos>, aid: i64) -> Result<Vec<f64>, String> {
+    con(&datos, |c| progreso::episodios_vistos(c, aid))
 }
 
 #[tauri::command(async)]

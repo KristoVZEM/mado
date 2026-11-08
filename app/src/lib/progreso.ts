@@ -43,3 +43,12 @@ export function debeGuardar(e: EstadoGuardado): boolean {
   const esperada = e.ultimaPosicion + (transcurridoMs / 1000) * velocidad;
   return Math.abs(e.posicion - esperada) > SALTO_GRANDE_S;
 }
+
+/**
+ * Episodios de la lista con número menor que `numero`, sin repetidos y de menor a mayor: son los
+ * que se marcan también como vistos al marcar `numero`. Salen siempre de la lista de episodios.
+ */
+export function anterioresDe(numeros: number[], numero: number): number[] {
+  const unicos = new Set(numeros.filter((n) => Number.isFinite(n) && n >= 0 && n < numero));
+  return [...unicos].sort((a, b) => a - b);
+}
