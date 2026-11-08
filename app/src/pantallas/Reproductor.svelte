@@ -1,6 +1,8 @@
 <script module lang="ts">
   /** Vive fuera de la instancia: al pasar de episodio la pantalla se remonta y debe seguir igual. */
   let pantallaCompleta = false;
+  /** Fuera de la instancia por lo mismo: la pantalla se remonta en cada episodio y el aviso de datos es uno por sesión. */
+  let avisoDatosDado = false;
 </script>
 
 <script lang="ts">
@@ -49,7 +51,6 @@
   let visto = false;
   let ultimoGuardadoMs = Date.now();
   let ultimaPosicionGuardada = 0;
-  let avisoDatosDado = false;
   let cambiandoIdioma = $state(false);
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
