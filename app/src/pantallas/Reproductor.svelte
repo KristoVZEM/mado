@@ -60,6 +60,11 @@
     return i >= 0 ? numeros[i + 1] : undefined;
   });
 
+  const anterior = $derived.by<number | undefined>(() => {
+    const i = numeros.indexOf(numero);
+    return i > 0 ? numeros[i - 1] : undefined;
+  });
+
   // Como Netflix: en los últimos segundos aparece el botón de siguiente episodio, que se rellena y,
   // un instante antes del final, pasa solo. No hay forma de desactivarlo.
   const proximo = $derived(
@@ -68,11 +73,15 @@
       : null,
   );
 
-  function irAlSiguiente() {
-    if (siguiente === undefined || yaSaltado) return;
+  /** Cambia de episodio conservando idioma y pantalla completa; solo actúa una vez por pantalla. */
+  function irAEpisodio(destino: number | undefined) {
+    if (destino === undefined || yaSaltado) return;
     yaSaltado = true;
-    irA({ tipo: 'reproducir', anime, numeros, numero: siguiente, idioma });
+    irA({ tipo: 'reproducir', anime, numeros, numero: destino, idioma });
   }
+
+  const irAlSiguiente = () => irAEpisodio(siguiente);
+  const irAlAnterior = () => irAEpisodio(anterior);
 
   $effect(() => {
     if (proximo?.saltar) irAlSiguiente();
@@ -322,10 +331,22 @@
         {/if}
       </div>
       <div class="botones">
+        <button
+          onclick={irAlAnterior}
+          disabled={anterior === undefined}
+          aria-label="Episodio anterior"
+          title={anterior === undefined ? 'No hay episodio anterior' : `Episodio ${anterior}`}>⏮</button
+        >
         <button onclick={() => saltarRelativo(-SALTO_CORTO_S)}>−{SALTO_CORTO_S}</button>
         <button onclick={alternarPausa}>{reproductor.pausa ? '▶' : '⏸'}</button>
         <button onclick={() => saltarRelativo(SALTO_CORTO_S)}>+{SALTO_CORTO_S}</button>
         <button onclick={() => saltarRelativo(SALTO_LARGO_S)}>+{SALTO_LARGO_S} s</button>
+        <button
+          onclick={irAlSiguiente}
+          disabled={siguiente === undefined}
+          aria-label="Episodio siguiente"
+          title={siguiente === undefined ? 'No hay episodio siguiente' : `Episodio ${siguiente}`}>⏭</button
+        >
         <span class="tiempo">{formatearTiempo(reproductor.posicion)} / {formatearTiempo(reproductor.duracion)}</span>
         <button onclick={alternarSilencio} aria-label={reproductor.silencio ? 'Quitar silencio' : 'Silenciar'}>
           {reproductor.silencio || reproductor.volumen === 0 ? '🔇' : '🔊'}
@@ -401,21 +422,25 @@
     bottom: 28px;
     overflow: hidden;
     padding: 12px 22px;
-    border: 1px solid #fff;
-    background: rgba(0, 0, 0, 0.75);
-    transition: bottom 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    transition: bottom 0.2s, background 0.15s, color 0.15s;
   }
   /* Con los controles a la vista se sube para no taparlos. */
   .siguiente.alto {
     bottom: 110px;
   }
+  /* Al pasar el cursor se vuelve más sólido, para que se lea bien antes de pulsarlo. */
   .siguiente:hover:not(:disabled) {
-    background: rgba(0, 0, 0, 0.75);
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
   }
   .relleno-siguiente {
     position: absolute;
     inset: 0 auto 0 0;
-    background: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.25);
   }
   .texto-siguiente {
     position: relative;
