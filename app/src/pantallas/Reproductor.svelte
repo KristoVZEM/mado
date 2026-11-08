@@ -30,7 +30,10 @@
   let pantallaCompleta = false;
   let destruido = false;
 
-  const siguiente = $derived<number | undefined>(numeros[numeros.indexOf(numero) + 1]);
+  const siguiente = $derived.by<number | undefined>(() => {
+    const i = numeros.indexOf(numero);
+    return i >= 0 ? numeros[i + 1] : undefined;
+  });
 
   onMount(async () => {
     try {
@@ -73,16 +76,22 @@
   }
 
   function teclas(e: KeyboardEvent) {
-    if (estado !== 'listo' || e.target instanceof HTMLInputElement) return;
+    if (e.code === 'Escape') {
+      volver();
+      return;
+    }
+    if (estado !== 'listo') return;
     switch (e.code) {
       case 'Space':
         e.preventDefault();
         void alternarPausa();
         break;
       case 'ArrowLeft':
+        e.preventDefault();
         void saltarRelativo(-SALTO_CORTO_S);
         break;
       case 'ArrowRight':
+        e.preventDefault();
         void saltarRelativo(SALTO_CORTO_S);
         break;
       case 'KeyS':
@@ -90,9 +99,6 @@
         break;
       case 'KeyF':
         void alternarPantallaCompleta();
-        break;
-      case 'Escape':
-        volver();
         break;
       default:
         return;
