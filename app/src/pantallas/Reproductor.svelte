@@ -16,7 +16,7 @@
     saltarRelativo,
   } from '../lib/reproductor.svelte.ts';
   import { cambiarIdioma } from '../lib/idioma.ts';
-  import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo } from '../lib/saltos.ts';
+  import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
   let {
@@ -36,6 +36,18 @@
   let cambiandoIdioma = $state(false);
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
+  let menuIdioma = $state(false);
+  let contenedorIdioma = $state<HTMLElement>();
+  let pista = $state<HTMLElement>();
+  /** Con el cursor sobre la barra: x en píxeles desde su borde izquierdo y segundo que señala. */
+  let cursor = $state<{ x: number; t: number } | null>(null);
+  /** Mientras se arrastra sobre la barra: segundo señalado (se aplica al soltar). */
+  let arrastre = $state<number | null>(null);
+
+  const tiempoMostrado = $derived(arrastre ?? reproductor.posicion);
+  const fraccionMostrada = $derived(
+    reproductor.duracion > 0 ? Math.min(1, tiempoMostrado / reproductor.duracion) : 0,
+  );
 
   const siguiente = $derived.by<number | undefined>(() => {
     const i = numeros.indexOf(numero);
@@ -70,7 +82,7 @@
     controlesVisibles = true;
     clearTimeout(temporizador);
     temporizador = setTimeout(() => {
-      if (!reproductor.pausa) controlesVisibles = false;
+      if (!reproductor.pausa && !menuIdioma && arrastre === null) controlesVisibles = false;
     }, 3000);
   }
 
@@ -87,6 +99,7 @@
 
   /** Cambia SUB/DUB conservando el segundo; si el idioma nuevo falla, el vídeo actual sigue. */
   async function elegirIdioma(nuevo: Idioma) {
+    menuIdioma = false;
     if (nuevo === idioma || cambiandoIdioma) return;
     cambiandoIdioma = true;
     try {
@@ -108,13 +121,50 @@
     }
   }
 
+  /** Segundo que señala un evento de puntero sobre la barra de progreso. */
+  function tiempoDe(e: PointerEvent): { x: number; t: number } | null {
+    if (!pista) return null;
+    const caja = pista.getBoundingClientRect();
+    return {
+      x: Math.min(caja.width, Math.max(0, e.clientX - caja.left)),
+      t: tiempoEnPosicion(e.clientX, caja.left, caja.width, reproductor.duracion),
+    };
+  }
+
+  function entrarEnBarra(e: PointerEvent) {
+    if (e.button !== 0 || !pista || reproductor.duracion <= 0) return;
+    pista.setPointerCapture(e.pointerId);
+    const p = tiempoDe(e);
+    if (p) arrastre = p.t;
+  }
+
+  function moverEnBarra(e: PointerEvent) {
+    const p = tiempoDe(e);
+    if (!p) return;
+    cursor = p;
+    if (arrastre !== null) arrastre = p.t;
+  }
+
+  function soltarEnBarra() {
+    if (arrastre === null) return;
+    const destino = arrastre;
+    arrastre = null;
+    void saltarAbsoluto(destino);
+  }
+
+  function alClicFuera(e: PointerEvent) {
+    if (menuIdioma && contenedorIdioma && !contenedorIdioma.contains(e.target as Node)) menuIdioma = false;
+  }
+
   function volver() {
     irA({ tipo: 'ficha', anime });
   }
 
   function teclas(e: KeyboardEvent) {
     if (e.code === 'Escape') {
-      volver();
+      // Esc cierra primero el desplegable de idioma; solo sin él abierto vuelve a la ficha.
+      if (menuIdioma) menuIdioma = false;
+      else volver();
       return;
     }
     if (estado !== 'listo') return;
@@ -155,7 +205,7 @@
   }
 </script>
 
-<svelte:window onkeydown={teclas} onmousemove={mostrarControles} />
+<svelte:window onkeydown={teclas} onmousemove={mostrarControles} onpointerdown={alClicFuera} />
 
 <div class="reproductor" class:transparente={estado === 'listo'} class:sin-cursor={estado === 'listo' && !controlesVisibles}>
   {#if estado === 'cargando'}
@@ -185,17 +235,7 @@
     <header class="barra arriba" class:oculta={!controlesVisibles}>
       <button onclick={volver}>← Volver</button>
       <span>{anime.title} · Ep. {numero}</span>
-      <span class="idioma" role="group" aria-label="Idioma">
-        {#each ['SUB', 'DUB'] as const as i (i)}
-          <button
-            class:activo={i === idioma}
-            aria-pressed={i === idioma}
-            disabled={cambiandoIdioma}
-            onclick={() => elegirIdioma(i)}>{i}</button
-          >
-        {/each}
-      </span>
-      {#if cambiandoIdioma}<span>Cambiando…</span>{/if}
+      {#if cambiandoIdioma}<span>Cambiando de idioma…</span>{/if}
       {#if playable?.servidor}
         <span class="etiqueta">{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor}</span>
       {/if}
@@ -206,14 +246,27 @@
     {/if}
 
     <footer class="barra abajo" class:oculta={!controlesVisibles}>
-      <input
-        type="range"
-        min="0"
-        max={reproductor.duracion || 1}
-        step="0.5"
-        value={reproductor.posicion}
-        onchange={(e) => saltarAbsoluto(Number(e.currentTarget.value))}
-      />
+      <div
+        class="progreso"
+        bind:this={pista}
+        role="slider"
+        tabindex="0"
+        aria-label="Posición"
+        aria-valuemin={0}
+        aria-valuemax={Math.round(reproductor.duracion)}
+        aria-valuenow={Math.round(tiempoMostrado)}
+        aria-valuetext={formatearTiempo(tiempoMostrado)}
+        onpointerdown={entrarEnBarra}
+        onpointermove={moverEnBarra}
+        onpointerup={soltarEnBarra}
+        onpointercancel={() => (arrastre = null)}
+        onpointerleave={() => (cursor = null)}
+      >
+        <div class="pista"><div class="relleno" style:width="{fraccionMostrada * 100}%"></div></div>
+        {#if cursor && reproductor.duracion > 0}
+          <div class="burbuja" style:left="{cursor.x}px">{formatearTiempo(arrastre ?? cursor.t)}</div>
+        {/if}
+      </div>
       <div class="botones">
         <button onclick={() => saltarRelativo(-SALTO_CORTO_S)}>−{SALTO_CORTO_S}</button>
         <button onclick={alternarPausa}>{reproductor.pausa ? '▶' : '⏸'}</button>
@@ -233,6 +286,26 @@
           value={reproductor.silencio ? 0 : reproductor.volumen}
           oninput={(e) => fijarVolumen(Number(e.currentTarget.value))}
         />
+        <div class="menu-idioma" bind:this={contenedorIdioma}>
+          <button
+            aria-haspopup="menu"
+            aria-expanded={menuIdioma}
+            disabled={cambiandoIdioma}
+            onclick={() => (menuIdioma = !menuIdioma)}>{idioma} ▾</button
+          >
+          {#if menuIdioma}
+            <div class="opciones" role="menu">
+              {#each ['SUB', 'DUB'] as const as i (i)}
+                <button
+                  role="menuitemradio"
+                  aria-checked={i === idioma}
+                  class:activo={i === idioma}
+                  onclick={() => elegirIdioma(i)}>{i === idioma ? '✓ ' : ''}{i}</button
+                >
+              {/each}
+            </div>
+          {/if}
+        </div>
         <button onclick={alternarPantallaCompleta}>⛶</button>
       </div>
     </footer>
@@ -306,17 +379,63 @@
     border-radius: 4px;
     font-size: 12px;
   }
-  input[type='range'] {
-    width: 100%;
-  }
   input.volumen {
     width: 110px;
   }
-  .idioma {
-    display: inline-flex;
-    gap: 4px;
+  /* Barra de progreso: alta de pulsar (20 px) con una pista fina dentro. */
+  .progreso {
+    position: relative;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    touch-action: none;
   }
-  .idioma button.activo {
+  .pista {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progreso:hover .pista,
+  .progreso:focus-visible .pista {
+    height: 8px;
+  }
+  .relleno {
+    height: 100%;
+    background: #e5484d;
+  }
+  .burbuja {
+    position: absolute;
+    bottom: 24px;
+    transform: translateX(-50%);
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #666;
+    border-radius: 4px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .menu-idioma {
+    position: relative;
+  }
+  .opciones {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.92);
+    border: 1px solid #666;
+    border-radius: 6px;
+  }
+  .opciones button.activo {
     border-color: #fff;
     font-weight: 700;
   }
