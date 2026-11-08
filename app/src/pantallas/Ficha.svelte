@@ -3,6 +3,8 @@
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError } from '../lib/errores.ts';
   import { irA } from '../lib/navegacion.svelte.ts';
+  import { episodiosVistos, leerAjuste } from '../lib/datos.ts';
+  import { idiomaGuardado } from '../lib/continuar.ts';
   import type { Ficha, Idioma, ResultadoBusqueda } from '../../../core/src/index.ts';
 
   let { anime }: { anime: ResultadoBusqueda } = $props();
@@ -11,10 +13,19 @@
   let cargando = $state(true);
   let error = $state('');
   let idioma = $state<Idioma>('SUB');
+  let vistos = $state(new Set<number>());
 
   const numeros = $derived(ficha ? ficha.episodes.map((e) => e.number).sort((a, b) => a - b) : []);
 
   onMount(async () => {
+    // Los datos locales son accesorios: si fallan, la ficha funciona igual, sin ✓ y en SUB.
+    const datos = Promise.all([
+      episodiosVistos(anime.aid).catch(() => [] as number[]),
+      leerAjuste(`idioma:${anime.aid}`).catch(() => null),
+    ]).then(([v, i]) => {
+      vistos = new Set(v);
+      idioma = idiomaGuardado(i);
+    });
     try {
       ficha = await fuentes.episodios(anime.slug);
     } catch (e) {
@@ -23,6 +34,7 @@
     } finally {
       cargando = false;
     }
+    await datos;
   });
 
   function reproducir(numero: number) {
@@ -46,7 +58,9 @@
     </p>
     <div class="episodios">
       {#each numeros as n (n)}
-        <button onclick={() => reproducir(n)}>{n}</button>
+        <button class:visto={vistos.has(n)} onclick={() => reproducir(n)}>
+          {n}{#if vistos.has(n)}<span class="marca" aria-label="visto"> ✓</span>{/if}
+        </button>
       {/each}
     </div>
   {/if}
@@ -60,5 +74,11 @@
   }
   .episodios button {
     min-width: 52px;
+  }
+  .episodios button.visto {
+    opacity: 0.65;
+  }
+  .marca {
+    color: #4caf50;
   }
 </style>
