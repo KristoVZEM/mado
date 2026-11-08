@@ -121,6 +121,15 @@
     if (reproductor.pausa) untrack(() => guardarAhora(true));
   });
 
+  // mpv carga en segundo plano: un servidor que se cae o rechaza los segmentos avisa con end-file/error
+  // cuando `cargar` ya devolvió. Sin esto la pantalla quedaría "lista" sin vídeo y sin mensaje.
+  $effect(() => {
+    if (reproductor.falloCarga && (estado === 'listo' || estado === 'cargando') && !cambiandoIdioma) {
+      mensaje = 'El servidor no entregó el vídeo. Vuelve atrás e inténtalo de nuevo.';
+      estado = 'error';
+    }
+  });
+
   onMount(async () => {
     try {
       await asegurarAjustes();

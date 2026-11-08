@@ -7,7 +7,7 @@ import type { Http, HttpOptions } from './http.ts';
 import { crearResolverMP4Upload } from './resolver-mp4upload.ts';
 import type { CapturarStream } from './resolver-mp4upload.ts';
 import { crearResolverVoe } from './resolver-voe.ts';
-import { resolverZilla } from './zilla.ts';
+import { crearResolverZilla } from './zilla.ts';
 import type { Idioma, Playable, ResolverServidor } from './types.ts';
 
 export * from './errors.ts';
@@ -35,7 +35,7 @@ export interface OpcionesFuentes {
 export function crearFuentes(opts: OpcionesFuentes = {}) {
   const http = opts.http ?? createHttp(opts.httpOptions);
   const resolvers = opts.resolvers ?? [
-    resolverZilla,
+    crearResolverZilla(http),
     ...(opts.capturarStream ? [crearResolverMP4Upload(opts.capturarStream)] : []),
     crearResolverVoe(http),
   ];

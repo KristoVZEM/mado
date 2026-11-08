@@ -1,6 +1,7 @@
 import {
   command,
   init,
+  listenEvents,
   observeProperties,
   setProperty,
   type MpvObservableProperty,
@@ -11,6 +12,7 @@ import { crearCola } from './cola.ts';
 import { argumentosLoadfile } from './idioma.ts';
 import { validarUrlDeStream } from './url.ts';
 import { VOLUMEN_PASO, limitarVolumen } from './volumen.ts';
+import { esFalloDeReproduccion } from './finArchivo.ts';
 import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from './ajustes.svelte.ts';
 
 const OBSERVADAS = [
@@ -29,6 +31,8 @@ export const reproductor = $state({
   posicion: 0,
   duracion: 0,
   terminado: false,
+  /** mpv avisó de que no pudo cargar o reproducir el vídeo actual (`end-file` con motivo error). */
+  falloCarga: false,
   volumen: 100,
   velocidad: 1,
   silencio: false,
@@ -70,6 +74,9 @@ function iniciarMpv(): Promise<void> {
       else if (name === 'mute') reproductor.silencio = Boolean(data);
       else if (name === 'speed' && data != null) reproductor.velocidad = Number(data);
     });
+    await listenEvents((evento) => {
+      if (esFalloDeReproduccion(evento)) reproductor.falloCarga = true;
+    });
   })().catch((e) => {
     iniciado = null; // permite reintentar si falló
     throw e;
@@ -90,6 +97,7 @@ async function cargarAhora(p: Playable, inicio?: number): Promise<void> {
   const url = validarUrlDeStream(p.url);
   await iniciarMpv();
   reproductor.terminado = false;
+  reproductor.falloCarga = false;
   reproductor.posicion = inicio ?? 0;
   reproductor.duracion = 0;
   await setProperty('user-agent', p.userAgent);

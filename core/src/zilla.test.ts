@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { resolverZilla, ZILLA_HEADERS } from './zilla.ts';
+import { FuenteCambio, SinRed } from './errors.ts';
+import type { Http } from './http.ts';
+import { crearResolverZilla, resolverZilla, ZILLA_HEADERS } from './zilla.ts';
 
 const ID = '7601658844858539e438dceee32e7924';
 
@@ -49,4 +51,48 @@ test('acepta el ID seguido de query o de barra', () => {
     const p = resolverZilla({ server: 'HLS', url: `https://player.zilla-networks.com/play/${ID}${sufijo}` }, 'UA');
     assert.equal(p?.url, `https://player.zilla-networks.com/m3u8/${ID}`, sufijo);
   }
+});
+
+function httpZilla(respuesta: () => Response | Promise<Response>, vistas: { url: string; headers?: unknown }[] = []): Http {
+  return {
+    userAgent: 'UA',
+    get: async (url, init) => {
+      vistas.push({ url, headers: init?.headers });
+      return respuesta();
+    },
+  };
+}
+
+const EMBED = { server: 'HLS', url: `https://player.zilla-networks.com/play/${ID}` };
+
+test('crearResolverZilla pide la lista con las cabeceras de Zilla y devuelve el Playable', async () => {
+  const vistas: { url: string; headers?: unknown }[] = [];
+  const r = crearResolverZilla(httpZilla(() => new Response('#EXTM3U\n#EXT-X-VERSION:3\n'), vistas));
+  const p = await r(EMBED, 'UA-test');
+  assert.equal(p?.url, `https://player.zilla-networks.com/m3u8/${ID}`);
+  assert.deepEqual(vistas, [{ url: `https://player.zilla-networks.com/m3u8/${ID}`, headers: ZILLA_HEADERS }]);
+});
+
+test('crearResolverZilla no toca la red con URLs que no son de Zilla', async () => {
+  const vistas: { url: string }[] = [];
+  const r = crearResolverZilla(httpZilla(() => new Response('#EXTM3U'), vistas));
+  assert.equal(await r({ server: 'Voe', url: 'https://voe.sx/e/abc' }, 'UA'), null);
+  assert.equal(vistas.length, 0);
+});
+
+test('crearResolverZilla: 403/404 o una respuesta que no es HLS cuentan como FuenteCambio', async () => {
+  for (const res of [
+    () => new Response('no', { status: 403 }),
+    () => new Response('no', { status: 404 }),
+    () => new Response('<html>bloqueado</html>'),
+    () => new Response(''),
+  ]) {
+    const r = crearResolverZilla(httpZilla(res));
+    await assert.rejects(r(EMBED, 'UA'), FuenteCambio);
+  }
+});
+
+test('crearResolverZilla deja subir los fallos de red tal cual', async () => {
+  const r = crearResolverZilla(httpZilla(() => Promise.reject(new SinRed('sin red'))));
+  await assert.rejects(r(EMBED, 'UA'), SinRed);
 });

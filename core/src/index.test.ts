@@ -38,6 +38,7 @@ function httpFalso(rutas: Record<string, unknown>): Http {
   return {
     userAgent: 'UA-test',
     get: async (url) => {
+      if (url === 'https://player.zilla-networks.com/m3u8/abc') return new Response('#EXTM3U\n');
       for (const [fragmento, payload] of Object.entries(rutas)) {
         if (url.includes(fragmento)) return new Response(JSON.stringify(payload));
       }
@@ -99,6 +100,7 @@ function httpConVoe(embeds: { server: string; url: string }[]): Http {
   return {
     userAgent: 'UA-test',
     get: async (url) => {
+      if (url === 'https://player.zilla-networks.com/m3u8/abc') return new Response('#EXTM3U\n');
       if (url.includes('/media/one-piece/1/__data.json')) return new Response(JSON.stringify(payloadEpisodio(embeds)));
       return rutas[url] !== undefined ? new Response(rutas[url]) : new Response('no', { status: 404 });
     },
@@ -154,4 +156,16 @@ test('si ningún servidor sirve, SinServidor explica por qué falló cada uno', 
     assert.ok(e.causas[0] instanceof SinRed);
     return true;
   });
+});
+
+test('si Zilla no responde una lista HLS, la cadena pasa a MP4Upload', async () => {
+  const base = httpConVoe([ZILLA, MP4]);
+  const http: Http = {
+    userAgent: 'UA-test',
+    get: async (url, init) =>
+      url.startsWith('https://player.zilla-networks.com/') ? new Response('no', { status: 403 }) : base.get(url, init),
+  };
+  const f = crearFuentes({ http, capturarStream: async () => 'https://mp4.test/v.mp4' });
+  const p = await f.resolver('one-piece', 1);
+  assert.equal(p.servidor, 'MP4Upload');
 });
