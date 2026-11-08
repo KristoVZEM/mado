@@ -152,6 +152,7 @@ pub fn abrir(ruta: &Path) -> Resultado<Connection> {
 }
 
 /// Base en memoria, ya migrada. Para las pruebas.
+#[cfg(test)]
 pub fn abrir_en_memoria() -> Resultado<Connection> {
     let mut conn = Connection::open_in_memory()?;
     configurar(&conn)?;
