@@ -79,6 +79,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_libmpv::init())
         .plugin(tauri_plugin_http::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // La base vive en el directorio de datos locales de la app (no Roaming). Si no se puede
             // abrir (p. ej. es de una versión más nueva), la app arranca igual y cada comando de
@@ -108,6 +109,8 @@ pub fn run() {
             datos::comandos::descartar_progreso,
             datos::comandos::leer_ajuste,
             datos::comandos::guardar_ajuste,
+            datos::comandos::previsualizar_historial,
+            datos::comandos::importar_historial,
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicación de Tauri");

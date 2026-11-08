@@ -7,6 +7,7 @@
     "core:default",
     "core:window:allow-set-fullscreen",
     "libmpv:default",
+    "dialog:allow-open",
     {
       "identifier": "http:default",
       "allow": [{ "url": "https://*" }, { "url": "https://*/*" }]

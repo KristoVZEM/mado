@@ -3,6 +3,7 @@
 
 pub mod ajustes;
 pub mod comandos;
+pub mod importar;
 pub mod progreso;
 
 use rusqlite::Connection;
@@ -79,9 +80,16 @@ CREATE TABLE ajustes (
 );
 ";
 
+/// Esquema de la versión 2: guarda el `eid` de Ukiku (para poder exportar algún día) y acelera
+/// las consultas por fecha. Solo añade; no reconstruye tablas.
+const V2: &str = "
+ALTER TABLE historial ADD COLUMN eid INTEGER;
+CREATE INDEX historial_visto ON historial(visto_en DESC);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1];
+const MIGRACIONES: &[&str] = &[V1, V2];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -277,5 +285,31 @@ mod pruebas {
         drop(c2);
         let _ = std::fs::remove_file(&ruta);
         let _ = std::fs::remove_file(&copia);
+    }
+
+    #[test]
+    fn la_migracion_a_v2_anade_eid_e_indice_y_conserva_los_datos() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        configurar(&conn).unwrap();
+        conn.execute_batch(V1).unwrap();
+        conn.execute_batch("PRAGMA user_version = 1;").unwrap();
+        conn.execute_batch("INSERT INTO anime VALUES (1, 'a', 'A'); INSERT INTO historial VALUES (1, 3.0, 777);")
+            .unwrap();
+        migrar(&mut conn).unwrap();
+        assert_eq!(version_actual(&conn).unwrap(), 2);
+        let fila: (i64, Option<i64>) = conn
+            .query_row("SELECT visto_en, eid FROM historial WHERE aid = 1 AND numero = 3.0", [], |f| {
+                Ok((f.get(0)?, f.get(1)?))
+            })
+            .unwrap();
+        assert_eq!(fila, (777, None));
+        let indices: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'historial_visto'",
+                [],
+                |f| f.get(0),
+            )
+            .unwrap();
+        assert_eq!(indices, 1);
     }
 }

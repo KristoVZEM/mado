@@ -58,3 +58,30 @@ export const descartarProgreso = (aid: number) => invoke<void>('descartar_progre
 export const leerAjuste = (clave: string) => invoke<string | null>('leer_ajuste', { clave });
 
 export const guardarAjuste = (clave: string, valor: string) => invoke<void>('guardar_ajuste', { clave, valor });
+
+/** Lo que pasaría al importar el `history` de Ukiku; ver `importar.rs`. */
+export interface ResumenImportacion {
+  total: number;
+  series: number;
+  nuevos: number;
+  existentes: number;
+  invalidos: number;
+  /** Episodios vistos que hay ahora en la base (los que borraría "reemplazar"). */
+  actuales: number;
+}
+
+export interface ResultadoImportacion {
+  nuevos: number;
+  actualizados: number;
+  invalidos: number;
+  /** Ruta de la copia previa de la base (solo al reemplazar). */
+  copia: string | null;
+}
+
+export type ModoImportacion = 'mezclar' | 'reemplazar';
+
+/** `ruta` es la que devuelve el diálogo nativo; Rust lee el archivo, la ventana nunca ve su contenido. */
+export const previsualizarHistorial = (ruta: string) => invoke<ResumenImportacion>('previsualizar_historial', { ruta });
+
+export const importarHistorial = (ruta: string, modo: ModoImportacion) =>
+  invoke<ResultadoImportacion>('importar_historial', { ruta, modo });

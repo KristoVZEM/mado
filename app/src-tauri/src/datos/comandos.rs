@@ -1,9 +1,11 @@
 //! Comandos de Tauri: envoltorios finos sobre las funciones de `datos`. La interfaz nunca escribe
 //! SQL; aquí solo se toma la conexión, se llama a la función y se traduce el error a `String`.
 
+use super::importar::{self, Aplicado, Resumen};
 use super::progreso::{self, EntradaContinuar, Serie};
 use super::{ajustes, Resultado};
 use rusqlite::Connection;
+use std::path::Path;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
@@ -94,4 +96,19 @@ pub fn leer_ajuste(datos: State<'_, Datos>, clave: String) -> Result<Option<Stri
 #[tauri::command(async)]
 pub fn guardar_ajuste(datos: State<'_, Datos>, clave: String, valor: String) -> Result<(), String> {
     con(&datos, |c| ajustes::guardar(c, &clave, &valor))
+}
+
+/// Lee y valida el `history` de Ukiku sin escribir nada. La interfaz solo manda la ruta del diálogo.
+#[tauri::command(async)]
+pub fn previsualizar_historial(datos: State<'_, Datos>, ruta: String) -> Result<Resumen, String> {
+    let lectura = importar::leer_archivo(Path::new(&ruta)).map_err(|e| e.to_string())?;
+    con(&datos, |c| importar::previsualizar(c, &lectura))
+}
+
+/// Importa el `history` de Ukiku. `modo` es "mezclar" o "reemplazar".
+#[tauri::command(async)]
+pub fn importar_historial(datos: State<'_, Datos>, ruta: String, modo: String) -> Result<Aplicado, String> {
+    let modo = importar::Modo::desde_texto(&modo).map_err(|e| e.to_string())?;
+    let lectura = importar::leer_archivo(Path::new(&ruta)).map_err(|e| e.to_string())?;
+    con(&datos, |c| importar::aplicar(c, &lectura, modo))
 }

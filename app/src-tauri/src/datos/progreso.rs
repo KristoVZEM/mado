@@ -10,7 +10,7 @@ pub struct Serie<'a> {
     pub titulo: &'a str,
 }
 
-const MAX_TEXTO: usize = 300;
+pub(super) const MAX_TEXTO: usize = 300;
 
 fn validar_serie(serie: &Serie) -> Resultado<()> {
     if serie.aid <= 0 {

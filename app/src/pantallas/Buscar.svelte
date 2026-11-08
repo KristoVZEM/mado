@@ -20,15 +20,19 @@
   let abriendo = $state<number | null>(null);
   let verAjustes = $state(false);
 
-  onMount(async () => {
-    await asegurarAjustes();
+  async function cargarPendientes() {
     try {
       avisoDatos = (await estadoDatos()) ?? '';
-      if (!avisoDatos) pendientes = await continuarViendo(12);
+      pendientes = avisoDatos ? [] : await continuarViendo(12);
     } catch (e) {
       console.error(e);
       avisoDatos = mensajeDeError(e);
     }
+  }
+
+  onMount(async () => {
+    await asegurarAjustes();
+    await cargarPendientes();
   });
 
   async function retomar(p: EntradaContinuar) {
@@ -92,7 +96,7 @@
     <button onclick={() => (verAjustes = !verAjustes)} aria-label="Ajustes" aria-expanded={verAjustes}>⚙</button>
   </header>
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
-  {#if verAjustes}<Ajustes cerrar={() => (verAjustes = false)} />{/if}
+  {#if verAjustes}<Ajustes cerrar={() => (verAjustes = false)} datosOk={!avisoDatos} alImportar={cargarPendientes} />{/if}
 
   {#if pendientes.length > 0}
     <section aria-label="Continuar viendo">

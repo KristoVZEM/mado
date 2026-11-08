@@ -4,7 +4,51 @@
   import { validarSalto } from '../lib/continuar.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
 
-  let { cerrar }: { cerrar: () => void } = $props();
+  import { open } from '@tauri-apps/plugin-dialog';
+  import { importarHistorial, previsualizarHistorial, type ModoImportacion, type ResumenImportacion } from '../lib/datos.ts';
+  import { mensajeDeError } from '../lib/errores.ts';
+  import { textoAviso, textoResultado, textoResumen } from '../lib/importar.ts';
+
+  let { cerrar, datosOk, alImportar }: { cerrar: () => void; datosOk: boolean; alImportar: () => void } = $props();
+
+  type Fase =
+    | { tipo: 'inicio' }
+    | { tipo: 'vista'; ruta: string; resumen: ResumenImportacion; confirmando: boolean }
+    | { tipo: 'aplicando' }
+    | { tipo: 'listo'; texto: string }
+    | { tipo: 'error'; texto: string };
+  let fase = $state<Fase>({ tipo: 'inicio' });
+
+  /** Los rechazos de `invoke` llegan como texto; el resto de errores pasan por `mensajeDeError`. */
+  const textoDeError = (e: unknown) => (typeof e === 'string' ? e : mensajeDeError(e));
+
+  async function elegirArchivo() {
+    try {
+      const ruta = await open({ multiple: false, directory: false, title: 'Elegir el archivo history de Ukiku' });
+      if (!ruta) return;
+      fase = { tipo: 'vista', ruta, resumen: await previsualizarHistorial(ruta), confirmando: false };
+    } catch (e) {
+      console.error(e);
+      fase = { tipo: 'error', texto: textoDeError(e) };
+    }
+  }
+
+  function confirmar(confirmando: boolean) {
+    if (fase.tipo === 'vista') fase = { ...fase, confirmando };
+  }
+
+  async function importar(modo: ModoImportacion) {
+    if (fase.tipo !== 'vista') return;
+    const { ruta } = fase;
+    fase = { tipo: 'aplicando' };
+    try {
+      fase = { tipo: 'listo', texto: textoResultado(await importarHistorial(ruta, modo)) };
+      alImportar();
+    } catch (e) {
+      console.error(e);
+      fase = { tipo: 'error', texto: textoDeError(e) };
+    }
+  }
 
   let corto = $state(String(ajustes.saltoCorto));
   let largo = $state(String(ajustes.saltoLargo));
@@ -42,13 +86,41 @@
     <button onclick={restablecer}>Restablecer</button>
     <button onclick={cerrar}>Cancelar</button>
   </div>
+
+  <h3>Importar historial de Ukiku</h3>
+  {#if !datosOk}
+    <p class="error">Los datos locales no están disponibles; no se puede importar.</p>
+  {:else if fase.tipo === 'inicio' || fase.tipo === 'error' || fase.tipo === 'listo'}
+    <p>Elige el archivo <code>history</code> de tu copia de seguridad de Ukiku (local o de Dropbox).</p>
+    <button onclick={elegirArchivo}>Elegir archivo…</button>
+    {#if fase.tipo === 'error'}<p class="error" role="alert">{fase.texto}</p>{/if}
+    {#if fase.tipo === 'listo'}<p role="status">{fase.texto}</p>{/if}
+  {:else if fase.tipo === 'vista'}
+    <p>{textoResumen(fase.resumen)}</p>
+    {#if fase.confirmando}
+      <p class="error" role="alert">{textoAviso('reemplazar', fase.resumen)}</p>
+      <div class="acciones">
+        <button onclick={() => importar('reemplazar')}>Sí, reemplazar</button>
+        <button onclick={() => confirmar(false)}>Cancelar</button>
+      </div>
+    {:else}
+      <p>{textoAviso('mezclar', fase.resumen)}</p>
+      <div class="acciones">
+        <button onclick={() => importar('mezclar')}>Mezclar</button>
+        <button onclick={() => confirmar(true)}>Reemplazar…</button>
+        <button onclick={() => (fase = { tipo: 'inicio' })}>Cancelar</button>
+      </div>
+    {/if}
+  {:else}
+    <p>Importando…</p>
+  {/if}
 </section>
 
 <style>
   .ajustes {
     display: grid;
     gap: 8px;
-    max-width: 320px;
+    max-width: 420px;
     margin: 12px 0;
   }
   label {
