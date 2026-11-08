@@ -21,7 +21,7 @@
     saltarRelativo,
   } from '../lib/reproductor.svelte.ts';
   import { cambiarIdioma } from '../lib/idioma.ts';
-  import { CUENTA_SIGUIENTE_S, iniciarCuentaAtras } from '../lib/cuenta.ts';
+  import { estadoSiguiente } from '../lib/siguiente.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
@@ -38,9 +38,7 @@
   let controlesVisibles = $state(true);
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   let destruido = false;
-  /** Segundos que faltan para pasar solo al siguiente episodio; null si no hay cuenta en marcha. */
-  let cuenta = $state<number | null>(null);
-  let cuentaCancelada = $state(false);
+  let yaSaltado = false;
   let cambiandoIdioma = $state(false);
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
@@ -62,20 +60,22 @@
     return i >= 0 ? numeros[i + 1] : undefined;
   });
 
-  // Al terminar el episodio, cuenta atrás hasta el siguiente. Se cancela sola al salir de la
-  // pantalla, al cambiar de idioma (el vídeo deja de estar terminado) o con el botón Cancelar.
+  // Como Netflix: en los últimos segundos aparece el botón de siguiente episodio, que se rellena y,
+  // un instante antes del final, pasa solo. No hay forma de desactivarlo.
+  const proximo = $derived(
+    estado === 'listo' && siguiente !== undefined
+      ? estadoSiguiente(reproductor.posicion, reproductor.duracion)
+      : null,
+  );
+
+  function irAlSiguiente() {
+    if (siguiente === undefined || yaSaltado) return;
+    yaSaltado = true;
+    irA({ tipo: 'reproducir', anime, numeros, numero: siguiente, idioma });
+  }
+
   $effect(() => {
-    if (!reproductor.terminado || siguiente === undefined || cuentaCancelada) return;
-    const proximo = siguiente;
-    const cancelar = iniciarCuentaAtras(
-      CUENTA_SIGUIENTE_S,
-      (n) => (cuenta = n),
-      () => irA({ tipo: 'reproducir', anime, numeros, numero: proximo, idioma }),
-    );
-    return () => {
-      cancelar();
-      cuenta = null;
-    };
+    if (proximo?.saltar) irAlSiguiente();
   });
 
   onMount(async () => {
@@ -273,12 +273,7 @@
       <div class="centro fondo">
         <p>Fin del episodio {numero}</p>
         {#if siguiente !== undefined}
-          <button onclick={() => irA({ tipo: 'reproducir', anime, numeros, numero: siguiente, idioma })}>
-            Siguiente episodio ({siguiente}){cuenta !== null ? ` · ${cuenta} s` : ''}
-          </button>
-          {#if cuenta !== null}
-            <button onclick={() => (cuentaCancelada = true)}>Cancelar cuenta atrás</button>
-          {/if}
+          <button onclick={irAlSiguiente}>Siguiente episodio ({siguiente})</button>
         {/if}
         <button onclick={volver}>Volver a la ficha</button>
       </div>
@@ -292,6 +287,13 @@
         <span class="etiqueta">{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor}</span>
       {/if}
     </header>
+
+    {#if proximo?.visible && siguiente !== undefined}
+      <button class="siguiente" class:alto={controlesVisibles} onclick={irAlSiguiente}>
+        <span class="relleno-siguiente" style:width="{proximo.progreso * 100}%"></span>
+        <span class="texto-siguiente">Siguiente episodio ({siguiente}) ▸</span>
+      </button>
+    {/if}
 
     {#if aviso}
       <div class="aviso" role="status">{aviso}</div>
@@ -388,6 +390,36 @@
     background: transparent;
     appearance: none;
     cursor: inherit;
+  }
+  /* Gana al `button:hover:not(:disabled)` global (app.css), que si no pinta la capa de gris. */
+  .superficie:hover:not(:disabled) {
+    background: transparent;
+  }
+  .siguiente {
+    position: absolute;
+    right: 24px;
+    bottom: 28px;
+    overflow: hidden;
+    padding: 12px 22px;
+    border: 1px solid #fff;
+    background: rgba(0, 0, 0, 0.75);
+    transition: bottom 0.2s;
+  }
+  /* Con los controles a la vista se sube para no taparlos. */
+  .siguiente.alto {
+    bottom: 110px;
+  }
+  .siguiente:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.75);
+  }
+  .relleno-siguiente {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(255, 255, 255, 0.35);
+  }
+  .texto-siguiente {
+    position: relative;
+    font-weight: 600;
   }
   .centro {
     position: absolute;
