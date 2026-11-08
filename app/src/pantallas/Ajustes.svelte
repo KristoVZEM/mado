@@ -5,28 +5,25 @@
   import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
 
   import { open } from '@tauri-apps/plugin-dialog';
-  import { importarHistorial, previsualizarHistorial, type ModoImportacion, type ResumenImportacion } from '../lib/datos.ts';
-  import { mensajeDeError } from '../lib/errores.ts';
-  import { textoAviso, textoResultado, textoResumen } from '../lib/importar.ts';
+  import { importarCopia, previsualizarCopia, type ModoImportacion, type ResumenCopia } from '../lib/datos.ts';
+  import { textoDeError } from '../lib/errores.ts';
+  import { lineasResumen, textoAviso, textoResultado } from '../lib/importar.ts';
 
   let { cerrar, datosOk, alImportar }: { cerrar: () => void; datosOk: boolean; alImportar: () => void } = $props();
 
   type Fase =
     | { tipo: 'inicio' }
-    | { tipo: 'vista'; ruta: string; resumen: ResumenImportacion; confirmando: boolean }
+    | { tipo: 'vista'; carpeta: string; resumen: ResumenCopia; confirmando: boolean }
     | { tipo: 'aplicando' }
     | { tipo: 'listo'; texto: string }
     | { tipo: 'error'; texto: string };
   let fase = $state<Fase>({ tipo: 'inicio' });
 
-  /** Los rechazos de `invoke` llegan como texto; el resto de errores pasan por `mensajeDeError`. */
-  const textoDeError = (e: unknown) => (typeof e === 'string' ? e : mensajeDeError(e));
-
-  async function elegirArchivo() {
+  async function elegirCarpeta() {
     try {
-      const ruta = await open({ multiple: false, directory: false, title: 'Elegir el archivo history de Ukiku' });
-      if (!ruta) return;
-      fase = { tipo: 'vista', ruta, resumen: await previsualizarHistorial(ruta), confirmando: false };
+      const carpeta = await open({ directory: true, multiple: false, title: 'Elegir la carpeta de la copia de Ukiku' });
+      if (!carpeta) return;
+      fase = { tipo: 'vista', carpeta, resumen: await previsualizarCopia(carpeta), confirmando: false };
     } catch (e) {
       console.error(e);
       fase = { tipo: 'error', texto: textoDeError(e) };
@@ -39,10 +36,10 @@
 
   async function importar(modo: ModoImportacion) {
     if (fase.tipo !== 'vista') return;
-    const { ruta } = fase;
+    const { carpeta } = fase;
     fase = { tipo: 'aplicando' };
     try {
-      fase = { tipo: 'listo', texto: textoResultado(await importarHistorial(ruta, modo)) };
+      fase = { tipo: 'listo', texto: textoResultado(await importarCopia(carpeta, modo)) };
       alImportar();
     } catch (e) {
       console.error(e);
@@ -87,16 +84,21 @@
     <button onclick={cerrar}>Cancelar</button>
   </div>
 
-  <h3>Importar historial de Ukiku</h3>
+  <h3>Importar copia de Ukiku</h3>
   {#if !datosOk}
     <p class="error">Los datos locales no están disponibles; no se puede importar.</p>
   {:else if fase.tipo === 'inicio' || fase.tipo === 'error' || fase.tipo === 'listo'}
-    <p>Elige el archivo <code>history</code> de tu copia de seguridad de Ukiku (local o de Dropbox).</p>
-    <button onclick={elegirArchivo}>Elegir archivo…</button>
+    <p>
+      Elige la carpeta de tu copia de seguridad de Ukiku (local o de Dropbox). Solo se leen los archivos
+      <code>history</code>, <code>following</code> y <code>favs</code>.
+    </p>
+    <button onclick={elegirCarpeta}>Elegir carpeta…</button>
     {#if fase.tipo === 'error'}<p class="error" role="alert">{fase.texto}</p>{/if}
     {#if fase.tipo === 'listo'}<p role="status">{fase.texto}</p>{/if}
   {:else if fase.tipo === 'vista'}
-    <p>{textoResumen(fase.resumen)}</p>
+    <ul class="resumen">
+      {#each lineasResumen(fase.resumen) as linea}<li>{linea}</li>{/each}
+    </ul>
     {#if fase.confirmando}
       <p class="error" role="alert">{textoAviso('reemplazar', fase.resumen)}</p>
       <div class="acciones">
@@ -133,5 +135,9 @@
   .acciones {
     display: flex;
     gap: 6px;
+  }
+  .resumen {
+    margin: 0;
+    padding-left: 18px;
   }
 </style>

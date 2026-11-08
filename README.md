@@ -16,8 +16,11 @@ validaron la técnica. Hoy hay:
   servidor propio).
 - `spike/`: el spike original; lo usa `lab/` hasta migrar a `core/`.
 
-Pendiente: datos locales (favoritos, historial, progreso), importar el
-`.backup` de Ukiku y el resto de la interfaz.
+Hecho: datos locales con SQLite (progreso, historial y ajustes) e
+importación de la copia de Ukiku desde una carpeta (historial, siguiendo y
+favoritos, mezclando o reemplazando). En curso: la biblioteca (estado y
+favoritos). Pendiente: la pantalla Biblioteca, la interfaz final y las
+descargas.
 
 ## Plan general
 

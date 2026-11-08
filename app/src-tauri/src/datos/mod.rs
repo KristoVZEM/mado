@@ -2,8 +2,9 @@
 //! Toda la lógica son funciones sobre `&Connection`; los comandos de Tauri viven en `comandos`.
 
 pub mod ajustes;
+pub mod biblioteca;
 pub mod comandos;
-pub mod importar;
+pub mod copia;
 pub mod progreso;
 
 use rusqlite::Connection;
@@ -87,9 +88,22 @@ ALTER TABLE historial ADD COLUMN eid INTEGER;
 CREATE INDEX historial_visto ON historial(visto_en DESC);
 ";
 
+/// Esquema de la versión 3: biblioteca (estado de seguimiento y favoritos). Solo crea tablas.
+/// `favoritos.categoria` NULL = sin categoría.
+const V3: &str = "
+CREATE TABLE siguiendo (
+    aid    INTEGER PRIMARY KEY REFERENCES anime(aid) ON DELETE CASCADE,
+    estado INTEGER NOT NULL CHECK (estado BETWEEN 1 AND 5)
+);
+CREATE TABLE favoritos (
+    aid       INTEGER PRIMARY KEY REFERENCES anime(aid) ON DELETE CASCADE,
+    categoria TEXT
+);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2];
+const MIGRACIONES: &[&str] = &[V1, V2, V3];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -193,7 +207,7 @@ mod pruebas {
     fn una_base_nueva_queda_en_la_version_actual_con_sus_tablas() {
         let conn = abrir_en_memoria().unwrap();
         assert_eq!(version_actual(&conn).unwrap(), VERSION);
-        assert_eq!(tablas(&conn), vec!["ajustes", "anime", "historial", "progreso"]);
+        assert_eq!(tablas(&conn), vec!["ajustes", "anime", "favoritos", "historial", "progreso", "siguiendo"]);
     }
 
     #[test]
@@ -296,7 +310,7 @@ mod pruebas {
         conn.execute_batch("INSERT INTO anime VALUES (1, 'a', 'A'); INSERT INTO historial VALUES (1, 3.0, 777);")
             .unwrap();
         migrar(&mut conn).unwrap();
-        assert_eq!(version_actual(&conn).unwrap(), 2);
+        assert_eq!(version_actual(&conn).unwrap(), VERSION);
         let fila: (i64, Option<i64>) = conn
             .query_row("SELECT visto_en, eid FROM historial WHERE aid = 1 AND numero = 3.0", [], |f| {
                 Ok((f.get(0)?, f.get(1)?))
@@ -311,5 +325,70 @@ mod pruebas {
             )
             .unwrap();
         assert_eq!(indices, 1);
+    }
+
+    #[test]
+    fn la_migracion_a_v3_crea_siguiendo_y_favoritos_y_conserva_los_datos() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        configurar(&conn).unwrap();
+        conn.execute_batch(V1).unwrap();
+        conn.execute_batch(V2).unwrap();
+        conn.execute_batch("PRAGMA user_version = 2;").unwrap();
+        conn.execute_batch(
+            "INSERT INTO anime VALUES (1, 'a', 'A');
+             INSERT INTO historial (aid, numero, visto_en, eid) VALUES (1, 3.0, 777, 55);
+             INSERT INTO progreso VALUES (1, 4.0, 10.0, 100.0, 888);",
+        )
+        .unwrap();
+        migrar(&mut conn).unwrap();
+        assert_eq!(version_actual(&conn).unwrap(), 3);
+        let t = tablas(&conn);
+        assert!(t.contains(&"siguiendo".to_string()) && t.contains(&"favoritos".to_string()), "{t:?}");
+        let h: (i64, Option<i64>) = conn
+            .query_row("SELECT visto_en, eid FROM historial WHERE aid = 1", [], |f| Ok((f.get(0)?, f.get(1)?)))
+            .unwrap();
+        assert_eq!(h, (777, Some(55)));
+        let p: i64 = conn.query_row("SELECT COUNT(*) FROM progreso", [], |f| f.get(0)).unwrap();
+        assert_eq!(p, 1);
+    }
+
+    #[test]
+    fn siguiendo_solo_admite_estados_del_1_al_5_y_series_conocidas() {
+        let conn = abrir_en_memoria().unwrap();
+        conn.execute("INSERT INTO anime VALUES (1, 'a', 'A')", []).unwrap();
+        for bueno in 1..=5 {
+            conn.execute("INSERT OR REPLACE INTO siguiendo (aid, estado) VALUES (1, ?1)", [bueno]).unwrap();
+        }
+        for malo in [0, 6] {
+            let r = conn.execute("INSERT OR REPLACE INTO siguiendo (aid, estado) VALUES (1, ?1)", [malo]);
+            assert!(r.is_err(), "{malo}");
+        }
+        assert!(conn.execute("INSERT INTO siguiendo (aid, estado) VALUES (2, 1)", []).is_err(), "sin fila en anime");
+        assert!(conn.execute("INSERT INTO favoritos (aid, categoria) VALUES (2, NULL)", []).is_err(), "sin fila en anime");
+        conn.execute("INSERT INTO favoritos (aid, categoria) VALUES (1, NULL)", []).unwrap();
+    }
+
+    #[test]
+    fn abrir_una_base_v2_guarda_la_copia_v2_antes_de_migrar() {
+        let ruta = ruta_temporal("v2.db");
+        {
+            let conn = Connection::open(&ruta).unwrap();
+            conn.execute_batch(V1).unwrap();
+            conn.execute_batch(V2).unwrap();
+            conn.execute_batch("PRAGMA user_version = 2; INSERT INTO anime VALUES (1, 'a', 'A');").unwrap();
+        }
+        let conn = abrir(&ruta).unwrap();
+        assert_eq!(version_actual(&conn).unwrap(), VERSION);
+        drop(conn);
+        let copia = ruta_copia(&ruta, 2);
+        let previa = Connection::open(&copia).unwrap();
+        assert_eq!(version_actual(&previa).unwrap(), 2);
+        let n: i64 = previa.query_row("SELECT COUNT(*) FROM anime", [], |f| f.get(0)).unwrap();
+        assert_eq!(n, 1);
+        drop(previa);
+        let _ = std::fs::remove_file(&copia);
+        for sufijo in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{}{sufijo}", ruta.display()));
+        }
     }
 }

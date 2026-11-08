@@ -1,9 +1,10 @@
 //! Comandos de Tauri: envoltorios finos sobre las funciones de `datos`. La interfaz nunca escribe
 //! SQL; aquí solo se toma la conexión, se llama a la función y se traduce el error a `String`.
 
-use super::importar::{self, Aplicado, Resumen};
+use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, Serie};
 use super::{ajustes, Resultado};
+use super::biblioteca::{self, Biblioteca};
 use rusqlite::Connection;
 use std::path::Path;
 use std::sync::Mutex;
@@ -98,17 +99,51 @@ pub fn guardar_ajuste(datos: State<'_, Datos>, clave: String, valor: String) -> 
     con(&datos, |c| ajustes::guardar(c, &clave, &valor))
 }
 
-/// Lee y valida el `history` de Ukiku sin escribir nada. La interfaz solo manda la ruta del diálogo.
 #[tauri::command(async)]
-pub fn previsualizar_historial(datos: State<'_, Datos>, ruta: String) -> Result<Resumen, String> {
-    let lectura = importar::leer_archivo(Path::new(&ruta)).map_err(|e| e.to_string())?;
-    con(&datos, |c| importar::previsualizar(c, &lectura))
+pub fn estado_serie(datos: State<'_, Datos>, aid: i64) -> Result<Option<u8>, String> {
+    con(&datos, |c| biblioteca::estado_serie(c, aid))
 }
 
-/// Importa el `history` de Ukiku. `modo` es "mezclar" o "reemplazar".
+/// `estado`: 0 deja de seguir la serie; 1 Viendo, 2 Considerando, 3 Completado, 4 Dropeado, 5 Pausado.
 #[tauri::command(async)]
-pub fn importar_historial(datos: State<'_, Datos>, ruta: String, modo: String) -> Result<Aplicado, String> {
-    let modo = importar::Modo::desde_texto(&modo).map_err(|e| e.to_string())?;
-    let lectura = importar::leer_archivo(Path::new(&ruta)).map_err(|e| e.to_string())?;
-    con(&datos, |c| importar::aplicar(c, &lectura, modo))
+pub fn fijar_estado(
+    datos: State<'_, Datos>,
+    aid: i64,
+    slug: String,
+    titulo: String,
+    estado: u8,
+) -> Result<(), String> {
+    con(&datos, |c| biblioteca::fijar_estado(c, &Serie { aid, slug: &slug, titulo: &titulo }, estado))
+}
+
+#[tauri::command(async)]
+pub fn es_favorito(datos: State<'_, Datos>, aid: i64) -> Result<bool, String> {
+    con(&datos, |c| biblioteca::es_favorito(c, aid))
+}
+
+/// Devuelve si la serie queda marcada como favorita.
+#[tauri::command(async)]
+pub fn alternar_favorito(datos: State<'_, Datos>, aid: i64, slug: String, titulo: String) -> Result<bool, String> {
+    con(&datos, |c| biblioteca::alternar_favorito(c, &Serie { aid, slug: &slug, titulo: &titulo }))
+}
+
+#[tauri::command(async)]
+pub fn listar_biblioteca(datos: State<'_, Datos>) -> Result<Biblioteca, String> {
+    con(&datos, biblioteca::listar_biblioteca)
+}
+
+/// Lee y valida la carpeta de la copia de Ukiku sin escribir nada. La interfaz solo manda la ruta
+/// de la carpeta del diálogo; los archivos se leen antes de tomar la base.
+#[tauri::command(async)]
+pub fn previsualizar_copia(datos: State<'_, Datos>, carpeta: String) -> Result<ResumenCopia, String> {
+    let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| e.to_string())?;
+    con(&datos, |c| copia::previsualizar(c, &leida))
+}
+
+/// Importa la carpeta de la copia de Ukiku. `modo` es "mezclar" o "reemplazar".
+#[tauri::command(async)]
+pub fn importar_copia(datos: State<'_, Datos>, carpeta: String, modo: String) -> Result<AplicadoCopia, String> {
+    let modo = Modo::desde_texto(&modo).map_err(|e| e.to_string())?;
+    let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| e.to_string())?;
+    con(&datos, |c| copia::aplicar(c, &leida, modo))
 }

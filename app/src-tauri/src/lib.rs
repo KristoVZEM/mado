@@ -109,8 +109,13 @@ pub fn run() {
             datos::comandos::descartar_progreso,
             datos::comandos::leer_ajuste,
             datos::comandos::guardar_ajuste,
-            datos::comandos::previsualizar_historial,
-            datos::comandos::importar_historial,
+            datos::comandos::estado_serie,
+            datos::comandos::fijar_estado,
+            datos::comandos::es_favorito,
+            datos::comandos::alternar_favorito,
+            datos::comandos::listar_biblioteca,
+            datos::comandos::previsualizar_copia,
+            datos::comandos::importar_copia,
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicación de Tauri");

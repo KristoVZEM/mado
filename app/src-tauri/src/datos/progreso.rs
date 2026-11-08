@@ -12,7 +12,7 @@ pub struct Serie<'a> {
 
 pub(super) const MAX_TEXTO: usize = 300;
 
-fn validar_serie(serie: &Serie) -> Resultado<()> {
+pub(super) fn validar_serie(serie: &Serie) -> Resultado<()> {
     if serie.aid <= 0 {
         return Err(Error::Invalido("aid inválido".into()));
     }
@@ -36,6 +36,15 @@ fn registrar_anime(conn: &Connection, serie: &Serie) -> Resultado<()> {
     conn.execute(
         "INSERT INTO anime (aid, slug, titulo) VALUES (?1, ?2, ?3)
          ON CONFLICT(aid) DO UPDATE SET slug = excluded.slug, titulo = excluded.titulo",
+        params![serie.aid, serie.slug, serie.titulo],
+    )?;
+    Ok(())
+}
+
+/// Registra la serie en `anime` solo si no estaba: no pisa un título que ya se conoce.
+pub(super) fn registrar_anime_sin_pisar(conn: &Connection, serie: &Serie) -> Resultado<()> {
+    conn.execute(
+        "INSERT INTO anime (aid, slug, titulo) VALUES (?1, ?2, ?3) ON CONFLICT(aid) DO NOTHING",
         params![serie.aid, serie.slug, serie.titulo],
     )?;
     Ok(())

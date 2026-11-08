@@ -59,8 +59,40 @@ export const leerAjuste = (clave: string) => invoke<string | null>('leer_ajuste'
 
 export const guardarAjuste = (clave: string, valor: string) => invoke<void>('guardar_ajuste', { clave, valor });
 
-/** Lo que pasaría al importar el `history` de Ukiku; ver `importar.rs`. */
-export interface ResumenImportacion {
+/** Estado de seguimiento: 1 Viendo, 2 Considerando, 3 Completado, 4 Dropeado, 5 Pausado; `null` si no se sigue. */
+export const estadoSerie = (aid: number) => invoke<number | null>('estado_serie', { aid });
+
+/** `estado` 0 deja de seguir la serie; 1–5 la sigue con ese estado. */
+export const fijarEstado = (serie: SerieRef, estado: number) =>
+  invoke<void>('fijar_estado', { aid: serie.aid, slug: serie.slug, titulo: serie.titulo, estado });
+
+export const esFavorito = (aid: number) => invoke<boolean>('es_favorito', { aid });
+
+/** Marca o desmarca la serie como favorita; devuelve si queda marcada. */
+export const alternarFavorito = (serie: SerieRef) =>
+  invoke<boolean>('alternar_favorito', { aid: serie.aid, slug: serie.slug, titulo: serie.titulo });
+
+/** Una fila de la biblioteca tal como la devuelve Rust (camelCase). */
+export interface EntradaBiblioteca {
+  aid: number;
+  slug: string;
+  titulo: string;
+  /** 1 Viendo … 5 Pausado; `null` si no se sigue (solo puede pasar en favoritos). */
+  estado: number | null;
+  /** Episodio más alto del historial; `null` si no hay ninguno visto. */
+  ultimoEpisodio: number | null;
+}
+
+export interface Biblioteca {
+  siguiendo: EntradaBiblioteca[];
+  favoritos: EntradaBiblioteca[];
+}
+
+/** Sin orden: la interfaz ordena (`lib/biblioteca.ts`). */
+export const listarBiblioteca = () => invoke<Biblioteca>('listar_biblioteca');
+
+/** Vista previa del `history` de la copia; ver `copia/historial.rs`. */
+export interface ResumenHistorial {
   total: number;
   series: number;
   nuevos: number;
@@ -70,18 +102,42 @@ export interface ResumenImportacion {
   actuales: number;
 }
 
-export interface ResultadoImportacion {
+/** Vista previa de `following` o `favs`: series por `aid`. */
+export interface ResumenLista {
+  total: number;
+  nuevos: number;
+  existentes: number;
+  invalidos: number;
+  /** Filas que hay ahora en la tabla (las que borraría "reemplazar"). */
+  actuales: number;
+}
+
+/** Vista previa de la carpeta: `null` en los archivos que no están (sus nombres van en `ausentes`). */
+export interface ResumenCopia {
+  historial: ResumenHistorial | null;
+  siguiendo: ResumenLista | null;
+  favoritos: ResumenLista | null;
+  ausentes: string[];
+}
+
+export interface ResultadoArchivo {
   nuevos: number;
   actualizados: number;
   invalidos: number;
+}
+
+export interface ResultadoCopia {
+  historial: ResultadoArchivo | null;
+  siguiendo: ResultadoArchivo | null;
+  favoritos: ResultadoArchivo | null;
   /** Ruta de la copia previa de la base (solo al reemplazar). */
   copia: string | null;
 }
 
 export type ModoImportacion = 'mezclar' | 'reemplazar';
 
-/** `ruta` es la que devuelve el diálogo nativo; Rust lee el archivo, la ventana nunca ve su contenido. */
-export const previsualizarHistorial = (ruta: string) => invoke<ResumenImportacion>('previsualizar_historial', { ruta });
+/** `carpeta` es la que devuelve el diálogo nativo; Rust lee solo `history`, `following` y `favs`. */
+export const previsualizarCopia = (carpeta: string) => invoke<ResumenCopia>('previsualizar_copia', { carpeta });
 
-export const importarHistorial = (ruta: string, modo: ModoImportacion) =>
-  invoke<ResultadoImportacion>('importar_historial', { ruta, modo });
+export const importarCopia = (carpeta: string, modo: ModoImportacion) =>
+  invoke<ResultadoCopia>('importar_copia', { carpeta, modo });

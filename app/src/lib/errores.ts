@@ -22,3 +22,6 @@ export function mensajeDeError(e: unknown): string {
   }
   return 'Error inesperado. Mira la consola para ver el detalle.';
 }
+
+/** Los rechazos de `invoke` llegan como texto; el resto de errores pasan por `mensajeDeError`. */
+export const textoDeError = (e: unknown) => (typeof e === 'string' ? e : mensajeDeError(e));
