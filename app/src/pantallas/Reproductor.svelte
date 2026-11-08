@@ -1,3 +1,8 @@
+<script module lang="ts">
+  /** Vive fuera de la instancia: al pasar de episodio la pantalla se remonta y debe seguir igual. */
+  let pantallaCompleta = false;
+</script>
+
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -6,13 +11,18 @@
   import { irA } from '../lib/navegacion.svelte.ts';
   import {
     alternarPausa,
+    alternarSilencio,
+    cambiarVolumen,
     cargar,
     detener,
+    fijarVolumen,
     reproductor,
     saltarAbsoluto,
     saltarRelativo,
   } from '../lib/reproductor.svelte.ts';
-  import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo } from '../lib/saltos.ts';
+  import { cambiarIdioma } from '../lib/idioma.ts';
+  import { estadoSiguiente } from '../lib/siguiente.ts';
+  import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
   let {
@@ -27,12 +37,54 @@
   let playable = $state<Playable | null>(null);
   let controlesVisibles = $state(true);
   let temporizador: ReturnType<typeof setTimeout> | undefined;
-  let pantallaCompleta = false;
   let destruido = false;
+  let yaSaltado = false;
+  let cambiandoIdioma = $state(false);
+  let aviso = $state('');
+  let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
+  let menuIdioma = $state(false);
+  let contenedorIdioma = $state<HTMLElement>();
+  let pista = $state<HTMLElement>();
+  /** Con el cursor sobre la barra: x en píxeles desde su borde izquierdo y segundo que señala. */
+  let cursor = $state<{ x: number; t: number } | null>(null);
+  /** Mientras se arrastra sobre la barra: segundo señalado (se aplica al soltar). */
+  let arrastre = $state<number | null>(null);
+
+  const tiempoMostrado = $derived(arrastre ?? reproductor.posicion);
+  const fraccionMostrada = $derived(
+    reproductor.duracion > 0 ? Math.min(1, tiempoMostrado / reproductor.duracion) : 0,
+  );
 
   const siguiente = $derived.by<number | undefined>(() => {
     const i = numeros.indexOf(numero);
     return i >= 0 ? numeros[i + 1] : undefined;
+  });
+
+  const anterior = $derived.by<number | undefined>(() => {
+    const i = numeros.indexOf(numero);
+    return i > 0 ? numeros[i - 1] : undefined;
+  });
+
+  // Como Netflix: en los últimos segundos aparece el botón de siguiente episodio, que se rellena y,
+  // un instante antes del final, pasa solo. No hay forma de desactivarlo.
+  const proximo = $derived(
+    estado === 'listo' && siguiente !== undefined
+      ? estadoSiguiente(reproductor.posicion, reproductor.duracion)
+      : null,
+  );
+
+  /** Cambia de episodio conservando idioma y pantalla completa; solo actúa una vez por pantalla. */
+  function irAEpisodio(destino: number | undefined) {
+    if (destino === undefined || yaSaltado) return;
+    yaSaltado = true;
+    irA({ tipo: 'reproducir', anime, numeros, numero: destino, idioma });
+  }
+
+  const irAlSiguiente = () => irAEpisodio(siguiente);
+  const irAlAnterior = () => irAEpisodio(anterior);
+
+  $effect(() => {
+    if (proximo?.saltar) irAlSiguiente();
   });
 
   onMount(async () => {
@@ -54,15 +106,15 @@
   onDestroy(() => {
     destruido = true;
     clearTimeout(temporizador);
+    clearTimeout(temporizadorAviso);
     void detener();
-    if (pantallaCompleta) void getCurrentWindow().setFullscreen(false);
   });
 
   function mostrarControles() {
     controlesVisibles = true;
     clearTimeout(temporizador);
     temporizador = setTimeout(() => {
-      if (!reproductor.pausa) controlesVisibles = false;
+      if (!reproductor.pausa && !menuIdioma && arrastre === null) controlesVisibles = false;
     }, 3000);
   }
 
@@ -71,13 +123,98 @@
     await getCurrentWindow().setFullscreen(pantallaCompleta);
   }
 
+  function avisar(texto: string) {
+    aviso = texto;
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => (aviso = ''), 5000);
+  }
+
+  /** Cambia SUB/DUB conservando el segundo; si el idioma nuevo falla, el vídeo actual sigue. */
+  async function elegirIdioma(nuevo: Idioma) {
+    menuIdioma = false;
+    if (nuevo === idioma || cambiandoIdioma) return;
+    cambiandoIdioma = true;
+    try {
+      const p = await cambiarIdioma({
+        nuevo,
+        posicion: reproductor.posicion,
+        resolver: (i) => fuentes.resolver(anime.slug, numero, i),
+        cargar,
+      });
+      if (destruido) return;
+      playable = p;
+      // La pantalla se identifica por el número de episodio, así que esto no la remonta.
+      irA({ tipo: 'reproducir', anime, numeros, numero, idioma: nuevo });
+    } catch (e) {
+      console.error(e);
+      if (!destruido) avisar(`No se pudo cambiar a ${nuevo}: ${mensajeDeError(e)}`);
+    } finally {
+      cambiandoIdioma = false;
+    }
+  }
+
+  /** Segundo que señala un evento de puntero sobre la barra de progreso. */
+  function tiempoDe(e: PointerEvent): { x: number; t: number } | null {
+    if (!pista) return null;
+    const caja = pista.getBoundingClientRect();
+    return {
+      x: Math.min(caja.width, Math.max(0, e.clientX - caja.left)),
+      t: tiempoEnPosicion(e.clientX, caja.left, caja.width, reproductor.duracion),
+    };
+  }
+
+  function entrarEnBarra(e: PointerEvent) {
+    if (e.button !== 0 || !pista || reproductor.duracion <= 0) return;
+    pista.setPointerCapture(e.pointerId);
+    const p = tiempoDe(e);
+    if (p) arrastre = p.t;
+  }
+
+  function moverEnBarra(e: PointerEvent) {
+    const p = tiempoDe(e);
+    if (!p) return;
+    cursor = p;
+    if (arrastre !== null) arrastre = p.t;
+  }
+
+  function soltarEnBarra() {
+    if (arrastre === null) return;
+    const destino = arrastre;
+    arrastre = null;
+    void saltarAbsoluto(destino);
+  }
+
+  function alClicFuera(e: PointerEvent) {
+    if (menuIdioma && contenedorIdioma && !contenedorIdioma.contains(e.target as Node)) menuIdioma = false;
+  }
+
   function volver() {
+    // Pasar al siguiente episodio mantiene la pantalla completa; salir a la ficha la quita.
+    if (pantallaCompleta) {
+      pantallaCompleta = false;
+      void getCurrentWindow().setFullscreen(false);
+    }
     irA({ tipo: 'ficha', anime });
+  }
+
+  /**
+   * La barra espaciadora pausa en `keydown`; si el foco está en un botón, el navegador además lo
+   * pulsa al soltarla y desharía la pausa. Cancelar el `keyup` evita esa segunda acción.
+   */
+  function soltarTecla(e: KeyboardEvent) {
+    if (e.code === 'Space') e.preventDefault();
+  }
+
+  function pausarDesdeImagen() {
+    void alternarPausa();
+    mostrarControles();
   }
 
   function teclas(e: KeyboardEvent) {
     if (e.code === 'Escape') {
-      volver();
+      // Esc cierra primero el desplegable de idioma; solo sin él abierto vuelve a la ficha.
+      if (menuIdioma) menuIdioma = false;
+      else volver();
       return;
     }
     if (estado !== 'listo') return;
@@ -94,6 +231,17 @@
         e.preventDefault();
         void saltarRelativo(SALTO_CORTO_S);
         break;
+      case 'ArrowUp':
+        e.preventDefault();
+        void cambiarVolumen(1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        void cambiarVolumen(-1);
+        break;
+      case 'KeyM':
+        void alternarSilencio();
+        break;
       case 'KeyS':
         void saltarRelativo(SALTO_LARGO_S);
         break;
@@ -107,7 +255,12 @@
   }
 </script>
 
-<svelte:window onkeydown={teclas} onmousemove={mostrarControles} />
+<svelte:window
+  onkeydown={teclas}
+  onkeyup={soltarTecla}
+  onmousemove={mostrarControles}
+  onpointerdown={alClicFuera}
+/>
 
 <div class="reproductor" class:transparente={estado === 'listo'} class:sin-cursor={estado === 'listo' && !controlesVisibles}>
   {#if estado === 'cargando'}
@@ -122,13 +275,14 @@
   {/if}
 
   {#if estado === 'listo'}
+    <!-- Superficie transparente sobre el vídeo: un clic en la imagen pausa o reanuda. -->
+    <button class="superficie" tabindex="-1" aria-label="Pausar o reanudar" onclick={pausarDesdeImagen}></button>
+
     {#if reproductor.terminado}
       <div class="centro fondo">
         <p>Fin del episodio {numero}</p>
         {#if siguiente !== undefined}
-          <button onclick={() => irA({ tipo: 'reproducir', anime, numeros, numero: siguiente, idioma })}>
-            Siguiente episodio ({siguiente})
-          </button>
+          <button onclick={irAlSiguiente}>Siguiente episodio ({siguiente})</button>
         {/if}
         <button onclick={volver}>Volver a la ficha</button>
       </div>
@@ -136,27 +290,97 @@
 
     <header class="barra arriba" class:oculta={!controlesVisibles}>
       <button onclick={volver}>← Volver</button>
-      <span>{anime.title} · Ep. {numero} · {idioma}</span>
+      <span>{anime.title} · Ep. {numero}</span>
+      {#if cambiandoIdioma}<span>Cambiando de idioma…</span>{/if}
       {#if playable?.servidor}
         <span class="etiqueta">{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor}</span>
       {/if}
     </header>
 
+    {#if proximo?.visible && siguiente !== undefined}
+      <button class="siguiente" class:alto={controlesVisibles} onclick={irAlSiguiente}>
+        <span class="relleno-siguiente" style:width="{proximo.progreso * 100}%"></span>
+        <span class="texto-siguiente">Siguiente episodio ({siguiente}) ▸</span>
+      </button>
+    {/if}
+
+    {#if aviso}
+      <div class="aviso" role="status">{aviso}</div>
+    {/if}
+
     <footer class="barra abajo" class:oculta={!controlesVisibles}>
-      <input
-        type="range"
-        min="0"
-        max={reproductor.duracion || 1}
-        step="0.5"
-        value={reproductor.posicion}
-        onchange={(e) => saltarAbsoluto(Number(e.currentTarget.value))}
-      />
+      <div
+        class="progreso"
+        bind:this={pista}
+        role="slider"
+        tabindex="0"
+        aria-label="Posición"
+        aria-valuemin={0}
+        aria-valuemax={Math.round(reproductor.duracion)}
+        aria-valuenow={Math.round(tiempoMostrado)}
+        aria-valuetext={formatearTiempo(tiempoMostrado)}
+        onpointerdown={entrarEnBarra}
+        onpointermove={moverEnBarra}
+        onpointerup={soltarEnBarra}
+        onpointercancel={() => (arrastre = null)}
+        onpointerleave={() => (cursor = null)}
+      >
+        <div class="pista"><div class="relleno" style:width="{fraccionMostrada * 100}%"></div></div>
+        {#if cursor && reproductor.duracion > 0}
+          <div class="burbuja" style:left="{cursor.x}px">{formatearTiempo(arrastre ?? cursor.t)}</div>
+        {/if}
+      </div>
       <div class="botones">
+        <button
+          onclick={irAlAnterior}
+          disabled={anterior === undefined}
+          aria-label="Episodio anterior"
+          title={anterior === undefined ? 'No hay episodio anterior' : `Episodio ${anterior}`}>⏮</button
+        >
         <button onclick={() => saltarRelativo(-SALTO_CORTO_S)}>−{SALTO_CORTO_S}</button>
         <button onclick={alternarPausa}>{reproductor.pausa ? '▶' : '⏸'}</button>
         <button onclick={() => saltarRelativo(SALTO_CORTO_S)}>+{SALTO_CORTO_S}</button>
         <button onclick={() => saltarRelativo(SALTO_LARGO_S)}>+{SALTO_LARGO_S} s</button>
+        <button
+          onclick={irAlSiguiente}
+          disabled={siguiente === undefined}
+          aria-label="Episodio siguiente"
+          title={siguiente === undefined ? 'No hay episodio siguiente' : `Episodio ${siguiente}`}>⏭</button
+        >
         <span class="tiempo">{formatearTiempo(reproductor.posicion)} / {formatearTiempo(reproductor.duracion)}</span>
+        <button onclick={alternarSilencio} aria-label={reproductor.silencio ? 'Quitar silencio' : 'Silenciar'}>
+          {reproductor.silencio || reproductor.volumen === 0 ? '🔇' : '🔊'}
+        </button>
+        <input
+          class="volumen"
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          aria-label="Volumen"
+          value={reproductor.silencio ? 0 : reproductor.volumen}
+          oninput={(e) => fijarVolumen(Number(e.currentTarget.value))}
+        />
+        <div class="menu-idioma" bind:this={contenedorIdioma}>
+          <button
+            aria-haspopup="menu"
+            aria-expanded={menuIdioma}
+            disabled={cambiandoIdioma}
+            onclick={() => (menuIdioma = !menuIdioma)}>{idioma} ▾</button
+          >
+          {#if menuIdioma}
+            <div class="opciones" role="menu">
+              {#each ['SUB', 'DUB'] as const as i (i)}
+                <button
+                  role="menuitemradio"
+                  aria-checked={i === idioma}
+                  class:activo={i === idioma}
+                  onclick={() => elegirIdioma(i)}>{i === idioma ? '✓ ' : ''}{i}</button
+                >
+              {/each}
+            </div>
+          {/if}
+        </div>
         <button onclick={alternarPantallaCompleta}>⛶</button>
       </div>
     </footer>
@@ -176,6 +400,51 @@
   }
   .reproductor.sin-cursor {
     cursor: none;
+  }
+  .superficie {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    appearance: none;
+    cursor: inherit;
+  }
+  /* Gana al `button:hover:not(:disabled)` global (app.css), que si no pinta la capa de gris. */
+  .superficie:hover:not(:disabled) {
+    background: transparent;
+  }
+  .siguiente {
+    position: absolute;
+    right: 24px;
+    bottom: 28px;
+    overflow: hidden;
+    padding: 12px 22px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(0, 0, 0, 0.3);
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    transition: bottom 0.2s, background 0.15s, color 0.15s;
+  }
+  /* Con los controles a la vista se sube para no taparlos. */
+  .siguiente.alto {
+    bottom: 110px;
+  }
+  /* Al pasar el cursor se vuelve más sólido, para que se lea bien antes de pulsarlo. */
+  .siguiente:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+  }
+  .relleno-siguiente {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .texto-siguiente {
+    position: relative;
+    font-weight: 600;
   }
   .centro {
     position: absolute;
@@ -230,7 +499,74 @@
     border-radius: 4px;
     font-size: 12px;
   }
-  input[type='range'] {
+  input.volumen {
+    width: 110px;
+  }
+  /* Barra de progreso: alta de pulsar (20 px) con una pista fina dentro. */
+  .progreso {
+    position: relative;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    touch-action: none;
+  }
+  .pista {
     width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progreso:hover .pista,
+  .progreso:focus-visible .pista {
+    height: 8px;
+  }
+  .relleno {
+    height: 100%;
+    background: #e5484d;
+  }
+  .burbuja {
+    position: absolute;
+    bottom: 24px;
+    transform: translateX(-50%);
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.9);
+    border: 1px solid #666;
+    border-radius: 4px;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .menu-idioma {
+    position: relative;
+  }
+  .opciones {
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(0, 0, 0, 0.92);
+    border: 1px solid #666;
+    border-radius: 6px;
+  }
+  .opciones button.activo {
+    border-color: #fff;
+    font-weight: 700;
+  }
+  .aviso {
+    position: absolute;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #c66;
+    border-radius: 6px;
   }
 </style>
