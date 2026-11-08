@@ -1,6 +1,7 @@
 <script lang="ts">
   import Buscar from './pantallas/Buscar.svelte';
   import Ficha from './pantallas/Ficha.svelte';
+  import Reproductor from './pantallas/Reproductor.svelte';
   import { nav } from './lib/navegacion.svelte.ts';
 </script>
 
@@ -11,5 +12,12 @@
     <Ficha anime={nav.pantalla.anime} />
   {/key}
 {:else}
-  <main class="pantalla"><p>Reproductor (se añade en la Task 6)</p></main>
+  {#key nav.pantalla.numero}
+    <Reproductor
+      anime={nav.pantalla.anime}
+      numeros={nav.pantalla.numeros}
+      numero={nav.pantalla.numero}
+      idioma={nav.pantalla.idioma}
+    />
+  {/key}
 {/if}
