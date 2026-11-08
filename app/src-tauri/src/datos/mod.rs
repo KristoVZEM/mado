@@ -2,6 +2,7 @@
 //! Toda la lógica son funciones sobre `&Connection`; los comandos de Tauri viven en `comandos`.
 
 pub mod ajustes;
+pub mod anilist;
 pub mod biblioteca;
 pub mod comandos;
 pub mod copia;
@@ -101,9 +102,53 @@ CREATE TABLE favoritos (
 );
 ";
 
+/// Esquema de la versión 4: caché de AniList (obras, vínculo con las series del usuario y agenda de
+/// emisión). Solo crea tablas. Las horas de emisión van en segundos (como AniList); `actualizado`, en
+/// milisegundos. `anilist_vinculo.origen = 'ninguno'` significa "se buscó y no hubo resultado".
+const V4: &str = "
+CREATE TABLE anilist_media (
+    anilist_id    INTEGER PRIMARY KEY,
+    mal_id        INTEGER,
+    titulo_romaji TEXT NOT NULL,
+    titulo_ingles TEXT,
+    titulo_nativo TEXT,
+    sinopsis      TEXT,
+    generos       TEXT NOT NULL DEFAULT '[]',
+    formato       TEXT,
+    estudio       TEXT,
+    puntuacion    INTEGER,
+    episodios     INTEGER,
+    estado        TEXT,
+    portada       TEXT,
+    banner        TEXT,
+    siguiente_ep  INTEGER,
+    siguiente_en  INTEGER,
+    relaciones    TEXT NOT NULL DEFAULT '[]',
+    sinonimos     TEXT NOT NULL DEFAULT '[]',
+    anio          INTEGER,
+    actualizado   INTEGER NOT NULL
+);
+CREATE TABLE anilist_vinculo (
+    aid         INTEGER PRIMARY KEY REFERENCES anime(aid) ON DELETE CASCADE,
+    anilist_id  INTEGER REFERENCES anilist_media(anilist_id),
+    confianza   REAL NOT NULL,
+    origen      TEXT NOT NULL CHECK (origen IN ('auto', 'manual', 'ninguno')),
+    actualizado INTEGER NOT NULL,
+    CHECK ((origen = 'ninguno') = (anilist_id IS NULL))
+);
+CREATE INDEX anilist_vinculo_media ON anilist_vinculo(anilist_id);
+CREATE TABLE anilist_emision (
+    anilist_id INTEGER NOT NULL REFERENCES anilist_media(anilist_id) ON DELETE CASCADE,
+    episodio   INTEGER NOT NULL,
+    emite_en   INTEGER NOT NULL,
+    PRIMARY KEY (anilist_id, episodio)
+);
+CREATE INDEX anilist_emision_cuando ON anilist_emision(emite_en);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -207,7 +252,17 @@ mod pruebas {
     fn una_base_nueva_queda_en_la_version_actual_con_sus_tablas() {
         let conn = abrir_en_memoria().unwrap();
         assert_eq!(version_actual(&conn).unwrap(), VERSION);
-        assert_eq!(tablas(&conn), vec!["ajustes", "anime", "favoritos", "historial", "progreso", "siguiendo"]);
+        assert_eq!(tablas(&conn), vec![
+                "ajustes",
+                "anilist_emision",
+                "anilist_media",
+                "anilist_vinculo",
+                "anime",
+                "favoritos",
+                "historial",
+                "progreso",
+                "siguiendo"
+            ]);
     }
 
     #[test]
@@ -341,7 +396,7 @@ mod pruebas {
         )
         .unwrap();
         migrar(&mut conn).unwrap();
-        assert_eq!(version_actual(&conn).unwrap(), 3);
+        assert_eq!(version_actual(&conn).unwrap(), VERSION);
         let t = tablas(&conn);
         assert!(t.contains(&"siguiendo".to_string()) && t.contains(&"favoritos".to_string()), "{t:?}");
         let h: (i64, Option<i64>) = conn
@@ -366,6 +421,61 @@ mod pruebas {
         assert!(conn.execute("INSERT INTO siguiendo (aid, estado) VALUES (2, 1)", []).is_err(), "sin fila en anime");
         assert!(conn.execute("INSERT INTO favoritos (aid, categoria) VALUES (2, NULL)", []).is_err(), "sin fila en anime");
         conn.execute("INSERT INTO favoritos (aid, categoria) VALUES (1, NULL)", []).unwrap();
+    }
+
+    #[test]
+    fn la_migracion_a_v4_crea_las_tablas_de_anilist_y_conserva_los_datos() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        configurar(&conn).unwrap();
+        conn.execute_batch(V1).unwrap();
+        conn.execute_batch(V2).unwrap();
+        conn.execute_batch(V3).unwrap();
+        conn.execute_batch("PRAGMA user_version = 3;").unwrap();
+        conn.execute_batch(
+            "INSERT INTO anime VALUES (1, 'a', 'A');
+             INSERT INTO siguiendo VALUES (1, 1);
+             INSERT INTO historial (aid, numero, visto_en) VALUES (1, 3.0, 777);",
+        )
+        .unwrap();
+        migrar(&mut conn).unwrap();
+        assert_eq!(version_actual(&conn).unwrap(), 4);
+        let t = tablas(&conn);
+        for nombre in ["anilist_media", "anilist_vinculo", "anilist_emision"] {
+            assert!(t.contains(&nombre.to_string()), "{t:?}");
+        }
+        let n: i64 = conn.query_row("SELECT COUNT(*) FROM historial", [], |f| f.get(0)).unwrap();
+        assert_eq!(n, 1);
+    }
+
+    #[test]
+    fn el_vinculo_exige_origen_valido_y_coherencia_con_anilist_id() {
+        let conn = abrir_en_memoria().unwrap();
+        conn.execute("INSERT INTO anime VALUES (1, 'a', 'A')", []).unwrap();
+        conn.execute("INSERT INTO anilist_media (anilist_id, titulo_romaji, actualizado) VALUES (10, 'X', 0)", [])
+            .unwrap();
+        let ok = |sql: &str| conn.execute(sql, []);
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (1, 10, 0.9, 'auto', 0)").is_ok());
+        conn.execute("DELETE FROM anilist_vinculo", []).unwrap();
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (1, NULL, 0.1, 'ninguno', 0)").is_ok());
+        conn.execute("DELETE FROM anilist_vinculo", []).unwrap();
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (1, 10, 0.9, 'raro', 0)").is_err(), "origen inválido");
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (1, NULL, 0.9, 'auto', 0)").is_err(), "auto sin anilist_id");
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (1, 10, 0.9, 'ninguno', 0)").is_err(), "ninguno con anilist_id");
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (2, 10, 0.9, 'auto', 0)").is_err(), "sin fila en anime");
+        assert!(ok("INSERT INTO anilist_vinculo VALUES (1, 99, 0.9, 'auto', 0)").is_err(), "media desconocida");
+    }
+
+    #[test]
+    fn borrar_una_serie_borra_su_vinculo_pero_no_la_obra() {
+        let conn = abrir_en_memoria().unwrap();
+        conn.execute("INSERT INTO anime VALUES (1, 'a', 'A')", []).unwrap();
+        conn.execute("INSERT INTO anilist_media (anilist_id, titulo_romaji, actualizado) VALUES (10, 'X', 0)", [])
+            .unwrap();
+        conn.execute("INSERT INTO anilist_vinculo VALUES (1, 10, 0.9, 'auto', 0)", []).unwrap();
+        conn.execute("DELETE FROM anime WHERE aid = 1", []).unwrap();
+        let v: i64 = conn.query_row("SELECT COUNT(*) FROM anilist_vinculo", [], |f| f.get(0)).unwrap();
+        let m: i64 = conn.query_row("SELECT COUNT(*) FROM anilist_media", [], |f| f.get(0)).unwrap();
+        assert_eq!((v, m), (0, 1));
     }
 
     #[test]

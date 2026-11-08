@@ -1,6 +1,7 @@
 //! Comandos de Tauri: envoltorios finos sobre las funciones de `datos`. La interfaz nunca escribe
 //! SQL; aquí solo se toma la conexión, se llama a la función y se traduce el error a `String`.
 
+use super::anilist;
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
 use super::{ajustes, Resultado};
@@ -82,6 +83,64 @@ pub fn progreso_de(datos: State<'_, Datos>, aid: i64, numero: f64) -> Result<Opt
 #[tauri::command(async)]
 pub fn continuar_viendo(datos: State<'_, Datos>, limite: u32) -> Result<Vec<EntradaContinuar>, String> {
     con(&datos, |c| progreso::continuar_viendo(c, limite.clamp(1, 50)))
+}
+
+#[tauri::command(async)]
+pub fn guardar_media(datos: State<'_, Datos>, media: anilist::MediaAnilist) -> Result<(), String> {
+    con(&datos, |c| anilist::guardar_media(c, ahora_ms(), &media))
+}
+
+#[tauri::command(async)]
+pub fn leer_media(datos: State<'_, Datos>, anilist_id: i64) -> Result<Option<anilist::MediaAnilist>, String> {
+    con(&datos, |c| anilist::leer_media(c, anilist_id))
+}
+
+#[tauri::command(async)]
+pub fn fijar_vinculo(
+    datos: State<'_, Datos>,
+    aid: i64,
+    slug: String,
+    titulo: String,
+    anilist_id: Option<i64>,
+    confianza: f64,
+    origen: String,
+) -> Result<bool, String> {
+    con(&datos, |c| {
+        let serie = Serie { aid, slug: &slug, titulo: &titulo };
+        anilist::fijar_vinculo(c, ahora_ms(), &serie, anilist_id, confianza, &origen)
+    })
+}
+
+#[tauri::command(async)]
+pub fn vinculo_con_media(datos: State<'_, Datos>, aid: i64) -> Result<Option<anilist::VinculoConMedia>, String> {
+    con(&datos, |c| anilist::vinculo_con_media(c, aid))
+}
+
+/// El límite se acota a 1–100.
+#[tauri::command(async)]
+pub fn pendientes_emparejar(datos: State<'_, Datos>, limite: u32) -> Result<Vec<anilist::PendienteEmparejar>, String> {
+    con(&datos, |c| anilist::pendientes_emparejar(c, ahora_ms(), limite.clamp(1, 100)))
+}
+
+#[tauri::command(async)]
+pub fn guardar_emision(
+    datos: State<'_, Datos>,
+    desde: i64,
+    hasta: i64,
+    medias: Vec<anilist::MediaAnilist>,
+    items: Vec<anilist::ItemEmision>,
+) -> Result<(), String> {
+    con(&datos, |c| anilist::guardar_emision(c, ahora_ms(), desde, hasta, &medias, &items))
+}
+
+#[tauri::command(async)]
+pub fn emision_entre(datos: State<'_, Datos>, desde: i64, hasta: i64) -> Result<Vec<anilist::EntradaEmision>, String> {
+    con(&datos, |c| anilist::emision_entre(c, desde, hasta))
+}
+
+#[tauri::command(async)]
+pub fn resumenes_vinculados(datos: State<'_, Datos>) -> Result<Vec<anilist::ResumenSerie>, String> {
+    con(&datos, anilist::resumenes_vinculados)
 }
 
 /// El límite se acota a 1–100: el historial puede tener miles de filas y se pide por páginas.

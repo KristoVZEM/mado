@@ -154,3 +154,120 @@ export interface EntradaHistorial {
 /** Del más reciente al más antiguo; páginas con `limite` (Rust lo acota a 1–100) y `desplazamiento`. */
 export const listarHistorial = (limite: number, desplazamiento: number) =>
   invoke<EntradaHistorial[]>('listar_historial', { limite, desplazamiento });
+
+export interface RelacionAnilist {
+  anilistId: number;
+  tipo: string;
+  titulo: string;
+}
+
+/** Una obra de AniList tal como la guarda y devuelve Rust. `actualizado` en ms (lo pone Rust). */
+export interface MediaAnilist {
+  anilistId: number;
+  malId: number | null;
+  tituloRomaji: string;
+  tituloIngles: string | null;
+  tituloNativo: string | null;
+  sinopsis: string | null;
+  generos: string[];
+  formato: string | null;
+  estudio: string | null;
+  puntuacion: number | null;
+  episodios: number | null;
+  estado: string | null;
+  portada: string | null;
+  banner: string | null;
+  /** Número y hora (segundos) del próximo episodio; `null` si no se emite ahora. */
+  siguienteEp: number | null;
+  siguienteEn: number | null;
+  relaciones: RelacionAnilist[];
+  sinonimos: string[];
+  anio: number | null;
+  actualizado?: number;
+}
+
+export interface Vinculo {
+  aid: number;
+  anilistId: number | null;
+  confianza: number;
+  origen: 'auto' | 'manual' | 'ninguno';
+  actualizado: number;
+}
+
+export interface VinculoConMedia {
+  vinculo: Vinculo;
+  media: MediaAnilist | null;
+}
+
+export interface PendienteEmparejar {
+  aid: number;
+  slug: string;
+  titulo: string;
+  /** 0 = la sigues, 1 = favorita, 2 = el resto. */
+  prioridad: number;
+}
+
+export interface ItemEmision {
+  anilistId: number;
+  episodio: number;
+  /** Segundos desde 1970. */
+  emiteEn: number;
+}
+
+export interface EntradaEmision {
+  anilistId: number;
+  episodio: number;
+  emiteEn: number;
+  tituloRomaji: string;
+  tituloIngles: string | null;
+  portada: string | null;
+  banner: string | null;
+  formato: string | null;
+  sinonimos: string[];
+  aid: number | null;
+  slug: string | null;
+  tituloSerie: string | null;
+  estado: number | null;
+}
+
+export interface ResumenSerie {
+  aid: number;
+  anilistId: number;
+  confianza: number;
+  origen: 'auto' | 'manual';
+  banner: string | null;
+  portada: string | null;
+  siguienteEp: number | null;
+  siguienteEn: number | null;
+  episodios: number | null;
+  estado: string | null;
+}
+
+export const guardarMedia = (media: MediaAnilist) => invoke<void>('guardar_media', { media });
+export const leerMedia = (anilistId: number) => invoke<MediaAnilist | null>('leer_media', { anilistId });
+
+/** `false` si ya había un vínculo manual y el nuevo no lo es (no se pisa). */
+export const fijarVinculo = (
+  serie: SerieRef,
+  anilistId: number | null,
+  confianza: number,
+  origen: Vinculo['origen'],
+) =>
+  invoke<boolean>('fijar_vinculo', {
+    aid: serie.aid,
+    slug: serie.slug,
+    titulo: serie.titulo,
+    anilistId,
+    confianza,
+    origen,
+  });
+
+export const vinculoConMedia = (aid: number) => invoke<VinculoConMedia | null>('vinculo_con_media', { aid });
+export const pendientesEmparejar = (limite: number) => invoke<PendienteEmparejar[]>('pendientes_emparejar', { limite });
+
+/** Sustituye la agenda de `[desde, hasta)` (segundos) y guarda las obras que la acompañan. */
+export const guardarEmision = (desde: number, hasta: number, medias: MediaAnilist[], items: ItemEmision[]) =>
+  invoke<void>('guardar_emision', { desde, hasta, medias, items });
+
+export const emisionEntre = (desde: number, hasta: number) => invoke<EntradaEmision[]>('emision_entre', { desde, hasta });
+export const resumenesVinculados = () => invoke<ResumenSerie[]>('resumenes_vinculados');
