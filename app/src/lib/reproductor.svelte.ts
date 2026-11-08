@@ -8,13 +8,17 @@ import {
 import type { Playable } from '../../../core/src/index.ts';
 import { cabecerasMpv } from './cabeceras.ts';
 import { crearCola } from './cola.ts';
+import { argumentosLoadfile } from './idioma.ts';
 import { validarUrlDeStream } from './url.ts';
+import { VOLUMEN_PASO, guardarVolumen, leerVolumen, limitarVolumen } from './volumen.ts';
 
 const OBSERVADAS = [
   ['pause', 'flag'],
   ['time-pos', 'double', 'none'],
   ['duration', 'double', 'none'],
   ['eof-reached', 'flag', 'none'],
+  ['volume', 'double'],
+  ['mute', 'flag'],
 ] as const satisfies MpvObservableProperty[];
 
 /** Estado reactivo del reproductor, alimentado por los eventos de mpv. */
@@ -23,7 +27,18 @@ export const reproductor = $state({
   posicion: 0,
   duracion: 0,
   terminado: false,
+  volumen: 100,
+  silencio: false,
 });
+
+/** localStorage puede faltar o lanzar (ventana privada, datos bloqueados): se trata como ausente. */
+function almacenLocal(): Storage | undefined {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
+}
 
 let iniciado: Promise<void> | null = null;
 const enSerie = crearCola();
@@ -47,12 +62,16 @@ function iniciarMpv(): Promise<void> {
         observedProperties: OBSERVADAS,
       });
       mpvCreado = true;
+      reproductor.volumen = leerVolumen(almacenLocal());
+      await setProperty('volume', reproductor.volumen);
     }
     await observeProperties(OBSERVADAS, ({ name, data }) => {
       if (name === 'pause') reproductor.pausa = Boolean(data);
       else if (name === 'duration') reproductor.duracion = Number(data ?? 0);
       else if (name === 'time-pos' && data != null) reproductor.posicion = Number(data);
       else if (name === 'eof-reached') reproductor.terminado = Boolean(data);
+      else if (name === 'volume' && data != null) reproductor.volumen = Number(data);
+      else if (name === 'mute') reproductor.silencio = Boolean(data);
     });
   })().catch((e) => {
     iniciado = null; // permite reintentar si falló
@@ -61,26 +80,46 @@ function iniciarMpv(): Promise<void> {
   return iniciado;
 }
 
-/** Carga un Playable y empieza a reproducir. Se serializa con `detener` para que no se crucen. */
-export function cargar(p: Playable): Promise<void> {
-  return enSerie(() => cargarAhora(p));
+/**
+ * Carga un Playable y empieza a reproducir, desde `inicio` segundos si se indica. Se serializa con
+ * `detener` para que no se crucen.
+ */
+export function cargar(p: Playable, inicio?: number): Promise<void> {
+  return enSerie(() => cargarAhora(p, inicio));
 }
 
 /** Cuerpo de `cargar` sin serializar; solo lo llama `cargar`. */
-async function cargarAhora(p: Playable): Promise<void> {
+async function cargarAhora(p: Playable, inicio?: number): Promise<void> {
   const url = validarUrlDeStream(p.url);
   await iniciarMpv();
   reproductor.terminado = false;
-  reproductor.posicion = 0;
+  reproductor.posicion = inicio ?? 0;
   reproductor.duracion = 0;
   await setProperty('user-agent', p.userAgent);
   await setProperty('http-header-fields', cabecerasMpv(p.headers));
-  await command('loadfile', [url]);
+  await command('loadfile', argumentosLoadfile(url, inicio));
   await setProperty('pause', false);
 }
 
 export function alternarPausa(): Promise<void> {
   return setProperty('pause', !reproductor.pausa);
+}
+
+/** Fija el volumen (0-100), lo recuerda para el próximo arranque y quita el silencio si sube. */
+export async function fijarVolumen(n: number): Promise<void> {
+  const v = limitarVolumen(n);
+  guardarVolumen(almacenLocal(), v);
+  await setProperty('volume', v);
+  if (reproductor.silencio && v > 0) await setProperty('mute', false);
+}
+
+/** Sube o baja el volumen un paso; `direccion` es 1 o -1. */
+export function cambiarVolumen(direccion: 1 | -1): Promise<void> {
+  return fijarVolumen(reproductor.volumen + direccion * VOLUMEN_PASO);
+}
+
+export function alternarSilencio(): Promise<void> {
+  return setProperty('mute', !reproductor.silencio);
 }
 
 /** Salto relativo en segundos (negativo para retroceder). */

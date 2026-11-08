@@ -6,12 +6,16 @@
   import { irA } from '../lib/navegacion.svelte.ts';
   import {
     alternarPausa,
+    alternarSilencio,
+    cambiarVolumen,
     cargar,
     detener,
+    fijarVolumen,
     reproductor,
     saltarAbsoluto,
     saltarRelativo,
   } from '../lib/reproductor.svelte.ts';
+  import { cambiarIdioma } from '../lib/idioma.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
@@ -29,6 +33,9 @@
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   let pantallaCompleta = false;
   let destruido = false;
+  let cambiandoIdioma = $state(false);
+  let aviso = $state('');
+  let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
 
   const siguiente = $derived.by<number | undefined>(() => {
     const i = numeros.indexOf(numero);
@@ -54,6 +61,7 @@
   onDestroy(() => {
     destruido = true;
     clearTimeout(temporizador);
+    clearTimeout(temporizadorAviso);
     void detener();
     if (pantallaCompleta) void getCurrentWindow().setFullscreen(false);
   });
@@ -69,6 +77,35 @@
   async function alternarPantallaCompleta() {
     pantallaCompleta = !pantallaCompleta;
     await getCurrentWindow().setFullscreen(pantallaCompleta);
+  }
+
+  function avisar(texto: string) {
+    aviso = texto;
+    clearTimeout(temporizadorAviso);
+    temporizadorAviso = setTimeout(() => (aviso = ''), 5000);
+  }
+
+  /** Cambia SUB/DUB conservando el segundo; si el idioma nuevo falla, el vídeo actual sigue. */
+  async function elegirIdioma(nuevo: Idioma) {
+    if (nuevo === idioma || cambiandoIdioma) return;
+    cambiandoIdioma = true;
+    try {
+      const p = await cambiarIdioma({
+        nuevo,
+        posicion: reproductor.posicion,
+        resolver: (i) => fuentes.resolver(anime.slug, numero, i),
+        cargar,
+      });
+      if (destruido) return;
+      playable = p;
+      // La pantalla se identifica por el número de episodio, así que esto no la remonta.
+      irA({ tipo: 'reproducir', anime, numeros, numero, idioma: nuevo });
+    } catch (e) {
+      console.error(e);
+      if (!destruido) avisar(`No se pudo cambiar a ${nuevo}: ${mensajeDeError(e)}`);
+    } finally {
+      cambiandoIdioma = false;
+    }
   }
 
   function volver() {
@@ -93,6 +130,17 @@
       case 'ArrowRight':
         e.preventDefault();
         void saltarRelativo(SALTO_CORTO_S);
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        void cambiarVolumen(1);
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        void cambiarVolumen(-1);
+        break;
+      case 'KeyM':
+        void alternarSilencio();
         break;
       case 'KeyS':
         void saltarRelativo(SALTO_LARGO_S);
@@ -136,11 +184,26 @@
 
     <header class="barra arriba" class:oculta={!controlesVisibles}>
       <button onclick={volver}>← Volver</button>
-      <span>{anime.title} · Ep. {numero} · {idioma}</span>
+      <span>{anime.title} · Ep. {numero}</span>
+      <span class="idioma" role="group" aria-label="Idioma">
+        {#each ['SUB', 'DUB'] as const as i (i)}
+          <button
+            class:activo={i === idioma}
+            aria-pressed={i === idioma}
+            disabled={cambiandoIdioma}
+            onclick={() => elegirIdioma(i)}>{i}</button
+          >
+        {/each}
+      </span>
+      {#if cambiandoIdioma}<span>Cambiando…</span>{/if}
       {#if playable?.servidor}
         <span class="etiqueta">{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor}</span>
       {/if}
     </header>
+
+    {#if aviso}
+      <div class="aviso" role="status">{aviso}</div>
+    {/if}
 
     <footer class="barra abajo" class:oculta={!controlesVisibles}>
       <input
@@ -157,6 +220,19 @@
         <button onclick={() => saltarRelativo(SALTO_CORTO_S)}>+{SALTO_CORTO_S}</button>
         <button onclick={() => saltarRelativo(SALTO_LARGO_S)}>+{SALTO_LARGO_S} s</button>
         <span class="tiempo">{formatearTiempo(reproductor.posicion)} / {formatearTiempo(reproductor.duracion)}</span>
+        <button onclick={alternarSilencio} aria-label={reproductor.silencio ? 'Quitar silencio' : 'Silenciar'}>
+          {reproductor.silencio || reproductor.volumen === 0 ? '🔇' : '🔊'}
+        </button>
+        <input
+          class="volumen"
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          aria-label="Volumen"
+          value={reproductor.silencio ? 0 : reproductor.volumen}
+          oninput={(e) => fijarVolumen(Number(e.currentTarget.value))}
+        />
         <button onclick={alternarPantallaCompleta}>⛶</button>
       </div>
     </footer>
@@ -232,5 +308,26 @@
   }
   input[type='range'] {
     width: 100%;
+  }
+  input.volumen {
+    width: 110px;
+  }
+  .idioma {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .idioma button.activo {
+    border-color: #fff;
+    font-weight: 700;
+  }
+  .aviso {
+    position: absolute;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.85);
+    border: 1px solid #c66;
+    border-radius: 6px;
   }
 </style>
