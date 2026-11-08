@@ -5,11 +5,15 @@
   import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
 
   import { open } from '@tauri-apps/plugin-dialog';
-  import { importarCopia, previsualizarCopia, type ModoImportacion, type ResumenCopia } from '../lib/datos.ts';
+  import { onMount } from 'svelte';
+  import { estadoDatos, importarCopia, previsualizarCopia, type ModoImportacion, type ResumenCopia } from '../lib/datos.ts';
   import { textoDeError } from '../lib/errores.ts';
   import { lineasResumen, textoAviso, textoResultado } from '../lib/importar.ts';
 
-  let { cerrar, datosOk, alImportar }: { cerrar: () => void; datosOk: boolean; alImportar: () => void } = $props();
+  let datosOk = $state(false);
+  onMount(async () => {
+    datosOk = (await estadoDatos().catch(() => 'error')) === null;
+  });
 
   type Fase =
     | { tipo: 'inicio' }
@@ -40,13 +44,13 @@
     fase = { tipo: 'aplicando' };
     try {
       fase = { tipo: 'listo', texto: textoResultado(await importarCopia(carpeta, modo)) };
-      alImportar();
     } catch (e) {
       console.error(e);
       fase = { tipo: 'error', texto: textoDeError(e) };
     }
   }
 
+  let guardado = $state(false);
   let corto = $state(String(ajustes.saltoCorto));
   let largo = $state(String(ajustes.saltoLargo));
 
@@ -59,30 +63,39 @@
     ajustes.saltoLargo = largoOk;
     guardarAjusteSilencioso('salto_corto', String(cortoOk));
     guardarAjusteSilencioso('salto_largo', String(largoOk));
-    cerrar();
+    guardado = true;
   }
 
   function restablecer() {
     corto = String(SALTO_CORTO_S);
     largo = String(SALTO_LARGO_S);
+    guardado = false;
+  }
+
+  function descartar() {
+    corto = String(ajustes.saltoCorto);
+    largo = String(ajustes.saltoLargo);
+    guardado = false;
   }
 </script>
 
+<main class="pantalla">
+<h1>Ajustes</h1>
 <section class="ajustes" aria-label="Ajustes">
-  <h2>Ajustes</h2>
   <label>
     Salto corto (s, {LIMITES.saltoCorto[0]}–{LIMITES.saltoCorto[1]})
-    <input bind:value={corto} inputmode="numeric" aria-invalid={cortoOk === null} />
+    <input bind:value={corto} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={cortoOk === null} />
   </label>
   <label>
     Salto largo (s, {LIMITES.saltoLargo[0]}–{LIMITES.saltoLargo[1]})
-    <input bind:value={largo} inputmode="numeric" aria-invalid={largoOk === null} />
+    <input bind:value={largo} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={largoOk === null} />
   </label>
   <div class="acciones">
     <button onclick={guardar} disabled={cortoOk === null || largoOk === null}>Guardar</button>
     <button onclick={restablecer}>Restablecer</button>
-    <button onclick={cerrar}>Cancelar</button>
+    <button onclick={descartar}>Descartar cambios</button>
   </div>
+  {#if guardado}<p role="status">Guardado.</p>{/if}
 
   <h3>Importar copia de Ukiku</h3>
   {#if !datosOk}
@@ -117,6 +130,7 @@
     <p>Importando…</p>
   {/if}
 </section>
+</main>
 
 <style>
   .ajustes {

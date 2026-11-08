@@ -1,10 +1,21 @@
+:root {
+  --fondo: #0e0e13;
+  --superficie: #17171f;
+  --superficie-2: #23232d;
+  --borde: #3a3a46;
+  --texto: #eee;
+  --texto-suave: #a6a6b4;
+  --acento: #ff4d6d;
+  --radio: 8px;
+}
+
 /* El fondo del documento es transparente: solo la pantalla del Reproductor deja ver el vídeo de mpv. */
 html,
 body {
   margin: 0;
   height: 100%;
   background: transparent;
-  color: #eee;
+  color: var(--texto);
   font: 14px/1.4 system-ui, sans-serif;
 }
 
@@ -12,19 +23,18 @@ body {
   height: 100%;
 }
 
-/* Pantallas normales (Buscar, Ficha): fondo opaco, tapan el vídeo de mpv que hay detrás. */
+/* Pantallas normales: fondo opaco, tapan el vídeo de mpv que hay detrás. La altura la da el armazón. */
 .pantalla {
   box-sizing: border-box;
-  min-height: 100vh;
-  padding: 16px 20px;
-  background: #14141a;
+  padding: 16px 24px;
+  background: var(--fondo);
 }
 
 button {
   padding: 6px 12px;
-  border: 1px solid #3a3a46;
+  border: 1px solid var(--borde);
   border-radius: 6px;
-  background: #23232d;
+  background: var(--superficie-2);
   color: inherit;
   font: inherit;
   cursor: pointer;
@@ -42,13 +52,22 @@ button:disabled {
 input[type='text'],
 input:not([type]) {
   padding: 6px 10px;
-  border: 1px solid #3a3a46;
+  border: 1px solid var(--borde);
   border-radius: 6px;
-  background: #1c1c24;
+  background: var(--superficie);
   color: inherit;
   font: inherit;
 }
 
 .error {
   color: #ff8a8a;
+}
+
+/* Cuadrícula de tarjetas de póster (Catálogo, Biblioteca). */
+.cuadricula {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
 }

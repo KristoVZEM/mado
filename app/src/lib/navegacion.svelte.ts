@@ -1,8 +1,9 @@
 import type { Idioma, ResultadoBusqueda } from '../../../core/src/index.ts';
+import type { Pestana } from './biblioteca.ts';
+import { SECCION_INICIAL, type Seccion } from './carril.ts';
 
-export type Pantalla =
-  | { tipo: 'buscar' }
-  | { tipo: 'biblioteca' }
+/** Lo que se abre encima de una sección. El Reproductor sale del armazón y ocupa toda la ventana. */
+export type Superior =
   | { tipo: 'ficha'; anime: ResultadoBusqueda }
   | {
       tipo: 'reproducir';
@@ -13,9 +14,37 @@ export type Pantalla =
       idioma: Idioma;
     };
 
-/** Estado de navegación: una sola pantalla activa, sin librería de rutas. */
-export const nav = $state<{ pantalla: Pantalla }>({ pantalla: { tipo: 'buscar' } });
+interface Estado {
+  seccion: Seccion;
+  superior: Superior | null;
+  /** Se conserva al cambiar de sección (mientras la app está abierta). */
+  catalogo: { texto: string; resultados: ResultadoBusqueda[]; buscado: boolean; pendiente: boolean };
+  pestana: Pestana;
+}
 
-export function irA(pantalla: Pantalla): void {
-  nav.pantalla = pantalla;
+export const nav = $state<Estado>({
+  seccion: SECCION_INICIAL,
+  superior: null,
+  catalogo: { texto: '', resultados: [], buscado: false, pendiente: false },
+  pestana: 'todos',
+});
+
+export function irASeccion(seccion: Seccion): void {
+  nav.superior = null;
+  nav.seccion = seccion;
+}
+
+export function abrir(superior: Superior): void {
+  nav.superior = superior;
+}
+
+export function cerrarSuperior(): void {
+  nav.superior = null;
+}
+
+/** Va a Catálogo con el texto puesto; Catálogo lanza la búsqueda al montarse. */
+export function buscarEnCatalogo(texto: string): void {
+  nav.catalogo.texto = texto;
+  nav.catalogo.pendiente = true;
+  irASeccion('catalogo');
 }

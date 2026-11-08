@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
-  import { irA } from '../lib/navegacion.svelte.ts';
+  import { abrir, cerrarSuperior } from '../lib/navegacion.svelte.ts';
   import { alternarFavorito, episodiosVistos, esFavorito, estadoSerie, fijarEstado, leerAjuste } from '../lib/datos.ts';
   import { idiomaGuardado } from '../lib/continuar.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
@@ -55,7 +55,7 @@
   });
 
   function reproducir(numero: number) {
-    irA({ tipo: 'reproducir', anime, numeros, numero, idioma });
+    abrir({ tipo: 'reproducir', anime, numeros, numero, idioma });
   }
 
   /** Muestra el estado nuevo mientras se guarda; si falla, vuelve al anterior y avisa. */
@@ -91,7 +91,7 @@
 </script>
 
 <main class="pantalla">
-  <button onclick={() => irA({ tipo: 'buscar' })}>← Volver</button>
+  <button onclick={cerrarSuperior}>← Volver</button>
   <h1>{ficha?.title || anime.title}</h1>
 
   {#if bibliotecaOk}

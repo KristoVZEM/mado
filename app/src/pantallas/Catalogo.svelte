@@ -1,24 +1,19 @@
 <script lang="ts">
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError } from '../lib/errores.ts';
-  import { irA } from '../lib/navegacion.svelte.ts';
+  import { abrir, nav } from '../lib/navegacion.svelte.ts';
   import { onMount } from 'svelte';
-  import Ajustes from './Ajustes.svelte';
+  import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
   import { continuarViendo, descartarProgreso, estadoDatos, leerAjuste, type EntradaContinuar } from '../lib/datos.ts';
   import { fraccionVista, idiomaGuardado, textoTarjeta } from '../lib/continuar.ts';
   import { asegurarAjustes } from '../lib/ajustes.svelte.ts';
-  import type { ResultadoBusqueda } from '../../../core/src/index.ts';
 
-  let texto = $state('');
-  let resultados = $state<ResultadoBusqueda[]>([]);
   let cargando = $state(false);
   let error = $state('');
-  let buscado = $state(false);
 
   let avisoDatos = $state('');
   let pendientes = $state<EntradaContinuar[]>([]);
   let abriendo = $state<number | null>(null);
-  let verAjustes = $state(false);
 
   async function cargarPendientes() {
     try {
@@ -33,6 +28,10 @@
   onMount(async () => {
     await asegurarAjustes();
     await cargarPendientes();
+    if (nav.catalogo.pendiente) {
+      nav.catalogo.pendiente = false;
+      await ejecutarBusqueda();
+    }
   });
 
   async function retomar(p: EntradaContinuar) {
@@ -46,7 +45,7 @@
       ]);
       const numeros = ficha.episodes.map((e) => e.number).sort((a, b) => a - b);
       if (!numeros.includes(p.numero)) throw new Error(`El episodio ${p.numero} ya no está en la lista.`);
-      irA({
+      abrir({
         tipo: 'reproducir',
         anime: { aid: p.aid, slug: p.slug, title: p.titulo },
         numeros,
@@ -71,33 +70,32 @@
     }
   }
 
-  async function buscar(evento: SubmitEvent) {
-    evento.preventDefault();
-    const consulta = texto.trim();
+  async function ejecutarBusqueda() {
+    const consulta = nav.catalogo.texto.trim();
     if (!consulta || cargando) return;
     cargando = true;
     error = '';
     try {
-      resultados = await fuentes.buscar(consulta);
-      buscado = true;
+      nav.catalogo.resultados = await fuentes.buscar(consulta);
+      nav.catalogo.buscado = true;
     } catch (e) {
       console.error(e);
       error = mensajeDeError(e);
-      resultados = [];
+      nav.catalogo.resultados = [];
     } finally {
       cargando = false;
     }
   }
+
+  function buscar(evento: SubmitEvent) {
+    evento.preventDefault();
+    void ejecutarBusqueda();
+  }
 </script>
 
 <main class="pantalla">
-  <header class="cabecera">
-    <h1>ukiku-pc</h1>
-    <button onclick={() => irA({ tipo: 'biblioteca' })}>Biblioteca</button>
-    <button onclick={() => (verAjustes = !verAjustes)} aria-label="Ajustes" aria-expanded={verAjustes}>⚙</button>
-  </header>
+  <h1>Catálogo</h1>
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
-  {#if verAjustes}<Ajustes cerrar={() => (verAjustes = false)} datosOk={!avisoDatos} alImportar={cargarPendientes} />{/if}
 
   {#if pendientes.length > 0}
     <section aria-label="Continuar viendo">
@@ -119,27 +117,22 @@
   {/if}
 
   <form onsubmit={buscar}>
-    <input bind:value={texto} placeholder="Buscar anime…" size="40" />
+    <input bind:value={nav.catalogo.texto} placeholder="Buscar anime…" size="40" />
     <button type="submit" disabled={cargando}>Buscar</button>
   </form>
 
   {#if cargando}<p>Buscando…</p>{/if}
   {#if error}<p class="error">{error}</p>{/if}
-  {#if buscado && !cargando && !error && resultados.length === 0}<p>Sin resultados.</p>{/if}
+  {#if nav.catalogo.buscado && !cargando && !error && nav.catalogo.resultados.length === 0}<p>Sin resultados.</p>{/if}
 
-  <ul class="resultados">
-    {#each resultados as r (r.aid)}
-      <li><button onclick={() => irA({ tipo: 'ficha', anime: r })}>{r.title}</button></li>
+  <ul class="cuadricula">
+    {#each nav.catalogo.resultados as r (r.aid)}
+      <li><TarjetaPoster aid={r.aid} titulo={r.title} alAbrir={() => abrir({ tipo: 'ficha', anime: r })} /></li>
     {/each}
   </ul>
 </main>
 
 <style>
-  .cabecera {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
   .pendientes {
     list-style: none;
     padding: 0;
@@ -166,16 +159,5 @@
     top: 2px;
     right: 2px;
     padding: 0 6px;
-  }
-  .resultados {
-    list-style: none;
-    padding: 0;
-    display: grid;
-    gap: 6px;
-    max-width: 640px;
-  }
-  .resultados button {
-    width: 100%;
-    text-align: left;
   }
 </style>

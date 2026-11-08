@@ -10,7 +10,7 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError } from '../lib/errores.ts';
-  import { irA } from '../lib/navegacion.svelte.ts';
+  import { abrir } from '../lib/navegacion.svelte.ts';
   import {
     alternarPausa,
     alternarSilencio,
@@ -93,7 +93,7 @@
     // Saltar de episodio no lo marca como visto: eso lo decide el umbral del 85 % (o el final del
     // vídeo). Si se avanza con ⏭ antes de llegar, el episodio queda a medias, no visto.
     yaSaltado = true;
-    irA({ tipo: 'reproducir', anime, numeros, numero: destino, idioma });
+    abrir({ tipo: 'reproducir', anime, numeros, numero: destino, idioma });
   }
 
   const irAlSiguiente = () => irAEpisodio(siguiente);
@@ -238,7 +238,7 @@
       if (destruido) return;
       playable = p;
       // La pantalla se identifica por el número de episodio, así que esto no la remonta.
-      irA({ tipo: 'reproducir', anime, numeros, numero, idioma: nuevo });
+      abrir({ tipo: 'reproducir', anime, numeros, numero, idioma: nuevo });
       guardarAjusteSilencioso(`idioma:${anime.aid}`, nuevo);
       ultimoGuardadoMs = Date.now();
       ultimaPosicionGuardada = reproductor.posicion;
@@ -294,7 +294,7 @@
       pantallaCompleta = false;
       void getCurrentWindow().setFullscreen(false);
     }
-    irA({ tipo: 'ficha', anime });
+    abrir({ tipo: 'ficha', anime });
   }
 
   /**
