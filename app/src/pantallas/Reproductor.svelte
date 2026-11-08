@@ -1,3 +1,8 @@
+<script module lang="ts">
+  /** Vive fuera de la instancia: al pasar de episodio la pantalla se remonta y debe seguir igual. */
+  let pantallaCompleta = false;
+</script>
+
 <script lang="ts">
   import { onDestroy, onMount } from 'svelte';
   import { getCurrentWindow } from '@tauri-apps/api/window';
@@ -16,6 +21,7 @@
     saltarRelativo,
   } from '../lib/reproductor.svelte.ts';
   import { cambiarIdioma } from '../lib/idioma.ts';
+  import { CUENTA_SIGUIENTE_S, iniciarCuentaAtras } from '../lib/cuenta.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S, formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
@@ -31,8 +37,10 @@
   let playable = $state<Playable | null>(null);
   let controlesVisibles = $state(true);
   let temporizador: ReturnType<typeof setTimeout> | undefined;
-  let pantallaCompleta = false;
   let destruido = false;
+  /** Segundos que faltan para pasar solo al siguiente episodio; null si no hay cuenta en marcha. */
+  let cuenta = $state<number | null>(null);
+  let cuentaCancelada = $state(false);
   let cambiandoIdioma = $state(false);
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
@@ -52,6 +60,22 @@
   const siguiente = $derived.by<number | undefined>(() => {
     const i = numeros.indexOf(numero);
     return i >= 0 ? numeros[i + 1] : undefined;
+  });
+
+  // Al terminar el episodio, cuenta atrás hasta el siguiente. Se cancela sola al salir de la
+  // pantalla, al cambiar de idioma (el vídeo deja de estar terminado) o con el botón Cancelar.
+  $effect(() => {
+    if (!reproductor.terminado || siguiente === undefined || cuentaCancelada) return;
+    const proximo = siguiente;
+    const cancelar = iniciarCuentaAtras(
+      CUENTA_SIGUIENTE_S,
+      (n) => (cuenta = n),
+      () => irA({ tipo: 'reproducir', anime, numeros, numero: proximo, idioma }),
+    );
+    return () => {
+      cancelar();
+      cuenta = null;
+    };
   });
 
   onMount(async () => {
@@ -75,7 +99,6 @@
     clearTimeout(temporizador);
     clearTimeout(temporizadorAviso);
     void detener();
-    if (pantallaCompleta) void getCurrentWindow().setFullscreen(false);
   });
 
   function mostrarControles() {
@@ -157,7 +180,25 @@
   }
 
   function volver() {
+    // Pasar al siguiente episodio mantiene la pantalla completa; salir a la ficha la quita.
+    if (pantallaCompleta) {
+      pantallaCompleta = false;
+      void getCurrentWindow().setFullscreen(false);
+    }
     irA({ tipo: 'ficha', anime });
+  }
+
+  /**
+   * La barra espaciadora pausa en `keydown`; si el foco está en un botón, el navegador además lo
+   * pulsa al soltarla y desharía la pausa. Cancelar el `keyup` evita esa segunda acción.
+   */
+  function soltarTecla(e: KeyboardEvent) {
+    if (e.code === 'Space') e.preventDefault();
+  }
+
+  function pausarDesdeImagen() {
+    void alternarPausa();
+    mostrarControles();
   }
 
   function teclas(e: KeyboardEvent) {
@@ -205,7 +246,12 @@
   }
 </script>
 
-<svelte:window onkeydown={teclas} onmousemove={mostrarControles} onpointerdown={alClicFuera} />
+<svelte:window
+  onkeydown={teclas}
+  onkeyup={soltarTecla}
+  onmousemove={mostrarControles}
+  onpointerdown={alClicFuera}
+/>
 
 <div class="reproductor" class:transparente={estado === 'listo'} class:sin-cursor={estado === 'listo' && !controlesVisibles}>
   {#if estado === 'cargando'}
@@ -220,13 +266,19 @@
   {/if}
 
   {#if estado === 'listo'}
+    <!-- Superficie transparente sobre el vídeo: un clic en la imagen pausa o reanuda. -->
+    <button class="superficie" tabindex="-1" aria-label="Pausar o reanudar" onclick={pausarDesdeImagen}></button>
+
     {#if reproductor.terminado}
       <div class="centro fondo">
         <p>Fin del episodio {numero}</p>
         {#if siguiente !== undefined}
           <button onclick={() => irA({ tipo: 'reproducir', anime, numeros, numero: siguiente, idioma })}>
-            Siguiente episodio ({siguiente})
+            Siguiente episodio ({siguiente}){cuenta !== null ? ` · ${cuenta} s` : ''}
           </button>
+          {#if cuenta !== null}
+            <button onclick={() => (cuentaCancelada = true)}>Cancelar cuenta atrás</button>
+          {/if}
         {/if}
         <button onclick={volver}>Volver a la ficha</button>
       </div>
@@ -325,6 +377,17 @@
   }
   .reproductor.sin-cursor {
     cursor: none;
+  }
+  .superficie {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    appearance: none;
+    cursor: inherit;
   }
   .centro {
     position: absolute;
