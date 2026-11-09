@@ -10,16 +10,19 @@ validaron la técnica. Hoy hay:
 
 - `core/`: núcleo de fuentes en TypeScript (buscar, episodios y resolver
   Zilla, MP4Upload y Voe, con errores tipados).
-- `app/`: aplicación de escritorio (Tauri + Svelte + libmpv) que busca,
-  muestra la ficha y reproduce con controles flotantes.
+- `app/`: aplicación de escritorio (Tauri + Svelte + libmpv) con un carril de
+  iconos (Inicio, Catálogo, Emisión, Biblioteca, Historial y Ajustes), ficha
+  con sinopsis y reproductor con controles flotantes.
 - `lab/`: chequeo diario de que las fuentes siguen sirviendo (corre en un
   servidor propio).
 - `spike/`: el spike original; lo usa `lab/` hasta migrar a `core/`.
 
-Hecho: datos locales con SQLite (progreso, historial y ajustes) e
-importación de la copia de Ukiku desde una carpeta (historial, siguiendo y
-favoritos, mezclando o reemplazando). En curso: la biblioteca (estado y
-favoritos). Pendiente: la pantalla Biblioteca, la interfaz final y las
+Hecho: datos locales con SQLite (progreso, historial, ajustes y biblioteca
+con estado y favoritos), importación de la copia de Ukiku desde una carpeta
+(historial, siguiendo y favoritos, mezclando o reemplazando) y datos de
+[AniList](https://anilist.co) (banner, puntuación, próximo episodio, agenda
+semanal de emisión y aviso de episodio nuevo), con emparejado automático de
+las series. Pendiente: sincronizar la lista con una cuenta de AniList y las
 descargas.
 
 ## Plan general
