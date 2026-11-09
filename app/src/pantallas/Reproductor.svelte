@@ -27,7 +27,8 @@
   import { VELOCIDADES, etiquetaVelocidad } from '../lib/velocidad.ts';
   import { estadoSiguiente } from '../lib/siguiente.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
-  import { guardarProgreso, marcarVisto, progresoDe, type SerieRef } from '../lib/datos.ts';
+  import { completarSiTermino } from '../lib/completar.ts';
+  import { fijarEstado, guardarProgreso, marcarVisto, progresoDe, seriesParaSync, type SerieRef } from '../lib/datos.ts';
   import { avisarCambio } from '../lib/sync.svelte.ts';
   import { alCerrar } from '../lib/cierre.ts';
   import { anterioresDe, debeGuardar, esVisto, posicionDeRetoma } from '../lib/progreso.ts';
@@ -227,6 +228,10 @@
     if (visto) return;
     visto = true;
     marcarVisto(serie, numero, siguiente, anterioresDe(numeros, numero))
+      // Si con este episodio se completa la serie, el estado cambia antes de avisar a la sincronización.
+      .then(() =>
+        completarSiTermino(serie, { local: async (aid) => (await seriesParaSync(aid))[0], fijarEstado }),
+      )
       .then(() => avisarCambio(serie.aid))
       .catch(falloDeDatos);
   }
