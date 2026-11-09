@@ -3,11 +3,24 @@
   import Portada from '../lib/componentes/Portada.svelte';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
-  import { abrir, cerrarSuperior } from '../lib/navegacion.svelte.ts';
-  import { alternarFavorito, episodiosVistos, esFavorito, estadoSerie, fijarEstado, leerAjuste } from '../lib/datos.ts';
+  import { abrir, buscarEnCatalogo, cerrarSuperior } from '../lib/navegacion.svelte.ts';
+  import {
+    alternarFavorito,
+    episodiosVistos,
+    esFavorito,
+    estadoSerie,
+    fijarEstado,
+    leerAjuste,
+    vinculoConMedia,
+    type RelacionAnilist,
+    type VinculoConMedia,
+  } from '../lib/datos.ts';
+  import { asegurarVinculo, elegirVinculo, refrescarSiHaceFalta } from '../lib/anilistServicio.ts';
+  import { esDudoso, textoProximo } from '../lib/anilist.ts';
+  import EscogerObra from '../lib/componentes/EscogerObra.svelte';
   import { idiomaGuardado } from '../lib/continuar.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
-  import type { Ficha, Idioma, ResultadoBusqueda } from '../../../core/src/index.ts';
+  import { decidir, type Ficha, type Idioma, type MediaAnilist, type ResultadoBusqueda } from '../../../core/src/index.ts';
 
   let { anime }: { anime: ResultadoBusqueda } = $props();
 
@@ -23,6 +36,66 @@
   let favorito = $state(false);
   let guardando = $state(false);
   let avisoBiblioteca = $state('');
+
+  // AniList: todo opcional. Si falla o no hay red, la Ficha funciona igual sin estos datos.
+  let vinculo = $state<VinculoConMedia | null>(null);
+  let candidatos = $state<MediaAnilist[]>([]);
+  let preguntaDescartada = $state(false);
+  const media = $derived(vinculo?.media ?? null);
+  const dudoso = $derived(vinculo ? esDudoso(vinculo.vinculo) : false);
+  const opcionesObra = $derived([...(media ? [media] : []), ...candidatos]);
+  const proximo = $derived(media ? textoProximo(media.siguienteEp, media.siguienteEn, Date.now() / 1000) : null);
+  /** Puntuación, estudio, formato y próximo episodio, en una sola línea. */
+  const extra = $derived(
+    media
+      ? [
+          media.puntuacion !== null ? `★ ${(media.puntuacion / 10).toFixed(1)}` : null,
+          media.estudio,
+          media.formato,
+          proximo ? `Próximo: ${proximo}` : null,
+        ].filter(Boolean)
+      : [],
+  );
+
+  const textoPlano = (t: string) => t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  async function cargarAniList() {
+    try {
+      const estadoV = await asegurarVinculo(serie, { anio: ficha?.anio ?? null, episodios: numeros.length || null });
+      vinculo = await refrescarSiHaceFalta(estadoV.actual, serie.titulo);
+      candidatos = estadoV.candidatos;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function elegir(m: MediaAnilist) {
+    try {
+      await elegirVinculo(serie, m);
+      vinculo = await vinculoConMedia(anime.aid);
+      candidatos = [];
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  /** Abre una serie relacionada: la busca en animeav1 y, si hay una coincidencia firme, abre su Ficha. */
+  async function abrirRelacionada(r: RelacionAnilist) {
+    try {
+      for (const res of await fuentes.buscar(r.titulo)) {
+        const d = decidir({ titulo: res.title }, [
+          { anilistId: r.anilistId, tituloRomaji: r.titulo, tituloIngles: null, tituloNativo: null, sinonimos: [], anio: null, episodios: null },
+        ]);
+        if (d.tipo === 'auto') {
+          abrir({ tipo: 'ficha', anime: res });
+          return;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    buscarEnCatalogo(r.titulo);
+  }
 
   let sinopsisAbierta = $state(false);
   /** Estado de emisión y géneros, en una sola línea. */
@@ -57,6 +130,7 @@
     } finally {
       cargando = false;
     }
+    if (ficha) void cargarAniList();
     await Promise.all([datos, biblioteca]);
   });
 
@@ -98,11 +172,15 @@
 
 <main class="pantalla">
   <button onclick={cerrarSuperior}>← Volver</button>
+  {#if media?.banner}
+    <div class="banner" style:background-image={`url(${media.banner})`} role="img" aria-label="Banner de la serie"></div>
+  {/if}
   <div class="cabecera">
     <div class="portada-ficha"><Portada aid={anime.aid} titulo={ficha?.title || anime.title} /></div>
     <div class="datos">
       <h1>{ficha?.title || anime.title}</h1>
       {#if meta.length > 0}<p class="meta">{meta.join(' · ')}</p>{/if}
+      {#if extra.length > 0}<p class="meta">{extra.join(' · ')}</p>{/if}
       {#if ficha?.synopsis}
         <p class="sinopsis" class:recortada={larga && !sinopsisAbierta}>{ficha.synopsis}</p>
         {#if larga}
@@ -110,6 +188,9 @@
             {sinopsisAbierta ? 'Ver menos' : 'Ver más'}
           </button>
         {/if}
+      {/if}
+      {#if !ficha?.synopsis && media?.sinopsis}
+        <p class="sinopsis">{textoPlano(media.sinopsis)}</p>
       {/if}
       {#if bibliotecaOk}
         <p class="biblioteca">
@@ -132,6 +213,21 @@
     </div>
   </div>
 
+  {#if dudoso && !preguntaDescartada && opcionesObra.length > 0}
+    <EscogerObra candidatos={opcionesObra} alElegir={elegir} alDescartar={() => (preguntaDescartada = true)} />
+  {/if}
+
+  {#if media && media.relaciones.length > 0}
+    <section class="relacionadas" aria-label="Relacionadas">
+      <h2>Relacionadas</h2>
+      <p>
+        {#each media.relaciones as r (r.anilistId)}
+          <button onclick={() => abrirRelacionada(r)}>{r.titulo} ({r.tipo})</button>
+        {/each}
+      </p>
+    </section>
+  {/if}
+
   {#if cargando}<p>Cargando episodios…</p>{/if}
   {#if error}<p class="error">{error}</p>{/if}
 
@@ -153,6 +249,19 @@
 </main>
 
 <style>
+  .banner {
+    height: 180px;
+    margin-top: 12px;
+    border-radius: var(--radio);
+    background-size: cover;
+    background-position: center;
+    box-shadow: inset 0 -80px 60px -40px var(--fondo);
+  }
+  .relacionadas p {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
   .cabecera {
     display: grid;
     grid-template-columns: 170px 1fr;
