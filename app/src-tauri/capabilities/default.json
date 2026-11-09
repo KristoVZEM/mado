@@ -12,7 +12,11 @@
     "notification:default",
     {
       "identifier": "http:default",
-      "allow": [{ "url": "https://*" }, { "url": "https://*/*" }]
+      "allow": [
+        { "url": "https://animeav1.com" },
+        { "url": "https://graphql.anilist.co" },
+        { "url": "https://player.zilla-networks.com" }
+      ]
     }
   ]
 }
