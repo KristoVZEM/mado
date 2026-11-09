@@ -12,6 +12,7 @@
     estadoSerie,
     fijarEstado,
     leerAjuste,
+    progresoDeSerie,
     vinculoConMedia,
     type RelacionAnilist,
     type VinculoConMedia,
@@ -22,7 +23,8 @@
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
   import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { ordenarEpisodios } from '../lib/ajustes.ts';
-  import { idiomaGuardado } from '../lib/continuar.ts';
+  import { fraccionVista, idiomaGuardado } from '../lib/continuar.ts';
+  import { episodioPrincipal, textoPrincipal, textoQuedan, type ProgresoEp } from '../lib/episodiosFicha.ts';
   import { avisarCambio } from '../lib/sync.svelte.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
   import {
@@ -41,6 +43,7 @@
   let error = $state('');
   let idioma = $state<Idioma>('SUB');
   let vistos = $state(new Set<number>());
+  let progresos = $state<ProgresoEp[]>([]);
 
   // Biblioteca: solo se ofrece si se pudo leer al abrir. `estado` 0 = Ninguno.
   let bibliotecaOk = $state(false);
@@ -128,6 +131,9 @@
   /** Orden de la lista en pantalla; `numeros` se queda ascendente porque el reproductor calcula el siguiente con él. */
   const mostrados = $derived(ordenarEpisodios(numeros, ajustes.ordenDescendente));
   let avisoDesmarcar = $state('');
+  const progresoPorNumero = $derived(new Map(progresos.map((p) => [p.numero, p])));
+  /** El episodio que ofrece el botón grande: el que dejaste a medias, el siguiente sin ver, o volver al primero. */
+  const principal = $derived(episodioPrincipal(numeros, vistos, progresos));
   const serie = $derived({ aid: anime.aid, slug: anime.slug, titulo: ficha?.title || anime.title });
 
   onMount(async () => {
@@ -137,8 +143,10 @@
       episodiosVistos(anime.aid).catch(() => [] as number[]),
       leerAjuste(`idioma:${anime.aid}`).catch(() => null),
       asegurarAjustes(),
-    ]).then(([v, i]) => {
+      progresoDeSerie(anime.aid).catch(() => [] as ProgresoEp[]),
+    ]).then(([v, i, , p]) => {
       vistos = new Set(v);
+      progresos = p;
       idioma = idiomaGuardado(i, ajustes.idiomaDefecto);
     });
     const biblioteca = Promise.all([estadoSerie(anime.aid), esFavorito(anime.aid)])
@@ -245,6 +253,14 @@
       {#if !ficha?.synopsis && media?.sinopsis}
         <p class="sinopsis">{textoPlano(media.sinopsis)}</p>
       {/if}
+      {#if principal}
+        <p>
+          <button class="principal" onclick={() => reproducir(principal.numero)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+            {textoPrincipal(principal)}
+          </button>
+        </p>
+      {/if}
       {#if bibliotecaOk}
         <p class="biblioteca">
           <label>
@@ -294,24 +310,35 @@
       <button disabled={idioma === 'DUB'} onclick={() => (idioma = 'DUB')}>DUB</button>
       · {numeros.length} episodios
     </p>
-    <div class="episodios">
+    <ul class="lista-episodios" aria-label="Episodios">
       {#each mostrados as n (n)}
-        <span class="episodio">
-          <button class:visto={vistos.has(n)} onclick={() => reproducir(n)}>
-            {n}{#if vistos.has(n)}<span class="marca" aria-label="visto"> ✓</span>{/if}
+        {@const p = progresoPorNumero.get(n)}
+        {@const fr = p ? fraccionVista(p.posicionS, p.duracionS) : null}
+        {@const quedan = p ? textoQuedan(p.posicionS, p.duracionS) : null}
+        <li class="episodio" class:visto={vistos.has(n)} class:actual={principal?.numero === n}>
+          <button class="fila" onclick={() => reproducir(n)}>
+            <span class="miniatura">
+              <Portada aid={anime.aid} titulo={serie.titulo} numero={n} />
+              {#if vistos.has(n)}
+                <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              {/if}
+              {#if fr !== null}<progress value={fr} max="1" aria-hidden="true"></progress>{/if}
+            </span>
+            <span class="info">
+              <strong>Episodio {n}</strong>
+              {#if vistos.has(n)}<span>Visto</span>{:else if quedan}<span>{quedan}</span>{/if}
+            </span>
           </button>
           {#if vistos.has(n)}
             <button
               class="quitar"
               onclick={() => desmarcar(n)}
               aria-label={`Marcar el episodio ${n} como no visto`}
-              title="Marcar como no visto. Si la serie está sincronizada con AniList, el progreso de AniList puede volver a marcarlo."
-              >×</button
-            >
+              title="Marcar como no visto. AniList puede volver a marcarlo.">×</button>
           {/if}
-        </span>
+        </li>
       {/each}
-    </div>
+    </ul>
     {#if avisoDesmarcar}<p class="error" role="alert">{avisoDesmarcar}</p>{/if}
   {/if}
 </main>
@@ -368,26 +395,129 @@
     align-items: center;
     gap: 8px;
   }
-  .episodios {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .episodio {
+  .principal {
     display: inline-flex;
-    gap: 2px;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    background: var(--acento);
+    border-color: var(--acento);
+    color: #fff;
+    font-weight: 600;
   }
-  .episodios button {
-    min-width: 52px;
+  .principal:hover:not(:disabled) {
+    background: #ff6a85;
   }
-  .episodios .quitar {
-    min-width: 0;
-    padding-inline: 6px;
+  .principal svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
   }
-  .episodios button.visto {
-    opacity: 0.65;
+  .lista-episodios {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 6px 16px;
+  }
+  /* Con series de cientos de episodios, el navegador solo pinta las filas que se ven. */
+  .episodio {
+    position: relative;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 92px;
+  }
+  .fila {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    padding: 6px;
+    border-color: transparent;
+    background: none;
+    text-align: left;
+    transition: background 150ms;
+  }
+  .fila:hover:not(:disabled) {
+    background: var(--superficie);
+  }
+  .fila:focus-visible {
+    outline: 2px solid var(--acento);
+    outline-offset: 1px;
+  }
+  .episodio.actual .fila {
+    background: var(--superficie);
+    border-color: var(--borde);
+  }
+  .miniatura {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--radio);
+  }
+  .episodio.visto .miniatura {
+    opacity: 0.55;
   }
   .marca {
-    color: #4caf50;
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    width: 20px;
+    height: 20px;
+    padding: 2px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 0.65);
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .miniatura progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 4px;
+    appearance: none;
+    border: 0;
+    background: rgb(0 0 0 / 0.6);
+  }
+  .miniatura progress::-webkit-progress-bar {
+    background: rgb(0 0 0 / 0.6);
+  }
+  .miniatura progress::-webkit-progress-value {
+    background: var(--acento);
+  }
+  .info {
+    display: grid;
+    gap: 2px;
+  }
+  .info span {
+    color: var(--texto-suave);
+  }
+  .episodio.visto strong {
+    color: var(--texto-suave);
+  }
+  .quitar {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 0 8px;
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .episodio:hover .quitar,
+  .episodio:focus-within .quitar {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fila,
+    .quitar {
+      transition: none;
+    }
   }
 </style>

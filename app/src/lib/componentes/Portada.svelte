@@ -4,14 +4,16 @@
   let { aid, titulo, numero }: { aid: number; titulo: string; numero?: number } = $props();
 
   const captura = $derived(numero !== undefined);
-  const src = $derived(numero !== undefined ? urlCaptura(aid, numero) : urlPortada(aid));
-  let fallida = $state<string | null>(null);
-  const roto = $derived(src === null || fallida === src);
+  const principal = $derived(numero !== undefined ? urlCaptura(aid, numero) : urlPortada(aid));
+  /** Si la captura de un episodio no carga, se enseña el póster de la serie antes que una letra. */
+  const respaldo = $derived(numero !== undefined ? urlPortada(aid) : null);
+  let fallidas = $state<string[]>([]);
+  const src = $derived([principal, respaldo].find((s) => s !== null && !fallidas.includes(s)) ?? null);
 </script>
 
 <div class="portada" class:captura>
-  {#if !roto && src}
-    <img {src} alt="" loading="lazy" onerror={() => (fallida = src)} />
+  {#if src}
+    <img {src} class:respaldo={src === respaldo} alt="" loading="lazy" onerror={() => (fallidas = [...fallidas, src])} />
   {:else}
     <span class="inicial" aria-hidden="true">{inicialDe(titulo)}</span>
   {/if}
@@ -34,6 +36,10 @@
     height: 100%;
     object-fit: cover;
     display: block;
+  }
+  /* El póster es vertical: en un recuadro 16:9 se recorta, y la parte alta suele tener las caras. */
+  img.respaldo {
+    object-position: center 25%;
   }
   .inicial {
     font-size: 2.2rem;

@@ -183,6 +183,11 @@ pub fn descartar_progreso(datos: State<'_, Datos>, aid: i64) -> Result<(), Strin
 }
 
 #[tauri::command(async)]
+pub fn progreso_de_serie(datos: State<'_, Datos>, aid: i64) -> Result<Vec<progreso::ProgresoEpisodio>, String> {
+    con(&datos, |c| progreso::progreso_de_serie(c, aid))
+}
+
+#[tauri::command(async)]
 pub fn desmarcar_visto(datos: State<'_, Datos>, aid: i64, numero: f64) -> Result<(), String> {
     con(&datos, |c| progreso::desmarcar_visto(c, aid, numero))
 }

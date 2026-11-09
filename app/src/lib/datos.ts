@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { crearCola } from './cola.ts';
+import type { ProgresoEp } from './episodiosFicha.ts';
 import type { Bajada, LocalSync } from '../../../core/src/index.ts';
 
 /** Identifica una serie para guardar su progreso; `aid` y `slug` son los de animeav1. */
@@ -61,6 +62,9 @@ export const marcarVisto = (serie: SerieRef, numero: number, siguiente?: number,
 export const episodiosVistos = (aid: number) => invoke<number[]>('episodios_vistos', { aid });
 
 export const progresoDe = (aid: number, numero: number) => invoke<number | null>('progreso_de', { aid, numero });
+
+/** Episodios a medias de una serie, del más reciente al más antiguo. */
+export const progresoDeSerie = (aid: number) => invoke<ProgresoEp[]>('progreso_de_serie', { aid });
 
 export const continuarViendo = (limite: number) => invoke<EntradaContinuar[]>('continuar_viendo', { limite });
 

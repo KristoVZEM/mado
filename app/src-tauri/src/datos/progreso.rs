@@ -90,6 +90,26 @@ pub fn progreso_de(conn: &Connection, aid: i64, numero: f64) -> Resultado<Option
     }
 }
 
+/// Un episodio a medias de una serie.
+#[derive(Debug, PartialEq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgresoEpisodio {
+    pub numero: f64,
+    pub posicion_s: f64,
+    pub duracion_s: f64,
+}
+
+/// Todos los episodios a medias de una serie, del más reciente al más antiguo.
+pub fn progreso_de_serie(conn: &Connection, aid: i64) -> Resultado<Vec<ProgresoEpisodio>> {
+    let mut st = conn.prepare(
+        "SELECT numero, posicion_s, duracion_s FROM progreso WHERE aid = ?1 ORDER BY actualizado DESC, numero",
+    )?;
+    let filas = st.query_map(params![aid], |f| {
+        Ok(ProgresoEpisodio { numero: f.get(0)?, posicion_s: f.get(1)?, duracion_s: f.get(2)? })
+    })?;
+    Ok(filas.collect::<Result<Vec<_>, _>>()?)
+}
+
 /// Una tarjeta de "Continuar viendo".
 #[derive(Debug, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -260,6 +280,20 @@ mod pruebas {
             let serie = Serie { aid, slug: &slug, titulo: &titulo };
             marcar_visto(conn, ahora, &serie, numero, None, &[]).unwrap();
         }
+    }
+
+    #[test]
+    fn progreso_de_serie_trae_solo_esa_serie_del_mas_reciente_al_mas_antiguo() {
+        let conn = abrir_en_memoria().unwrap();
+        guardar_progreso(&conn, 100, &ONE_PIECE, 1.0, 10.0, 1400.0).unwrap();
+        guardar_progreso(&conn, 300, &ONE_PIECE, 3.0, 30.0, 1400.0).unwrap();
+        guardar_progreso(&conn, 200, &ONE_PIECE, 2.0, 20.0, 1400.0).unwrap();
+        let otra = Serie { aid: 11, slug: "otra", titulo: "Otra" };
+        guardar_progreso(&conn, 400, &otra, 1.0, 5.0, 900.0).unwrap();
+        let p = progreso_de_serie(&conn, 10).unwrap();
+        let claves: Vec<(f64, f64, f64)> = p.iter().map(|e| (e.numero, e.posicion_s, e.duracion_s)).collect();
+        assert_eq!(claves, vec![(3.0, 30.0, 1400.0), (2.0, 20.0, 1400.0), (1.0, 10.0, 1400.0)]);
+        assert!(progreso_de_serie(&conn, 99).unwrap().is_empty());
     }
 
     #[test]
