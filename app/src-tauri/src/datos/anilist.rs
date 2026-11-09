@@ -265,6 +265,34 @@ pub fn vinculo_con_media(conn: &Connection, aid: i64) -> Resultado<Option<Vincul
         .optional()?)
 }
 
+/// Un vínculo `auto` con el título de la serie y su obra en caché, para repasarlo con las reglas de hoy.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VinculoAuto {
+    pub aid: i64,
+    pub slug: String,
+    pub titulo: String,
+    pub confianza: f64,
+    pub media: MediaAnilist,
+}
+
+/// Todos los vínculos `auto` (los `manual` y `ninguno` quedan fuera), ordenados por `aid`.
+pub fn vinculos_auto(conn: &Connection) -> Resultado<Vec<VinculoAuto>> {
+    let sql = format!(
+        "SELECT v.aid, a.slug, a.titulo, v.confianza, {COLS_MEDIA}
+         FROM anilist_vinculo v
+         JOIN anime a ON a.aid = v.aid
+         JOIN anilist_media m ON m.anilist_id = v.anilist_id
+         WHERE v.origen = 'auto'
+         ORDER BY v.aid"
+    );
+    let mut st = conn.prepare(&sql)?;
+    let filas = st.query_map([], |f| {
+        Ok(VinculoAuto { aid: f.get(0)?, slug: f.get(1)?, titulo: f.get(2)?, confianza: f.get(3)?, media: fila_media(f, 4)? })
+    })?;
+    Ok(filas.collect::<Result<Vec<_>, _>>()?)
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PendienteEmparejar {
@@ -676,5 +704,21 @@ mod pruebas {
         assert_eq!(r.len(), 1);
         assert_eq!((r[0].aid, r[0].anilist_id, r[0].siguiente_ep, r[0].siguiente_en), (2, 10, Some(8), Some(1234)));
         assert_eq!(r[0].banner.as_deref(), Some("https://s4.anilist.co/b.jpg"));
+    }
+
+    #[test]
+    fn vinculos_auto_trae_solo_los_auto_con_su_titulo_y_su_obra() {
+        let conn = abrir_en_memoria().unwrap();
+        con_obra(&conn, 10);
+        con_obra(&conn, 11);
+        let s = |aid: i64, slug: &'static str| Serie { aid, slug, titulo: slug };
+        fijar_vinculo(&conn, 1, &s(2, "dos"), Some(11), 0.9, "auto").unwrap();
+        fijar_vinculo(&conn, 1, &s(1, "uno"), Some(10), 0.95, "auto").unwrap();
+        fijar_vinculo(&conn, 1, &s(3, "tres"), Some(10), 1.0, "manual").unwrap();
+        fijar_vinculo(&conn, 1, &s(4, "cuatro"), None, 0.1, "ninguno").unwrap();
+        let v = vinculos_auto(&conn).unwrap();
+        let claves: Vec<(i64, &str, f64, i64)> =
+            v.iter().map(|x| (x.aid, x.titulo.as_str(), x.confianza, x.media.anilist_id)).collect();
+        assert_eq!(claves, vec![(1, "uno", 0.95, 10), (2, "dos", 0.9, 11)], "ordenados por aid; sin manual ni ninguno");
     }
 }

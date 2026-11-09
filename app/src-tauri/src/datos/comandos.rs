@@ -4,7 +4,7 @@
 use super::anilist;
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
-use super::{ajustes, Resultado};
+use super::{ajustes, Error, Resultado};
 use super::biblioteca::{self, Biblioteca};
 use super::sync;
 use rusqlite::Connection;
@@ -20,11 +20,28 @@ fn ahora_ms() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
+/// Mensaje para la pantalla. Los errores de validación y de base más nueva ya son legibles y se muestran
+/// tal cual; los de SQLite y de disco llevan SQL, nombres de tablas o rutas, así que la pantalla recibe un
+/// texto genérico y el detalle va a la consola de la aplicación.
+fn para_interfaz(e: &Error) -> String {
+    match e {
+        Error::Invalido(_) | Error::BaseMasNueva { .. } => e.to_string(),
+        Error::Sqlite(_) => {
+            eprintln!("[datos] {e}");
+            "No se pudo acceder a los datos locales. El detalle está en la consola de la aplicación.".to_string()
+        }
+        Error::Io(causa) => {
+            eprintln!("[datos] {e}");
+            format!("Error de disco ({}). El detalle está en la consola de la aplicación.", causa.kind())
+        }
+    }
+}
+
 /// Toma la conexión y ejecuta `f`. Si la base no está disponible, devuelve ese mensaje.
 fn con<T>(datos: &State<'_, Datos>, f: impl FnOnce(&Connection) -> Resultado<T>) -> Result<T, String> {
     let guardia = datos.0.lock().map_err(|_| "la base de datos quedó en un estado inconsistente".to_string())?;
     match &*guardia {
-        Ok(conn) => f(conn).map_err(|e| e.to_string()),
+        Ok(conn) => f(conn).map_err(|e| para_interfaz(&e)),
         Err(motivo) => Err(motivo.clone()),
     }
 }
@@ -117,6 +134,11 @@ pub fn vinculo_con_media(datos: State<'_, Datos>, aid: i64) -> Result<Option<ani
     con(&datos, |c| anilist::vinculo_con_media(c, aid))
 }
 
+#[tauri::command(async)]
+pub fn vinculos_auto(datos: State<'_, Datos>) -> Result<Vec<anilist::VinculoAuto>, String> {
+    con(&datos, anilist::vinculos_auto)
+}
+
 /// El límite se acota a 1–100.
 #[tauri::command(async)]
 pub fn pendientes_emparejar(datos: State<'_, Datos>, limite: u32) -> Result<Vec<anilist::PendienteEmparejar>, String> {
@@ -206,15 +228,15 @@ pub fn listar_biblioteca(datos: State<'_, Datos>) -> Result<Biblioteca, String> 
 /// de la carpeta del diálogo; los archivos se leen antes de tomar la base.
 #[tauri::command(async)]
 pub fn previsualizar_copia(datos: State<'_, Datos>, carpeta: String) -> Result<ResumenCopia, String> {
-    let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| e.to_string())?;
+    let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| para_interfaz(&e))?;
     con(&datos, |c| copia::previsualizar(c, &leida))
 }
 
 /// Importa la carpeta de la copia de Ukiku. `modo` es "mezclar" o "reemplazar".
 #[tauri::command(async)]
 pub fn importar_copia(datos: State<'_, Datos>, carpeta: String, modo: String) -> Result<AplicadoCopia, String> {
-    let modo = Modo::desde_texto(&modo).map_err(|e| e.to_string())?;
-    let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| e.to_string())?;
+    let modo = Modo::desde_texto(&modo).map_err(|e| para_interfaz(&e))?;
+    let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| para_interfaz(&e))?;
     con(&datos, |c| copia::aplicar(c, &leida, modo))
 }
 
@@ -248,4 +270,34 @@ pub fn borrar_cuenta(datos: State<'_, Datos>) -> Result<(), String> {
 #[tauri::command(async)]
 pub fn marcar_sincronizada(datos: State<'_, Datos>) -> Result<(), String> {
     con(&datos, |c| sync::marcar_sincronizada(c, ahora_ms()))
+}
+
+#[cfg(test)]
+mod pruebas {
+    use super::*;
+    use super::super::Error;
+
+    #[test]
+    fn los_errores_de_validacion_y_de_base_nueva_se_muestran_tal_cual() {
+        assert_eq!(para_interfaz(&Error::Invalido("estado inválido: 9".into())), "estado inválido: 9");
+        let nueva = Error::BaseMasNueva { encontrada: 9, conocida: 5 };
+        assert_eq!(para_interfaz(&nueva), nueva.to_string());
+    }
+
+    #[test]
+    fn un_error_de_sqlite_no_deja_pasar_el_sql_ni_los_nombres_de_tablas() {
+        let conn = Connection::open_in_memory().unwrap();
+        let crudo = conn.execute("SELECT secreto FROM tabla_que_no_existe", []).unwrap_err();
+        let texto = para_interfaz(&Error::Sqlite(crudo));
+        assert!(!texto.contains("tabla_que_no_existe") && !texto.contains("SELECT"), "{texto}");
+        assert!(texto.contains("datos locales"), "{texto}");
+    }
+
+    #[test]
+    fn un_error_de_disco_dice_el_tipo_pero_no_la_ruta() {
+        let crudo = std::io::Error::new(std::io::ErrorKind::PermissionDenied, r"C:\Users\alguien\privado\ukiku.db");
+        let texto = para_interfaz(&Error::Io(crudo));
+        assert!(!texto.contains("alguien") && !texto.contains("ukiku.db"), "{texto}");
+        assert!(texto.contains("disco"), "{texto}");
+    }
 }

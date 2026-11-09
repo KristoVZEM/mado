@@ -13,6 +13,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("anilist_agenda_cargada", 0.0, 9.0e15),
     // Client ID de la app registrada en el portal de desarrolladores de AniList (no es secreto).
     ("anilist_client_id", 1.0, 2.0e9),
+    // Versión de las reglas con que se repasaron los vínculos automáticos (0 = nunca).
+    ("anilist_repaso_version", 0.0, 1000.0),
 ];
 
 const PREFIJO_IDIOMA: &str = "idioma:";

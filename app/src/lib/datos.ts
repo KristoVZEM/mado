@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { crearCola } from './cola.ts';
 import type { Bajada, LocalSync } from '../../../core/src/index.ts';
 
 /** Identifica una serie para guardar su progreso; `aid` y `slug` son los de animeav1. */
@@ -26,25 +27,35 @@ export interface EntradaContinuar {
 /** `null` si la base funciona; si no, el motivo (p. ej. es de una versión más nueva). */
 export const estadoDatos = () => invoke<string | null>('estado_datos');
 
+/**
+ * Las escrituras de progreso van en serie y en el orden en que se piden: así un guardado tardío no puede
+ * llegar después de `marcarVisto` y volver a crear el progreso de un episodio que ya se marcó como visto.
+ */
+const enSerie = crearCola();
+
 export const guardarProgreso = (serie: SerieRef, numero: number, posicionS: number, duracionS: number) =>
-  invoke<void>('guardar_progreso', {
-    aid: serie.aid,
-    slug: serie.slug,
-    titulo: serie.titulo,
-    numero,
-    posicionS,
-    duracionS,
-  });
+  enSerie(() =>
+    invoke<void>('guardar_progreso', {
+      aid: serie.aid,
+      slug: serie.slug,
+      titulo: serie.titulo,
+      numero,
+      posicionS,
+      duracionS,
+    }),
+  );
 
 export const marcarVisto = (serie: SerieRef, numero: number, siguiente?: number, anteriores: number[] = []) =>
-  invoke<void>('marcar_visto', {
-    aid: serie.aid,
-    slug: serie.slug,
-    titulo: serie.titulo,
-    numero,
-    siguiente: siguiente ?? null,
-    anteriores,
-  });
+  enSerie(() =>
+    invoke<void>('marcar_visto', {
+      aid: serie.aid,
+      slug: serie.slug,
+      titulo: serie.titulo,
+      numero,
+      siguiente: siguiente ?? null,
+      anteriores,
+    }),
+  );
 
 /** Números de episodio vistos de una serie, de menor a mayor. */
 export const episodiosVistos = (aid: number) => invoke<number[]>('episodios_vistos', { aid });
@@ -53,7 +64,7 @@ export const progresoDe = (aid: number, numero: number) => invoke<number | null>
 
 export const continuarViendo = (limite: number) => invoke<EntradaContinuar[]>('continuar_viendo', { limite });
 
-export const descartarProgreso = (aid: number) => invoke<void>('descartar_progreso', { aid });
+export const descartarProgreso = (aid: number) => enSerie(() => invoke<void>('descartar_progreso', { aid }));
 
 /** Los ajustes viajan como texto: leerlos con `lib/ajustes.ts`, que valida y cae al valor por defecto. */
 export const leerAjuste = (clave: string) => invoke<string | null>('leer_ajuste', { clave });
@@ -292,3 +303,14 @@ export const marcarSincronizada = () => invoke<void>('marcar_sincronizada');
 export const guardarTokenAnilist = (token: string) => invoke<void>('guardar_token_anilist', { token });
 export const leerTokenAnilist = () => invoke<string | null>('leer_token_anilist');
 export const borrarTokenAnilist = () => invoke<void>('borrar_token_anilist');
+
+/** Un vínculo `auto` con el título de la serie y su obra en caché; para repasarlo con las reglas de hoy. */
+export interface VinculoAuto {
+  aid: number;
+  slug: string;
+  titulo: string;
+  confianza: number;
+  media: MediaAnilist;
+}
+
+export const vinculosAuto = () => invoke<VinculoAuto[]>('vinculos_auto');

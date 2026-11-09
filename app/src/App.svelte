@@ -8,20 +8,31 @@
   import Historial from './pantallas/Historial.svelte';
   import Ficha from './pantallas/Ficha.svelte';
   import Reproductor from './pantallas/Reproductor.svelte';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { onMount } from 'svelte';
+  import { ejecutarAlCerrar } from './lib/cierre.ts';
   import { asegurarVinculo } from './lib/anilistServicio.ts';
   import { estadoDatos, pendientesEmparejar } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
   import { nav } from './lib/navegacion.svelte.ts';
-  import { sincronizarAlAbrir } from './lib/sync.svelte.ts';
+  import { repasarVinculosAlAbrir, sincronizarAlAbrir } from './lib/sync.svelte.ts';
 
   const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
   // Empareja las series con AniList en segundo plano, poco a poco y reanudándose en cada arranque.
   // Todo es opcional: cualquier fallo se queda en la consola y no afecta a la app.
   onMount(() => {
+    // Cerrar con la X: se retiene el cierre, se guarda lo pendiente (progreso, volumen) y se cierra.
+    // `ejecutarAlCerrar` tiene tope de tiempo, así que la ventana nunca queda colgada.
+    void getCurrentWindow()
+      .onCloseRequested(async (evento) => {
+        evento.preventDefault();
+        await ejecutarAlCerrar();
+        await getCurrentWindow().destroy();
+      })
+      .catch((e) => console.error('cierre de la ventana:', e));
     // La sincronización con la cuenta de AniList corre aparte del emparejador y comparte su limitador.
-    void dormir(8000).then(sincronizarAlAbrir);
+    void dormir(8000).then(repasarVinculosAlAbrir).then(sincronizarAlAbrir);
     void (async () => {
       try {
         await dormir(5000); // no competir con el arranque

@@ -6,15 +6,20 @@ import {
   borrarCuenta,
   borrarTokenAnilist,
   estadoDatos,
+  fijarVinculo,
+  guardarAjuste,
+  leerAjuste,
   guardarCuenta,
   guardarTokenAnilist,
   leerCuenta,
   marcarSincronizada,
   seriesParaSync,
+  vinculosAuto,
   type Cuenta,
 } from './datos.ts';
 import { textoDeError } from './errores.ts';
 import { crearSincronizador, type ResumenSync } from './sincronizacion.ts';
+import { repasarSiHaceFalta } from './repaso.ts';
 
 export const sync = $state<{
   cuenta: Cuenta | null;
@@ -135,6 +140,25 @@ export function cancelarVistaPrevia() {
   sync.plan = null;
   sync.fase = 'reposo';
   sync.mensaje = 'No se cambió nada.';
+}
+
+/**
+ * Repasa los vínculos automáticos (una vez por versión de reglas). Va antes de sincronizar: un vínculo
+ * que ya no es firme no debe escribir en AniList. Nunca lanza.
+ */
+export async function repasarVinculosAlAbrir() {
+  try {
+    if (await estadoDatos()) return;
+    const rebajas = await repasarSiHaceFalta({
+      vinculos: vinculosAuto,
+      rebajar: async (serie, anilistId, confianza) => void (await fijarVinculo(serie, anilistId, confianza, 'auto')),
+      version: async () => Number((await leerAjuste('anilist_repaso_version')) ?? 0) || 0,
+      guardarVersion: (n) => guardarAjuste('anilist_repaso_version', String(n)),
+    });
+    if (rebajas && rebajas.length > 0) console.info(`repaso de vínculos: ${rebajas.length} pasaron a dudosos`);
+  } catch (e) {
+    console.error('repaso de vínculos:', e instanceof Error ? e.name : e);
+  }
 }
 
 /** Al abrir la app: solo si hay cuenta y ya hubo una primera sincronización confirmada. Nunca lanza. */

@@ -29,6 +29,7 @@
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { guardarProgreso, marcarVisto, progresoDe, type SerieRef } from '../lib/datos.ts';
   import { avisarCambio } from '../lib/sync.svelte.ts';
+  import { alCerrar } from '../lib/cierre.ts';
   import { anterioresDe, debeGuardar, esVisto, posicionDeRetoma } from '../lib/progreso.ts';
   import { formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
@@ -159,7 +160,11 @@
     }
   });
 
+  // Al cerrar la ventana con la X se espera a que el progreso quede guardado (con tope de tiempo).
+  const quitarAlCerrar = alCerrar(() => guardarAhora(true));
+
   onDestroy(() => {
+    quitarAlCerrar();
     destruido = true;
     clearTimeout(temporizador);
     clearTimeout(temporizadorAviso);
@@ -195,8 +200,8 @@
   }
 
   /** Guarda la posición actual si toca (o siempre, con `forzar`). No hace nada si ya está visto. */
-  function guardarAhora(forzar = false) {
-    if (visto || estado !== 'listo' || reproductor.duracion <= 0) return;
+  function guardarAhora(forzar = false): Promise<void> {
+    if (visto || estado !== 'listo' || reproductor.duracion <= 0) return Promise.resolve();
     const posicion = reproductor.posicion;
     const ahoraMs = Date.now();
     if (
@@ -209,12 +214,12 @@
         velocidad: reproductor.velocidad,
       })
     ) {
-      return;
+      return Promise.resolve();
     }
-    if (!(posicion > 0)) return;
+    if (!(posicion > 0)) return Promise.resolve();
     ultimoGuardadoMs = ahoraMs;
     ultimaPosicionGuardada = posicion;
-    guardarProgreso(serie, numero, posicion, reproductor.duracion).catch(falloDeDatos);
+    return guardarProgreso(serie, numero, posicion, reproductor.duracion).catch(falloDeDatos);
   }
 
   /** Marca el episodio como visto una sola vez (y deja listo el siguiente en 0:00 en la base). */

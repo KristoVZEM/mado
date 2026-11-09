@@ -8,6 +8,8 @@ import {
 } from 'tauri-plugin-libmpv-api';
 import type { Playable } from '../../../core/src/index.ts';
 import { cabecerasMpv } from './cabeceras.ts';
+import { alCerrar } from './cierre.ts';
+import { crearRetardo } from './retardo.ts';
 import { crearCola } from './cola.ts';
 import { argumentosLoadfile } from './idioma.ts';
 import { validarUrlDeStream } from './url.ts';
@@ -110,11 +112,15 @@ export function alternarPausa(): Promise<void> {
   return setProperty('pause', !reproductor.pausa);
 }
 
+/** Al arrastrar el control se emiten decenas de valores: solo se guarda el último, 400 ms después. */
+const guardarVolumen = crearRetardo<string>((v) => guardarAjusteSilencioso('volumen', v), 400);
+alCerrar(() => guardarVolumen.vaciar());
+
 /** Fija el volumen (0-100), lo recuerda para el próximo arranque y quita el silencio si sube. */
 export async function fijarVolumen(n: number): Promise<void> {
   const v = limitarVolumen(n);
   ajustes.volumen = v;
-  guardarAjusteSilencioso('volumen', String(v));
+  guardarVolumen.llamar(String(v));
   await setProperty('volume', v);
   if (reproductor.silencio && v > 0) await setProperty('mute', false);
 }

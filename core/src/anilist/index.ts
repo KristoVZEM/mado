@@ -12,3 +12,5 @@ export { aEstadoLocal, MAX_PROGRESO, planificar, STATUS } from './sync.ts';
 export type { Bajada, EstadoLocal, LocalSync, Plan, RemotoSync, Subida } from './sync.ts';
 export { entradaDe, guardarEntradas, listaUsuario, obtenerUsuario } from './lista.ts';
 export type { ResultadoSubida } from './lista.ts';
+export { planearRepaso } from './repaso.ts';
+export type { Rebaja, VinculoAutoRepaso } from './repaso.ts';
