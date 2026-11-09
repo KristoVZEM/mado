@@ -41,3 +41,8 @@ test('textoDeError usa el texto de un rechazo de invoke y traduce el resto', () 
   assert.equal(textoDeError('estado inválido: 9'), 'estado inválido: 9');
   assert.equal(textoDeError(new SinRed('x')), mensajeDeError(new SinRed('x')));
 });
+
+test('el desafío de Cloudflare y la falta de respuesta sugieren cambiar de red o de servidor de la VPN', () => {
+  assert.match(mensajeDeError(new Desafio('x')), /VPN/);
+  assert.match(mensajeDeError(new SinRed('x')), /otro servidor de la VPN/);
+});

@@ -19,6 +19,7 @@
   } from '../lib/datos.ts';
   import { elegirDestacado, etiquetaNuevo } from '../lib/destacado.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
+  import { avisarFalloDeFuente } from '../lib/fuente.svelte.ts';
   import { fuentes } from '../lib/fuentes.ts';
   import { abrir, buscarEnCatalogo, irASeccion, nav } from '../lib/navegacion.svelte.ts';
 
@@ -87,6 +88,7 @@
     } catch (e) {
       console.error(e);
       error = mensajeDeError(e);
+      avisarFalloDeFuente(e);
     } finally {
       abriendo = null;
     }

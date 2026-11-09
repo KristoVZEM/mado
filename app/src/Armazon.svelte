@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { CARRIL, type Seccion } from './lib/carril.ts';
+  import { fuente, reintentarFuente } from './lib/fuente.svelte.ts';
+  import { textoAvisoFuente } from './lib/fuente.ts';
   import { irASeccion, nav } from './lib/navegacion.svelte.ts';
 
   let { children }: { children: Snippet } = $props();
@@ -32,10 +34,33 @@
       </button>
     {/each}
   </nav>
-  <div class="contenido">{@render children()}</div>
+  <div class="contenido">
+    {#if fuente.causa && !fuente.descartado}
+      <div class="aviso-fuente" role="alert">
+        <span>{textoAvisoFuente(fuente.causa)}</span>
+        <button onclick={reintentarFuente} disabled={fuente.probando}>{fuente.probando ? 'Probando…' : 'Reintentar'}</button>
+        <button onclick={() => (fuente.descartado = true)} aria-label="Cerrar el aviso">×</button>
+      </div>
+    {/if}
+    {@render children()}
+  </div>
 </div>
 
 <style>
+  .aviso-fuente {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: var(--espacio) var(--margen) 0;
+    padding: 10px 14px;
+    background: var(--superficie);
+    border: 1px solid var(--borde);
+    border-left: 3px solid var(--acento);
+    border-radius: var(--radio);
+  }
+  .aviso-fuente span {
+    flex: 1;
+  }
   .armazon {
     display: grid;
     grid-template-columns: 64px 1fr;

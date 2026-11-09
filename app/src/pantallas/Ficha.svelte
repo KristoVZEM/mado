@@ -20,6 +20,7 @@
   import { esDudoso, textoProximo } from '../lib/anilist.ts';
   import EscogerObra from '../lib/componentes/EscogerObra.svelte';
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { ordenarEpisodios } from '../lib/ajustes.ts';
   import { idiomaGuardado } from '../lib/continuar.ts';
   import { avisarCambio } from '../lib/sync.svelte.ts';
@@ -147,17 +148,29 @@
         bibliotecaOk = true;
       })
       .catch((e) => console.error(e));
+    await cargarEpisodios();
+    await Promise.all([datos, biblioteca]);
+  });
+
+  /**
+   * Pide los episodios a la fuente. Si falla, la Ficha sigue mostrando lo guardado (datos de AniList, estado,
+   * favorito y vistos) y ofrece reintentar. Los datos de AniList se cargan en todo caso.
+   */
+  async function cargarEpisodios() {
+    cargando = true;
+    error = '';
     try {
       ficha = await fuentes.episodios(anime.slug);
+      fuenteRecuperada();
     } catch (e) {
       console.error(e);
       error = mensajeDeError(e);
+      avisarFalloDeFuente(e);
     } finally {
       cargando = false;
     }
-    if (ficha) void cargarAniList();
-    await Promise.all([datos, biblioteca]);
-  });
+    if (ficha || vinculo === null) void cargarAniList();
+  }
 
   /** Quita un episodio de los vistos; si falla, vuelve a ponerlo y avisa. */
   async function desmarcar(n: number) {
@@ -269,7 +282,10 @@
   {/if}
 
   {#if cargando}<p>Cargando episodios…</p>{/if}
-  {#if error}<p class="error">{error}</p>{/if}
+  {#if error}
+    <p class="error">{error}</p>
+    {#if !ficha}<button onclick={cargarEpisodios} disabled={cargando}>Reintentar</button>{/if}
+  {/if}
 
   {#if ficha}
     <p>

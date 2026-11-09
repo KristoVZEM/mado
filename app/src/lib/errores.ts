@@ -6,10 +6,10 @@ import { Desafio, FuenteCambio, SinRed, SinServidor } from '../../../core/src/er
  */
 export function mensajeDeError(e: unknown): string {
   if (e instanceof SinRed) {
-    return 'Sin respuesta de la fuente. Revisa la conexión; si tu proveedor bloquea Cloudflare, prueba con una VPN.';
+    return 'Sin respuesta de la fuente. Revisa la conexión; si tu proveedor bloquea Cloudflare, prueba con una VPN o con otro servidor de la VPN.';
   }
   if (e instanceof Desafio) {
-    return 'La fuente pidió un desafío de Cloudflare y no se puede continuar ahora.';
+    return 'La fuente pidió un desafío de Cloudflare y no se puede continuar ahora. Prueba a cambiar de red o de servidor de la VPN y reintenta.';
   }
   if (e instanceof FuenteCambio) {
     return 'La fuente cambió su formato. Hay que actualizar el cliente.';

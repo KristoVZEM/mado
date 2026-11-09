@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError } from '../lib/errores.ts';
+  import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { abrir, nav } from '../lib/navegacion.svelte.ts';
   import { onMount } from 'svelte';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
@@ -23,9 +24,11 @@
     try {
       nav.catalogo.resultados = await fuentes.buscar(consulta);
       nav.catalogo.buscado = true;
+      fuenteRecuperada();
     } catch (e) {
       console.error(e);
       error = mensajeDeError(e);
+      avisarFalloDeFuente(e);
       nav.catalogo.resultados = [];
     } finally {
       cargando = false;
