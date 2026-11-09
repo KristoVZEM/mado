@@ -12,6 +12,7 @@ import type { Idioma, Playable, ResolverServidor } from './types.ts';
 
 export * from './errors.ts';
 export * from './anilist/index.ts';
+export * from './avisos.ts';
 export type { Embed, Idioma, Playable, ResolverServidor } from './types.ts';
 export type { Http, HttpOptions } from './http.ts';
 export type { ResultadoBusqueda } from './busqueda.ts';

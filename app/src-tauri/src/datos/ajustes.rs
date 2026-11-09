@@ -15,6 +15,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("anilist_client_id", 1.0, 2.0e9),
     // Versión de las reglas con que se repasaron los vínculos automáticos (0 = nunca).
     ("anilist_repaso_version", 0.0, 1000.0),
+    // Avisos de episodios nuevos: 1 o ausente = activos; 0 = desactivados.
+    ("avisos_activos", 0.0, 1.0),
 ];
 
 const PREFIJO_IDIOMA: &str = "idioma:";
@@ -113,6 +115,7 @@ mod pruebas {
             ("salto_largo", "30", "180", "29", "181"),
             ("velocidad", "0.5", "3", "0.4", "3.1"),
             ("anilist_agenda_cargada", "0", "9000000000000000", "-1", "9000000000000001"),
+            ("avisos_activos", "0", "1", "-1", "2"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");

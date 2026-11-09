@@ -9,6 +9,7 @@
     "core:window:allow-destroy",
     "libmpv:default",
     "dialog:allow-open",
+    "notification:default",
     {
       "identifier": "http:default",
       "allow": [{ "url": "https://*" }, { "url": "https://*/*" }]

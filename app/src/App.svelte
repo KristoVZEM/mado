@@ -15,6 +15,7 @@
   import { estadoDatos, pendientesEmparejar } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
   import { nav } from './lib/navegacion.svelte.ts';
+  import { iniciarAvisos } from './lib/avisosApp.ts';
   import { repasarVinculosAlAbrir, sincronizarAlAbrir } from './lib/sync.svelte.ts';
 
   const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -32,7 +33,7 @@
       })
       .catch((e) => console.error('cierre de la ventana:', e));
     // La sincronización con la cuenta de AniList corre aparte del emparejador y comparte su limitador.
-    void dormir(8000).then(repasarVinculosAlAbrir).then(sincronizarAlAbrir);
+    void dormir(8000).then(repasarVinculosAlAbrir).then(sincronizarAlAbrir).then(iniciarAvisos);
     void (async () => {
       try {
         await dormir(5000); // no competir con el arranque

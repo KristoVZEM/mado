@@ -10,6 +10,7 @@
   import { textoDeError } from '../lib/errores.ts';
   import { lineasResumen, textoAviso, textoResultado } from '../lib/importar.ts';
   import SeccionAnilist from './SeccionAnilist.svelte';
+  import SeccionAvisos from './SeccionAvisos.svelte';
 
   let datosOk = $state(false);
   onMount(async () => {
@@ -132,6 +133,8 @@
   {/if}
 
   <SeccionAnilist />
+
+  <SeccionAvisos />
 </section>
 </main>
 

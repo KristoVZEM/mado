@@ -314,3 +314,15 @@ export interface VinculoAuto {
 }
 
 export const vinculosAuto = () => invoke<VinculoAuto[]>('vinculos_auto');
+
+/** Serie en Viendo con vínculo firme y obra en emisión: hay que mirar si salió un episodio nuevo. */
+export interface CandidataAviso {
+  aid: number;
+  slug: string;
+  titulo: string;
+  /** Último episodio ya avisado; `null` si nunca se vigiló. */
+  ultimoAvisado: number | null;
+  ultimoVisto: number;
+}
+export const avisosCandidatas = () => invoke<CandidataAviso[]>('avisos_candidatas');
+export const avisosGuardar = (items: { aid: number; ultimo: number }[]) => invoke<void>('avisos_guardar', { items });

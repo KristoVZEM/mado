@@ -81,6 +81,7 @@ pub fn run() {
         .plugin(tauri_plugin_libmpv::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             // La base vive en el directorio de datos locales de la app (no Roaming). Si no se puede
             // abrir (p. ej. es de una versión más nueva), la app arranca igual y cada comando de
@@ -129,6 +130,8 @@ pub fn run() {
             datos::comandos::importar_copia,
             datos::comandos::series_para_sync,
             datos::comandos::aplicar_bajadas,
+            datos::comandos::avisos_candidatas,
+            datos::comandos::avisos_guardar,
             datos::comandos::guardar_cuenta,
             datos::comandos::leer_cuenta,
             datos::comandos::borrar_cuenta,

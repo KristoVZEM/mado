@@ -3,6 +3,7 @@
 
 pub mod ajustes;
 pub mod anilist;
+pub mod avisos;
 pub mod biblioteca;
 pub mod comandos;
 pub mod copia;
@@ -160,9 +161,19 @@ CREATE TABLE anilist_cuenta (
 );
 ";
 
+/// Esquema de la versión 6: avisos de episodios nuevos. Solo agrega. `ultimo_episodio` es el mayor episodio ya
+/// avisado (o anotado en silencio la primera vez); `avisado_en` va en milisegundos.
+const V6: &str = "
+CREATE TABLE avisos (
+    aid             INTEGER PRIMARY KEY REFERENCES anime(aid) ON DELETE CASCADE,
+    ultimo_episodio REAL    NOT NULL CHECK (ultimo_episodio > 0),
+    avisado_en      INTEGER NOT NULL
+);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -273,6 +284,7 @@ mod pruebas {
                 "anilist_media",
                 "anilist_vinculo",
                 "anime",
+                "avisos",
                 "favoritos",
                 "historial",
                 "progreso",

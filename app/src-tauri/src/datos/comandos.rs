@@ -2,6 +2,7 @@
 //! SQL; aquí solo se toma la conexión, se llama a la función y se traduce el error a `String`.
 
 use super::anilist;
+use super::avisos;
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
 use super::{ajustes, Error, Resultado};
@@ -250,6 +251,18 @@ pub fn series_para_sync(datos: State<'_, Datos>, aid: Option<i64>) -> Result<Vec
 #[tauri::command(async)]
 pub fn aplicar_bajadas(datos: State<'_, Datos>, bajadas: Vec<sync::Bajada>) -> Result<u32, String> {
     con(&datos, |c| sync::aplicar_bajadas(c, ahora_ms(), &bajadas))
+}
+
+/// Series en Viendo con vínculo firme y obra en emisión, para mirar si salió un episodio nuevo.
+#[tauri::command(async)]
+pub fn avisos_candidatas(datos: State<'_, Datos>) -> Result<Vec<avisos::Candidata>, String> {
+    con(&datos, avisos::candidatas)
+}
+
+/// Anota hasta qué episodio se avisó de cada serie; todo o nada.
+#[tauri::command(async)]
+pub fn avisos_guardar(datos: State<'_, Datos>, items: Vec<avisos::Avisado>) -> Result<(), String> {
+    con(&datos, |c| avisos::guardar_avisados(c, ahora_ms(), &items))
 }
 
 #[tauri::command(async)]
