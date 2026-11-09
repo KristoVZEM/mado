@@ -45,11 +45,15 @@ export function parecido(a: string, b: string): number {
   return Math.max(piso, total === 0 ? 0 : (2 * comunes) / total);
 }
 
+/** Numerales romanos que valen como temporada. Sin `i`, `v` ni `x`: una sola letra se confunde con otras cosas. */
+const ROMANOS: Record<string, number> = { ii: 2, iii: 3, iv: 4, vi: 6, vii: 7, viii: 8, ix: 9 };
+
 /**
- * Número de temporada que lleva al final un título ya normalizado («… 2», «… 3rd»), o `null` si no
- * lleva. Solo 1 o 2 cifras y con texto delante: «Mob Psycho 100» o «86» no son temporadas.
+ * Número de temporada que lleva al final un título ya normalizado («… 2», «… 3rd», «… iii»), o `null` si no
+ * lleva. Las cifras son 1 o 2 y siempre con texto delante: «Mob Psycho 100» o «86» no son temporadas.
  */
 export function temporadaDe(normalizado: string): number | null {
-  const m = /^.+ (\d{1,2})(?:st|nd|rd|th)?$/.exec(normalizado);
-  return m ? Number(m[1]) : null;
+  const m = /^.+ (?:(\d{1,2})(?:st|nd|rd|th)?|(ii|iii|iv|vi|vii|viii|ix))$/.exec(normalizado);
+  if (!m) return null;
+  return m[1] !== undefined ? Number(m[1]) : ROMANOS[m[2]];
 }

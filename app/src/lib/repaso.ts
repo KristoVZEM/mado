@@ -3,7 +3,7 @@ import type { Rebaja } from '../../../core/src/index.ts';
 import type { SerieRef, VinculoAuto } from './datos.ts';
 
 /** Sube cuando cambian las reglas del emparejador: obliga a repasar de nuevo los vínculos automáticos. */
-export const VERSION_REPASO = 1;
+export const VERSION_REPASO = 2;
 
 export interface DepsRepaso {
   vinculos(): Promise<VinculoAuto[]>;

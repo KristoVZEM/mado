@@ -36,3 +36,13 @@ test('temporadaDe lee el número de temporada final del título normalizado', ()
   assert.equal(temporadaDe('86 eighty six'), null);
   assert.equal(temporadaDe('2'), null); // solo un número: no es una temporada
 });
+
+test('temporadaDe lee numerales romanos, pero no los de una letra ni uno solo', () => {
+  assert.equal(temporadaDe('overlord iv'), 4);
+  assert.equal(temporadaDe('tiger bunny ii'), 2);
+  assert.equal(temporadaDe('kono subarashii iii'), 3);
+  for (const [t, n] of [['vi', 6], ['vii', 7], ['viii', 8], ['ix', 9]] as const) assert.equal(temporadaDe(`titulo ${t}`), n);
+  for (const t of ['titulo i', 'titulo v', 'titulo x', 'ii', 'iii', 'overlord ivx', 'titulo iii extra']) {
+    assert.equal(temporadaDe(t), null, t);
+  }
+});

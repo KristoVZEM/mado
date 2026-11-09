@@ -45,6 +45,17 @@ test('la temporada se distingue por el número', () => {
   assert.equal(d.tipo === 'auto' && d.propuesta.candidato.anilistId, 25777);
 });
 
+test('la temporada con numeral romano no se confunde con la primera', () => {
+  const OVL = c(20832, 'Overlord', null, [], 2015, 13);
+  const OVL3 = c(35073, 'Overlord III', null, [], 2018, 13);
+  const OVL4 = c(133844, 'Overlord IV', null, [], 2022, 13);
+  assert.equal(decidir({ titulo: 'Overlord' }, [OVL4, OVL3, OVL]).tipo === 'auto', true);
+  const d = decidir({ titulo: 'Overlord' }, [OVL4, OVL3]);
+  assert.notEqual(d.tipo, 'auto', 'sin la primera temporada, las otras no se vinculan solas');
+  const iv = decidir({ titulo: 'Overlord IV' }, [OVL, OVL3, OVL4]);
+  assert.equal(iv.tipo === 'auto' && iv.propuesta.candidato.anilistId, 133844);
+});
+
 test('un título parcial queda como dudoso, no como vínculo firme', () => {
   const d = decidir({ titulo: 'Frieren' }, [FRIEREN]);
   assert.equal(d.tipo, 'dudoso');

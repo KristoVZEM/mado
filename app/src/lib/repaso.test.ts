@@ -40,6 +40,14 @@ test('rebaja los vínculos de otra temporada y anota la versión', async () => {
   assert.equal(guardado.version, VERSION_REPASO);
 });
 
+test('una base repasada con las reglas anteriores (versión 1) se repasa de nuevo y rebaja una temporada romana', async () => {
+  const { deps, log, guardado } = entorno([va(1, 'Overlord', 'Overlord IV')], 1);
+  const r = await repasarSiHaceFalta(deps);
+  assert.equal(r?.length, 1);
+  assert.equal(log.length, 1);
+  assert.equal(guardado.version, VERSION_REPASO);
+});
+
 test('si ya se repasó con estas reglas no hace nada', async () => {
   const { deps, log } = entorno([va(1, 'Kusuriya no Hitorigoto', 'Kusuriya no Hitorigoto 2nd Season')], VERSION_REPASO);
   assert.equal(await repasarSiHaceFalta(deps), null);
