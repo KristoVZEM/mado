@@ -275,7 +275,7 @@
   }
   .abrir:hover:not(:disabled) :global(.portada),
   .abrir:focus-visible :global(.portada) {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--anillo);
   }
   .abrir span {
     color: var(--texto-suave);

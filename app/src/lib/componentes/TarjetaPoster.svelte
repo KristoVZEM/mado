@@ -34,7 +34,7 @@
   }
   .tarjeta:hover :global(.portada),
   .tarjeta:focus-visible :global(.portada) {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--anillo);
   }
   .marco {
     position: relative;

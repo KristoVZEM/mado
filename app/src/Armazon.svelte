@@ -7,6 +7,9 @@
 
   let { children }: { children: Snippet } = $props();
 
+  /** Pasados 20 px de desplazamiento, la píldora gana fondo y pierde el degradado de detrás. */
+  let desplazado = $state(false);
+
   // Iconos de 24×24 trazados con línea.
   const ICONOS: Record<Seccion, string> = {
     inicio: 'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',
@@ -19,8 +22,11 @@
   };
 </script>
 
+<svelte:window onscroll={() => (desplazado = window.scrollY > 20)} />
+
 <div class="armazon">
-  <nav class="cabecera" aria-label="Secciones">
+  <div class="velo" class:oculto={desplazado} aria-hidden="true"></div>
+  <nav class="cabecera" class:desplazado aria-label="Secciones">
     {#each CARRIL as e (e.id)}
       <button
         class="elemento"
@@ -70,6 +76,19 @@
     min-height: 100vh;
     background: var(--fondo);
   }
+  /* Degradado tras la píldora: deja leer la cabecera sobre un banner claro. */
+  .velo {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 88px;
+    z-index: 19;
+    background: linear-gradient(to bottom, rgb(10 10 10 / 0.7), transparent);
+    pointer-events: none;
+    transition: opacity 300ms;
+  }
+  .velo.oculto {
+    opacity: 0;
+  }
   /* Píldora flotante centrada: se queda fija sobre el contenido y sobre los banners. */
   .cabecera {
     position: fixed;
@@ -79,12 +98,18 @@
     z-index: 20;
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 3px;
-    background: rgb(23 23 31 / 0.8);
+    gap: 4px;
+    padding: 4px;
+    background: rgb(10 10 10 / 0.2);
     backdrop-filter: blur(12px);
     border: 1px solid var(--borde);
     border-radius: 999px;
+    transition: all 300ms;
+  }
+  .cabecera.desplazado {
+    background: rgb(10 10 10 / 0.6);
+    backdrop-filter: blur(5px);
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
   .elemento {
     display: flex;
@@ -101,18 +126,15 @@
     margin-left: 6px;
   }
   .elemento:hover:not(:disabled) {
-    background: var(--superficie-2);
+    background: rgb(38 38 38 / 0.5);
     color: var(--texto);
   }
   .elemento[aria-current='page'] {
     color: var(--texto);
     background: var(--superficie-2);
   }
-  .elemento[aria-current='page'] svg {
-    color: var(--acento);
-  }
   .elemento:focus-visible {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--anillo);
   }
   /* Con la ventana estrecha solo quedan los iconos. */
   @media (max-width: 820px) {
@@ -134,5 +156,11 @@
   }
   .contenido {
     min-width: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cabecera,
+    .velo {
+      transition: none;
+    }
   }
 </style>

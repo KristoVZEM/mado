@@ -113,7 +113,7 @@
   }
   .fila:hover :global(.portada),
   .fila:focus-visible :global(.portada) {
-    outline: 2px solid var(--acento);
+    outline: 2px solid var(--anillo);
   }
   .captura {
     flex: 0 0 160px;

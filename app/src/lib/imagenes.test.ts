@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { inicialDe, urlCaptura, urlPortada } from './imagenes.ts';
+import { inicialDe, portadaGrande, urlCaptura, urlPortada } from './imagenes.ts';
 
 test('urlPortada usa el aid', () => {
   assert.equal(urlPortada(21), 'https://cdn.animeav1.com/covers/21.jpg');
@@ -24,4 +24,15 @@ test('inicialDe: primera letra en mayúscula, ? si no hay', () => {
   assert.equal(inicialDe('  ñandú'), 'Ñ');
   assert.equal(inicialDe(''), '?');
   assert.equal(inicialDe('   '), '?');
+});
+
+test('portadaGrande pide la versión extraLarge de AniList', () => {
+  assert.equal(
+    portadaGrande('https://s4.anilist.co/file/anilistcdn/media/anime/cover/medium/bx5081-x.jpg'),
+    'https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx5081-x.jpg',
+  );
+});
+
+test('portadaGrande deja igual lo que no reconoce', () => {
+  assert.equal(portadaGrande('https://cdn.animeav1.com/covers/1.jpg'), 'https://cdn.animeav1.com/covers/1.jpg');
 });

@@ -1,12 +1,13 @@
 <script lang="ts">
   import { inicialDe, urlCaptura, urlPortada } from '../imagenes.ts';
 
-  let { aid, titulo, numero }: { aid: number; titulo: string; numero?: number } = $props();
+  /** `preferida`: una portada mejor que la de la CDN (por ejemplo la grande de AniList); si falla, se usa la de la CDN. */
+  let { aid, titulo, numero, preferida = null }: { aid: number; titulo: string; numero?: number; preferida?: string | null } = $props();
 
   const captura = $derived(numero !== undefined);
-  const principal = $derived(numero !== undefined ? urlCaptura(aid, numero) : urlPortada(aid));
+  const principal = $derived(numero !== undefined ? urlCaptura(aid, numero) : (preferida ?? urlPortada(aid)));
   /** Si la captura de un episodio no carga, se enseña el póster de la serie antes que una letra. */
-  const respaldo = $derived(numero !== undefined ? urlPortada(aid) : null);
+  const respaldo = $derived(numero !== undefined || preferida ? urlPortada(aid) : null);
   let fallidas = $state<string[]>([]);
   const src = $derived([principal, respaldo].find((s) => s !== null && !fallidas.includes(s)) ?? null);
 </script>

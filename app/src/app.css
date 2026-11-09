@@ -2,18 +2,27 @@
   /* Los desplegables, las barras de desplazamiento y los controles nativos salen oscuros. */
   color-scheme: dark;
   --fuente: 'Zen Kaku Gothic New', system-ui, sans-serif;
-  --fondo: #0e0e13;
-  --superficie: #17171f;
-  --superficie-2: #23232d;
-  --borde: #3a3a46;
-  --texto: #eee;
-  --texto-suave: #a6a6b4;
+  /* Grises neutros y bordes translúcidos: el único color vivo es el acento. */
+  --fondo: #0a0a0a;
+  --superficie: #171717;
+  --superficie-2: #262626;
+  --borde: rgb(255 255 255 / 0.1);
+  --borde-control: rgb(255 255 255 / 0.15);
+  --texto: #fafafa;
+  --texto-suave: #a1a1a1;
+  /* Anillo de foco gris (4,3:1 sobre el fondo), sin color. */
+  --anillo: #8c8c8c;
   --acento: #ff4d6d;
   --acento-hover: #ff6a85;
   /* Texto sobre el acento: el blanco da 3,2:1; este da 6:1. */
-  --sobre-acento: #0e0e13;
+  --sobre-acento: #0a0a0a;
+  /* Botón principal: claro sobre el fondo oscuro, con texto oscuro. */
+  --boton-claro: #e5e5e5;
+  --boton-claro-texto: #171717;
+  --boton-claro-hover: rgb(229 229 229 / 0.9);
   --radio: 8px;
-  --radio-control: 6px;
+  --radio-control: 8px;
+  --radio-grande: 14px;
   /* Medidas de la interfaz: se retocan aquí. */
   --margen: 28px;
   --espacio: 16px;
@@ -58,7 +67,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--acento);
+  outline: 2px solid var(--anillo);
   outline-offset: 2px;
 }
 
@@ -80,11 +89,11 @@ input {
 }
 
 button {
-  min-height: 34px;
+  min-height: 36px;
   padding: 6px 14px;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: var(--radio-control);
-  background: var(--superficie-2);
+  background: rgb(255 255 255 / 0.045);
   color: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -92,11 +101,11 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #2d2d3a;
+  background: rgb(255 255 255 / 0.075);
 }
 
 button:active:not(:disabled) {
-  background: #1d1d26;
+  background: rgb(255 255 255 / 0.1);
 }
 
 button:disabled {
@@ -108,15 +117,19 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 20px;
-  background: var(--acento);
-  border-color: var(--acento);
-  color: var(--sobre-acento);
-  font-weight: 700;
+  padding: 6px 18px;
+  background: var(--boton-claro);
+  border-color: var(--boton-claro);
+  color: var(--boton-claro-texto);
+  font-weight: 600;
 }
 
 .principal:hover:not(:disabled) {
-  background: var(--acento-hover);
+  background: var(--boton-claro-hover);
+}
+
+.principal:active:not(:disabled) {
+  background: var(--boton-claro-hover);
 }
 
 .principal svg {
@@ -130,12 +143,15 @@ button:disabled {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--acento);
+  color: var(--texto-suave);
+  font-size: 0.8rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .enlace:hover:not(:disabled) {
   background: none;
-  text-decoration: underline;
+  color: var(--texto);
 }
 
 select,
@@ -144,9 +160,9 @@ input:not([type]) {
   min-height: 34px;
   box-sizing: border-box;
   padding: 4px 10px;
-  border: 1px solid var(--borde);
+  border: 1px solid var(--borde-control);
   border-radius: var(--radio-control);
-  background: var(--superficie);
+  background: rgb(255 255 255 / 0.045);
   color: inherit;
 }
 
