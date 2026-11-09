@@ -49,8 +49,9 @@ pub(super) fn aplicar_en(conn: &Connection, l: &Lista<EntradaSiguiendo>, reempla
             nuevos += 1;
         }
         conn.execute(
-            "INSERT INTO siguiendo (aid, estado) VALUES (?1, ?2)
-             ON CONFLICT(aid) DO UPDATE SET estado = excluded.estado",
+            "INSERT INTO siguiendo (aid, estado, actualizado)
+             VALUES (?1, ?2, CAST(strftime('%s', 'now') AS INTEGER) * 1000)
+             ON CONFLICT(aid) DO UPDATE SET estado = excluded.estado, actualizado = excluded.actualizado",
             params![e.aid, e.estado],
         )?;
     }

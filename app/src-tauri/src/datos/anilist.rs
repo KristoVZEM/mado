@@ -577,7 +577,7 @@ mod pruebas {
             conn.execute("INSERT INTO anime VALUES (?1, ?2, ?2)", params![aid, slug]).unwrap();
         }
         conn.execute("INSERT INTO favoritos VALUES (2, NULL)", []).unwrap();
-        conn.execute("INSERT INTO siguiendo VALUES (3, 1)", []).unwrap();
+        conn.execute("INSERT INTO siguiendo (aid, estado) VALUES (3, 1)", []).unwrap();
         con_obra(&conn, 10);
         let ahora = 100 * MES_MS;
         let s = |aid: i64, slug: &'static str| Serie { aid, slug, titulo: slug };
@@ -644,8 +644,8 @@ mod pruebas {
         let s = |aid: i64, slug: &'static str| Serie { aid, slug, titulo: slug };
         fijar_vinculo(&conn, 1, &s(7, "siete"), Some(10), 0.9, "auto").unwrap();
         fijar_vinculo(&conn, 1, &s(3, "tres"), Some(10), 0.9, "auto").unwrap();
-        conn.execute("INSERT INTO siguiendo VALUES (7, 1)", []).unwrap();
-        conn.execute("INSERT INTO siguiendo VALUES (3, 4)", []).unwrap();
+        conn.execute("INSERT INTO siguiendo (aid, estado) VALUES (7, 1)", []).unwrap();
+        conn.execute("INSERT INTO siguiendo (aid, estado) VALUES (3, 4)", []).unwrap();
         let e = emision_entre(&conn, 0, 1000).unwrap();
         assert_eq!(e.len(), 1);
         assert_eq!((e[0].aid, e[0].estado), (Some(3), Some(1)));

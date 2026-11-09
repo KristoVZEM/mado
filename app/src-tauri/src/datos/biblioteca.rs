@@ -23,8 +23,9 @@ pub fn fijar_estado(conn: &Connection, serie: &Serie, estado: u8) -> Resultado<(
             let tx = conn.unchecked_transaction()?;
             registrar_anime_sin_pisar(&tx, serie)?;
             tx.execute(
-                "INSERT INTO siguiendo (aid, estado) VALUES (?1, ?2)
-                 ON CONFLICT(aid) DO UPDATE SET estado = excluded.estado",
+                "INSERT INTO siguiendo (aid, estado, actualizado)
+                 VALUES (?1, ?2, CAST(strftime('%s', 'now') AS INTEGER) * 1000)
+                 ON CONFLICT(aid) DO UPDATE SET estado = excluded.estado, actualizado = excluded.actualizado",
                 params![serie.aid, estado],
             )?;
             tx.commit()?;
@@ -133,6 +134,14 @@ mod pruebas {
         fijar_estado(&conn, &ONE_PIECE, 3).unwrap();
         assert_eq!(estado_serie(&conn, 10).unwrap(), Some(3));
         assert_eq!(contar(&conn, "siguiendo"), 1);
+    }
+
+    #[test]
+    fn fijar_estado_guarda_la_hora_del_cambio() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        let t: i64 = conn.query_row("SELECT actualizado FROM siguiendo WHERE aid = 10", [], |f| f.get(0)).unwrap();
+        assert!(t > 1_700_000_000_000, "milisegundos desde 1970, no {t}");
     }
 
     #[test]

@@ -7,6 +7,7 @@ pub mod biblioteca;
 pub mod comandos;
 pub mod copia;
 pub mod progreso;
+pub mod sync;
 
 use rusqlite::Connection;
 use std::fmt;
@@ -146,9 +147,22 @@ CREATE TABLE anilist_emision (
 CREATE INDEX anilist_emision_cuando ON anilist_emision(emite_en);
 ";
 
+/// Esquema de la versión 5: sincronización con la cuenta de AniList. Solo agrega. `siguiendo.actualizado`
+/// (milisegundos) decide quién gana cuando el estado difiere (las filas previas quedan en 0: gana AniList).
+/// `anilist_cuenta` tiene a lo sumo una fila (`id = 1`); el token NO se guarda aquí.
+const V5: &str = "
+ALTER TABLE siguiendo ADD COLUMN actualizado INTEGER NOT NULL DEFAULT 0;
+CREATE TABLE anilist_cuenta (
+    id          INTEGER PRIMARY KEY CHECK (id = 1),
+    usuario_id  INTEGER NOT NULL,
+    nombre      TEXT NOT NULL,
+    ultima_sync INTEGER
+);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3, V4];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -254,6 +268,7 @@ mod pruebas {
         assert_eq!(version_actual(&conn).unwrap(), VERSION);
         assert_eq!(tablas(&conn), vec![
                 "ajustes",
+                "anilist_cuenta",
                 "anilist_emision",
                 "anilist_media",
                 "anilist_vinculo",
@@ -438,7 +453,7 @@ mod pruebas {
         )
         .unwrap();
         migrar(&mut conn).unwrap();
-        assert_eq!(version_actual(&conn).unwrap(), 4);
+        assert_eq!(version_actual(&conn).unwrap(), VERSION);
         let t = tablas(&conn);
         for nombre in ["anilist_media", "anilist_vinculo", "anilist_emision"] {
             assert!(t.contains(&nombre.to_string()), "{t:?}");
@@ -476,6 +491,31 @@ mod pruebas {
         let v: i64 = conn.query_row("SELECT COUNT(*) FROM anilist_vinculo", [], |f| f.get(0)).unwrap();
         let m: i64 = conn.query_row("SELECT COUNT(*) FROM anilist_media", [], |f| f.get(0)).unwrap();
         assert_eq!((v, m), (0, 1));
+    }
+
+    #[test]
+    fn la_migracion_a_v5_anade_actualizado_y_la_cuenta_y_conserva_los_datos() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        configurar(&conn).unwrap();
+        for v in [V1, V2, V3, V4] {
+            conn.execute_batch(v).unwrap();
+        }
+        conn.execute_batch("PRAGMA user_version = 4;").unwrap();
+        conn.execute_batch("INSERT INTO anime VALUES (1, 'a', 'A'); INSERT INTO siguiendo VALUES (1, 3);").unwrap();
+        migrar(&mut conn).unwrap();
+        assert_eq!(version_actual(&conn).unwrap(), VERSION);
+        let fila: (i64, i64) = conn
+            .query_row("SELECT estado, actualizado FROM siguiendo WHERE aid = 1", [], |f| Ok((f.get(0)?, f.get(1)?)))
+            .unwrap();
+        assert_eq!(fila, (3, 0), "las filas previas quedan con actualizado = 0");
+        assert!(tablas(&conn).contains(&"anilist_cuenta".to_string()));
+    }
+
+    #[test]
+    fn la_cuenta_de_anilist_solo_admite_una_fila() {
+        let conn = abrir_en_memoria().unwrap();
+        conn.execute("INSERT INTO anilist_cuenta (id, usuario_id, nombre) VALUES (1, 5, 'x')", []).unwrap();
+        assert!(conn.execute("INSERT INTO anilist_cuenta (id, usuario_id, nombre) VALUES (2, 6, 'y')", []).is_err());
     }
 
     #[test]

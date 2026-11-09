@@ -11,6 +11,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("velocidad", 0.5, 3.0),
     // Cuándo se cargó por última vez la agenda de emisión de AniList (milisegundos desde 1970).
     ("anilist_agenda_cargada", 0.0, 9.0e15),
+    // Client ID de la app registrada en el portal de desarrolladores de AniList (no es secreto).
+    ("anilist_client_id", 1.0, 2.0e9),
 ];
 
 const PREFIJO_IDIOMA: &str = "idioma:";
@@ -81,6 +83,15 @@ pub fn guardar(conn: &Connection, clave: &str, valor: &str) -> Resultado<()> {
 mod pruebas {
     use super::*;
     use crate::datos::abrir_en_memoria;
+
+    #[test]
+    fn el_client_id_de_anilist_es_un_entero_positivo() {
+        let conn = abrir_en_memoria().unwrap();
+        guardar(&conn, "anilist_client_id", "12345").unwrap();
+        assert_eq!(leer(&conn, "anilist_client_id").unwrap(), Some("12345".to_string()));
+        assert!(guardar(&conn, "anilist_client_id", "0").is_err());
+        assert!(guardar(&conn, "anilist_client_id", "abc").is_err());
+    }
 
     #[test]
     fn guardar_y_leer_un_ajuste() {

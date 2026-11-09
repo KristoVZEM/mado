@@ -1,5 +1,6 @@
 mod resolver;
 mod datos;
+mod token;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -125,6 +126,15 @@ pub fn run() {
             datos::comandos::resumenes_vinculados,
             datos::comandos::previsualizar_copia,
             datos::comandos::importar_copia,
+            datos::comandos::series_para_sync,
+            datos::comandos::aplicar_bajadas,
+            datos::comandos::guardar_cuenta,
+            datos::comandos::leer_cuenta,
+            datos::comandos::borrar_cuenta,
+            datos::comandos::marcar_sincronizada,
+            token::guardar_token_anilist,
+            token::leer_token_anilist,
+            token::borrar_token_anilist,
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicación de Tauri");

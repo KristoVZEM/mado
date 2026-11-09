@@ -636,7 +636,7 @@ mod pruebas {
     fn mezclar_el_following_gana_el_archivo_y_no_borra_lo_que_no_viene() {
         let conn = abrir_en_memoria().unwrap();
         sembrar(&conn);
-        conn.execute_batch("INSERT INTO anime VALUES (9, 'serie-9', 'Serie 9'); INSERT INTO siguiendo VALUES (9, 5);")
+        conn.execute_batch("INSERT INTO anime VALUES (9, 'serie-9', 'Serie 9'); INSERT INTO siguiendo (aid, estado) VALUES (9, 5);")
             .unwrap();
         let c = leida(&[(FOLLOWING, json(&format!("{},{}", seguida(1, 3), seguida(2, 4))))]);
         let r = aplicar(&conn, &c, Modo::Mezclar).unwrap();

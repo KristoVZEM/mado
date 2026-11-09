@@ -6,6 +6,7 @@ use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
 use super::{ajustes, Resultado};
 use super::biblioteca::{self, Biblioteca};
+use super::sync;
 use rusqlite::Connection;
 use std::path::Path;
 use std::sync::Mutex;
@@ -215,4 +216,36 @@ pub fn importar_copia(datos: State<'_, Datos>, carpeta: String, modo: String) ->
     let modo = Modo::desde_texto(&modo).map_err(|e| e.to_string())?;
     let leida = copia::leer_carpeta(Path::new(&carpeta)).map_err(|e| e.to_string())?;
     con(&datos, |c| copia::aplicar(c, &leida, modo))
+}
+
+/// Con `aid` solo esa serie; sin él, todas las vinculadas con firmeza.
+#[tauri::command(async)]
+pub fn series_para_sync(datos: State<'_, Datos>, aid: Option<i64>) -> Result<Vec<sync::SerieLocalSync>, String> {
+    con(&datos, |c| sync::series_para_sync(c, aid))
+}
+
+/// Devuelve cuántas bajadas se aplicaron; todo o nada.
+#[tauri::command(async)]
+pub fn aplicar_bajadas(datos: State<'_, Datos>, bajadas: Vec<sync::Bajada>) -> Result<u32, String> {
+    con(&datos, |c| sync::aplicar_bajadas(c, ahora_ms(), &bajadas))
+}
+
+#[tauri::command(async)]
+pub fn guardar_cuenta(datos: State<'_, Datos>, usuario_id: i64, nombre: String) -> Result<(), String> {
+    con(&datos, |c| sync::guardar_cuenta(c, usuario_id, &nombre))
+}
+
+#[tauri::command(async)]
+pub fn leer_cuenta(datos: State<'_, Datos>) -> Result<Option<sync::Cuenta>, String> {
+    con(&datos, sync::leer_cuenta)
+}
+
+#[tauri::command(async)]
+pub fn borrar_cuenta(datos: State<'_, Datos>) -> Result<(), String> {
+    con(&datos, sync::borrar_cuenta)
+}
+
+#[tauri::command(async)]
+pub fn marcar_sincronizada(datos: State<'_, Datos>) -> Result<(), String> {
+    con(&datos, |c| sync::marcar_sincronizada(c, ahora_ms()))
 }
