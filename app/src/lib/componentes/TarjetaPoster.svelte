@@ -14,6 +14,7 @@
   <span class="marco">
     <Portada {aid} {titulo} />
     {#if etiqueta}<span class="pastilla">{etiqueta}</span>{/if}
+    <span class="contorno"></span>
   </span>
   <strong>{titulo}</strong>
   {#if subtitulo}<span>{subtitulo}</span>{/if}
@@ -32,13 +33,34 @@
   .tarjeta:hover:not(:disabled) {
     background: none;
   }
-  .tarjeta:hover :global(.portada),
-  .tarjeta:focus-visible :global(.portada) {
-    outline: 2px solid var(--anillo);
-  }
   .marco {
     position: relative;
     display: block;
+    overflow: hidden;
+    border-radius: var(--radio);
+  }
+  .marco :global(img) {
+    transition:
+      opacity 150ms,
+      transform 150ms;
+  }
+  .tarjeta:hover .marco :global(img),
+  .tarjeta:focus-visible .marco :global(img) {
+    opacity: 0.75;
+    transform: scale(1.05);
+  }
+  /* Borde fino siempre y, con el ratón o el foco, un anillo interior. */
+  .contorno {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    pointer-events: none;
+    transition: box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .tarjeta:hover .contorno,
+  .tarjeta:focus-visible .contorno {
+    box-shadow: inset 0 0 0 1px rgb(250 250 250 / 0.15);
   }
   .pastilla {
     position: absolute;
@@ -60,8 +82,18 @@
     line-clamp: 2;
     -webkit-box-orient: vertical;
   }
-  span {
+  .tarjeta > span:not(.marco) {
     color: var(--texto-suave);
     font-size: 0.9em;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marco :global(img),
+    .contorno {
+      transition: none;
+    }
+    .tarjeta:hover .marco :global(img),
+    .tarjeta:focus-visible .marco :global(img) {
+      transform: none;
+    }
   }
 </style>

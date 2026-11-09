@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import Portada from '../lib/componentes/Portada.svelte';
+  import Destacados from '../lib/componentes/Destacados.svelte';
+  import Miniatura from '../lib/componentes/Miniatura.svelte';
   import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import FilaDesplazable from '../lib/componentes/FilaDesplazable.svelte';
   import Vacio from '../lib/componentes/Vacio.svelte';
@@ -13,20 +14,27 @@
     descartarProgreso,
     estadoDatos,
     leerAjuste,
+    leerMedia,
     listarBiblioteca,
     resumenesVinculados,
     type EntradaBiblioteca,
     type EntradaContinuar,
     type ResumenSerie,
   } from '../lib/datos.ts';
-  import { conNuevoEpisodio, elegirDestacado, etiquetaNuevo } from '../lib/destacado.ts';
+  import {
+    conNuevoEpisodio,
+    elegirDestacados,
+    etiquetaNuevo,
+    type Destacado,
+    type ItemDestacado,
+  } from '../lib/destacado.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { avisarFalloDeFuente } from '../lib/fuente.svelte.ts';
   import { fuentes } from '../lib/fuentes.ts';
   import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
 
   /** Tope de tarjetas por fila; el resto se ve en Biblioteca. */
-  const MAX_FILA = 20;
+  const MAX_FILA = 12;
 
   let avisoDatos = $state('');
   let error = $state('');
@@ -34,7 +42,7 @@
   let viendo = $state<EntradaBiblioteca[]>([]);
   let considerando = $state<EntradaBiblioteca[]>([]);
   let resumenes = $state<ResumenSerie[]>([]);
-  const destacado = $derived(elegirDestacado(pendientes, viendo, resumenes));
+  let destacados = $state<ItemDestacado[]>([]);
   const porAid = $derived(new Map(resumenes.map((r) => [r.aid, r])));
   /** Lo que sigues y tiene un episodio emitido sin ver. */
   const nuevos = $derived(conNuevoEpisodio(viendo, porAid));
@@ -59,6 +67,7 @@
         } else {
           error = textoDeError(b.reason);
         }
+        destacados = await cargarDestacados();
       }
     } catch (e) {
       console.error(e);
@@ -67,6 +76,17 @@
       cargando = false;
     }
   });
+
+  /** Las series de la cabecera, cada una con sus datos de AniList (géneros, año, sinopsis…). */
+  async function cargarDestacados(): Promise<ItemDestacado[]> {
+    const elegidos = elegirDestacados(pendientes, viendo, resumenes);
+    return Promise.all(
+      elegidos.map(async (destacado) => ({
+        destacado,
+        media: await leerMedia(destacado.anilistId).catch(() => null),
+      })),
+    );
+  }
 
   async function retomar(p: EntradaContinuar) {
     if (abriendo !== null) return;
@@ -116,12 +136,15 @@
     irASeccion('biblioteca');
   }
 
-  function usarDestacado() {
-    const d = destacado;
-    if (!d) return;
+  /** El botón principal de la cabecera: retoma el episodio a medias; si no hay, abre la Ficha. */
+  function continuarDestacado(d: Destacado) {
     const p = d.numero !== null ? pendientes.find((x) => x.aid === d.aid) : undefined;
     if (p) void retomar(p);
-    else abrir({ tipo: 'ficha', anime: { aid: d.aid, slug: d.slug, title: d.titulo } });
+    else abrirFichaDe(d);
+  }
+
+  function abrirFichaDe(d: Destacado) {
+    abrir({ tipo: 'ficha', anime: { aid: d.aid, slug: d.slug, title: d.titulo } });
   }
 
   function abrirFicha(e: EntradaBiblioteca) {
@@ -129,130 +152,124 @@
   }
 </script>
 
-<main class="pantalla">
+<main class="pantalla inicio" class:con-destacado={destacados.length > 0}>
   <h1 class="solo-lectores">Inicio</h1>
 
-  {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
-  {#if error}<p class="error" role="alert">{error}</p>{/if}
-  {#if cargando}<Esqueleto variante="poster" cantidad={8} />{/if}
-
-  {#if destacado}
-    <section
-      class="destacado"
-      style:background-image={`linear-gradient(90deg, var(--fondo) 5%, transparent 70%), url(${destacado.banner})`}
-      aria-label="Destacado"
-    >
-      <h2>{destacado.titulo}</h2>
-      <button class="principal" disabled={abriendo !== null} onclick={usarDestacado}>
-        {destacado.numero !== null ? `Continuar Ep. ${destacado.numero}` : 'Ver serie'}
-      </button>
-    </section>
+  {#if destacados.length > 0}
+    <Destacados
+      items={destacados}
+      abriendo={abriendo !== null}
+      alContinuar={continuarDestacado}
+      alAbrirFicha={abrirFichaDe}
+    />
   {/if}
 
-  {#if pendientes.length > 0}
-    <section aria-label="Continuar viendo">
-      <h2>Continuar viendo</h2>
-      <FilaDesplazable etiqueta="Continuar viendo">
-        {#each pendientes as p (p.aid)}
-          {@const fr = fraccionVista(p.posicionS, p.duracionS)}
-          <li class="continuar">
-            <button class="abrir" disabled={abriendo !== null} onclick={() => retomar(p)}>
-              <Portada aid={p.aid} titulo={p.titulo} numero={p.numero} />
-              <strong>{p.titulo}</strong>
-              <span>{abriendo === p.aid ? 'Abriendo…' : textoRestante(p.numero, p.posicionS, p.duracionS)}</span>
-              {#if fr !== null}<progress value={fr} max="1"></progress>{/if}
-            </button>
-            <button class="x" aria-label={`Descartar ${p.titulo}`} onclick={() => descartar(p)}>✕</button>
-          </li>
-        {/each}
-      </FilaDesplazable>
-    </section>
-  {/if}
+  <div class="cuerpo">
+    {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
+    {#if error}<p class="error" role="alert">{error}</p>{/if}
+    {#if cargando}<Esqueleto variante="poster" cantidad={8} />{/if}
 
-  {#if nuevos.length > 0}
-    <section aria-label="Nuevos episodios">
-      <h2>Nuevos episodios</h2>
-      <FilaDesplazable etiqueta="Nuevos episodios">
-        {#each nuevos.slice(0, MAX_FILA) as e (e.aid)}
-          <li class="poster">
-            <TarjetaPoster
-              aid={e.aid}
-              titulo={e.titulo}
-              subtitulo={textoUltimoVisto(e.ultimoEpisodio) ?? undefined}
-              etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
-              alAbrir={() => abrirFicha(e)}
-            />
-          </li>
-        {/each}
-      </FilaDesplazable>
-    </section>
-  {/if}
+    {#if pendientes.length > 0}
+      <section aria-label="Continuar viendo">
+        <FilaDesplazable etiqueta="Continuar viendo" titulo="Continuar viendo">
+          {#each pendientes as p (p.aid)}
+            {@const fr = fraccionVista(p.posicionS, p.duracionS)}
+            <li class="continuar">
+              <button class="abrir" disabled={abriendo !== null} onclick={() => retomar(p)}>
+                <Miniatura aid={p.aid} titulo={p.titulo} numero={p.numero} progreso={fr} />
+                <strong>{p.titulo}</strong>
+                <span class="detalle">{abriendo === p.aid ? 'Abriendo…' : textoRestante(p.numero, p.posicionS, p.duracionS)}</span>
+              </button>
+              <button class="x" aria-label={`Descartar ${p.titulo}`} onclick={() => descartar(p)}>✕</button>
+            </li>
+          {/each}
+        </FilaDesplazable>
+      </section>
+    {/if}
 
-  {#if viendo.length > 0}
-    <section aria-label="Siguiendo">
-      <h2>Siguiendo</h2>
-      <FilaDesplazable etiqueta="Siguiendo">
-        {#each viendo.slice(0, MAX_FILA) as e (e.aid)}
-          <li class="poster">
-            <TarjetaPoster
-              aid={e.aid}
-              titulo={e.titulo}
-              subtitulo={textoUltimoVisto(e.ultimoEpisodio) ?? undefined}
-              etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
-              alAbrir={() => abrirFicha(e)}
-            />
-          </li>
-        {/each}
-      </FilaDesplazable>
-      {#if viendo.length > MAX_FILA}
-        <button onclick={verTodoSiguiendo}>Ver las {viendo.length} en Biblioteca</button>
-      {/if}
-    </section>
-  {/if}
+    {#if nuevos.length > 0}
+      <section aria-label="Nuevos episodios">
+        <FilaDesplazable etiqueta="Nuevos episodios" titulo="Nuevos episodios">
+          {#each nuevos.slice(0, MAX_FILA) as e (e.aid)}
+            <li class="poster">
+              <TarjetaPoster
+                aid={e.aid}
+                titulo={e.titulo}
+                subtitulo={textoUltimoVisto(e.ultimoEpisodio) ?? undefined}
+                etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
+                alAbrir={() => abrirFicha(e)}
+              />
+            </li>
+          {/each}
+        </FilaDesplazable>
+      </section>
+    {/if}
 
-  {#if considerando.length > 0}
-    <section aria-label="Pendientes">
-      <h2>Pendientes</h2>
-      <FilaDesplazable etiqueta="Pendientes">
-        {#each considerando.slice(0, MAX_FILA) as e (e.aid)}
-          <li class="poster">
-            <TarjetaPoster aid={e.aid} titulo={e.titulo} alAbrir={() => abrirFicha(e)} />
-          </li>
-        {/each}
-      </FilaDesplazable>
-      {#if considerando.length > MAX_FILA}
-        <button onclick={verTodoPendientes}>Ver las {considerando.length} en Biblioteca</button>
-      {/if}
-    </section>
-  {/if}
+    {#if viendo.length > 0}
+      <section aria-label="Siguiendo">
+        <FilaDesplazable
+          etiqueta="Siguiendo"
+          titulo="Siguiendo"
+          verTodo={viendo.length > MAX_FILA ? { texto: 'Ver todo', alPulsar: verTodoSiguiendo } : undefined}
+        >
+          {#each viendo.slice(0, MAX_FILA) as e (e.aid)}
+            <li class="poster">
+              <TarjetaPoster
+                aid={e.aid}
+                titulo={e.titulo}
+                subtitulo={textoUltimoVisto(e.ultimoEpisodio) ?? undefined}
+                etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
+                alAbrir={() => abrirFicha(e)}
+              />
+            </li>
+          {/each}
+        </FilaDesplazable>
+      </section>
+    {/if}
 
-  {#if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0 && considerando.length === 0}
-    <Vacio titulo="Aquí aparecerá lo que veas" texto="Empieza por elegir una serie, o trae tu historial de Ukiku.">
-      <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
-      <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
-    </Vacio>
-  {/if}
+    {#if considerando.length > 0}
+      <section aria-label="Pendientes">
+        <FilaDesplazable
+          etiqueta="Pendientes"
+          titulo="Pendientes"
+          verTodo={considerando.length > MAX_FILA ? { texto: 'Ver todo', alPulsar: verTodoPendientes } : undefined}
+        >
+          {#each considerando.slice(0, MAX_FILA) as e (e.aid)}
+            <li class="poster">
+              <TarjetaPoster aid={e.aid} titulo={e.titulo} alAbrir={() => abrirFicha(e)} />
+            </li>
+          {/each}
+        </FilaDesplazable>
+      </section>
+    {/if}
+
+    {#if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0 && considerando.length === 0}
+      <Vacio titulo="Aquí aparecerá lo que veas" texto="Empieza por elegir una serie, o trae tu historial de Ukiku.">
+        <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
+        <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
+      </Vacio>
+    {/if}
+  </div>
 </main>
 
 <style>
-  .destacado {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    height: 260px;
-    padding: 24px;
-    margin: 16px 0;
-    border-radius: var(--radio);
-    background-size: cover;
-    background-position: center;
+  /* Con cabecera de destacados, la página llega hasta arriba: la cabecera flotante va sobre la imagen. */
+  .pantalla.con-destacado {
+    padding: 0;
   }
-  .destacado h2 {
-    margin: 0 0 12px;
-    font-size: 1.8rem;
-    max-width: 60%;
+  /* El texto del destacado y las filas empiezan en el mismo margen. */
+  .pantalla.inicio {
+    --margen: 48px;
   }
-  .destacado .principal {
-    align-self: flex-start;
+  .cuerpo {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 32px;
+    padding: 0 var(--margen) 32px;
+  }
+  section {
+    min-width: 0;
   }
   .continuar {
     position: relative;
@@ -273,15 +290,17 @@
   .abrir:hover:not(:disabled) {
     background: none;
   }
-  .abrir:hover:not(:disabled) :global(.portada),
-  .abrir:focus-visible :global(.portada) {
-    outline: 2px solid var(--anillo);
+  .abrir strong {
+    margin-top: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 0.875rem;
+    font-weight: 500;
   }
-  .abrir span {
+  .detalle {
     color: var(--texto-suave);
-  }
-  .abrir progress {
-    width: 100%;
+    font-size: 0.75rem;
   }
   .x {
     position: absolute;
@@ -289,6 +308,17 @@
     right: 6px;
     min-height: 0;
     padding: 0 6px;
-    background: rgb(0 0 0 / 0.6);
+    background: rgb(0 0 0 / 0.7);
+    opacity: 0;
+    transition: opacity 150ms;
+  }
+  .continuar:hover .x,
+  .continuar:focus-within .x {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .x {
+      transition: none;
+    }
   }
 </style>

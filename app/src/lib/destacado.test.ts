@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { EntradaBiblioteca, EntradaContinuar, ResumenSerie } from './datos.ts';
-import { conNuevoEpisodio, elegirDestacado, etiquetaNuevo, nuevoDe } from './destacado.ts';
+import { conNuevoEpisodio, elegirDestacado, elegirDestacados, etiquetaNuevo, nuevoDe } from './destacado.ts';
 
 const cont = (aid: number, numero = 3): EntradaContinuar => ({
   aid,
@@ -29,12 +29,12 @@ const res = (aid: number, banner: string | null, extra: Partial<ResumenSerie> = 
 
 test('elegirDestacado prefiere la primera de "continuar" que tenga banner', () => {
   const d = elegirDestacado([cont(1), cont(2)], [bib(9)], [res(1, null), res(2, 'https://b/2.jpg'), res(9, 'https://b/9.jpg')]);
-  assert.deepEqual(d, { aid: 2, slug: 's2', titulo: 'S2', banner: 'https://b/2.jpg', numero: 3 });
+  assert.deepEqual(d, { aid: 2, anilistId: 20, slug: 's2', titulo: 'S2', banner: 'https://b/2.jpg', numero: 3 });
 });
 
 test('elegirDestacado cae a "siguiendo" (sin episodio que continuar) si ninguna de continuar tiene banner', () => {
   const d = elegirDestacado([cont(1)], [bib(8), bib(9)], [res(1, null), res(9, 'https://b/9.jpg')]);
-  assert.deepEqual(d, { aid: 9, slug: 's9', titulo: 'S9', banner: 'https://b/9.jpg', numero: null });
+  assert.deepEqual(d, { aid: 9, anilistId: 90, slug: 's9', titulo: 'S9', banner: 'https://b/9.jpg', numero: null });
 });
 
 test('elegirDestacado devuelve null si nadie tiene banner o no hay resúmenes', () => {
@@ -72,4 +72,24 @@ test('conNuevoEpisodio: solo series en emisión con un episodio emitido que no h
   const lista = [bib(1), bib(2), bib(3), bib(4)]; // la 4 no tiene resumen
   assert.deepEqual(conNuevoEpisodio(lista, mapa).map((v) => v.aid), [1]);
   assert.deepEqual(conNuevoEpisodio([], mapa), []);
+});
+
+test('elegirDestacados pone primero «continuar», sin repetir y solo con banner', () => {
+  const r = [res(1, 'b1'), res(2, null), res(3, 'b3'), res(4, 'b4')];
+  const d = elegirDestacados([cont(3, 5), cont(2)], [bib(1), bib(3), bib(4)], r);
+  assert.deepEqual(
+    d.map((x) => [x.aid, x.numero]),
+    [
+      [3, 5],
+      [1, null],
+      [4, null],
+    ],
+  );
+  assert.equal(d[0].anilistId, 30);
+});
+
+test('elegirDestacados respeta el máximo y devuelve [] si ninguna tiene banner', () => {
+  const r = [1, 2, 3, 4].map((a) => res(a, `b${a}`));
+  assert.equal(elegirDestacados([], [bib(1), bib(2), bib(3), bib(4)], r, 2).length, 2);
+  assert.deepEqual(elegirDestacados([cont(1)], [bib(2)], [res(1, null), res(2, null)]), []);
 });

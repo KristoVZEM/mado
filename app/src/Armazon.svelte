@@ -121,6 +121,7 @@
     border-radius: 999px;
     background: none;
     color: var(--texto-suave);
+    font-size: 0.875rem;
   }
   .elemento.aparte {
     margin-left: 6px;
@@ -146,8 +147,8 @@
     }
   }
   svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;
