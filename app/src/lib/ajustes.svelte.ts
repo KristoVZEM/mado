@@ -1,9 +1,11 @@
-import { LIMITES, numeroDeAjuste, volumenInicial } from './ajustes.ts';
+import { idiomaDefectoDe, LIMITES, numeroDeAjuste, ordenDescendenteDe, volumenInicial } from './ajustes.ts';
 import { guardarAjuste, leerAjuste } from './datos.ts';
 import { SALTO_CORTO_S, SALTO_LARGO_S } from './saltos.ts';
 
 /** Ajustes en memoria, con los valores por defecto hasta que `asegurarAjustes` los lee de la base. */
 export const ajustes = $state({
+  idiomaDefecto: 'SUB' as 'SUB' | 'DUB',
+  ordenDescendente: false,
   volumen: 100,
   saltoCorto: SALTO_CORTO_S,
   saltoLargo: SALTO_LARGO_S,
@@ -42,12 +44,16 @@ async function leerSeguro(clave: string): Promise<string | null> {
 }
 
 async function cargar(): Promise<void> {
-  const [volumen, corto, largo, velocidad] = await Promise.all([
+  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios] = await Promise.all([
     leerSeguro('volumen'),
     leerSeguro('salto_corto'),
     leerSeguro('salto_largo'),
     leerSeguro('velocidad'),
+    leerSeguro('idioma_defecto'),
+    leerSeguro('orden_episodios'),
   ]);
+  ajustes.idiomaDefecto = idiomaDefectoDe(idiomaDefecto);
+  ajustes.ordenDescendente = ordenDescendenteDe(ordenEpisodios);
   // Migración única del volumen: de localStorage (antes de existir la base) a la base.
   const inicial = volumenInicial(volumen, leerLocal('ukiku.volumen'));
   ajustes.volumen = inicial.valor;

@@ -29,6 +29,11 @@ test('idiomaGuardado', () => {
   assert.equal(idiomaGuardado('SUB'), 'SUB');
   assert.equal(idiomaGuardado(null), 'SUB');
   assert.equal(idiomaGuardado('dub'), 'SUB');
+  // Con idioma por defecto DUB: solo lo guardado de verdad (SUB/DUB) le gana.
+  assert.equal(idiomaGuardado(null, 'DUB'), 'DUB');
+  assert.equal(idiomaGuardado('dub', 'DUB'), 'DUB');
+  assert.equal(idiomaGuardado('SUB', 'DUB'), 'SUB');
+  assert.equal(idiomaGuardado('DUB', 'SUB'), 'DUB');
 });
 
 test('validarSalto', () => {

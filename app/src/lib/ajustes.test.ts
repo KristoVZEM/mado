@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { LIMITES, numeroDeAjuste, volumenInicial } from './ajustes.ts';
+import { idiomaDefectoDe, LIMITES, numeroDeAjuste, ordenarEpisodios, ordenDescendenteDe, volumenInicial } from './ajustes.ts';
 
 test('los límites coinciden con los que valida Rust', () => {
   assert.deepEqual(LIMITES.volumen, [0, 100]);
@@ -51,4 +51,19 @@ test('volumenInicial: un valor inválido en la base cuenta como ausente y puede 
 test('volumenInicial recorta el valor de localStorage al rango 0-100', () => {
   assert.deepEqual(volumenInicial(null, '900'), { valor: 100, migrar: true });
   assert.deepEqual(volumenInicial(null, '-5'), { valor: 0, migrar: true });
+});
+
+test('idioma por defecto y orden: 1 activa la opción, cualquier otra cosa la deja por defecto', () => {
+  assert.equal(idiomaDefectoDe('1'), 'DUB');
+  assert.equal(idiomaDefectoDe(' 1 '), 'DUB');
+  for (const v of [null, undefined, '', '0', '2', 'DUB', 'x']) assert.equal(idiomaDefectoDe(v), 'SUB', String(v));
+  assert.equal(ordenDescendenteDe('1'), true);
+  for (const v of [null, undefined, '', '0', '2', 'desc']) assert.equal(ordenDescendenteDe(v), false, String(v));
+});
+
+test('ordenarEpisodios ordena una copia y no toca la lista original', () => {
+  const original = [3, 1, 2, 10.5];
+  assert.deepEqual(ordenarEpisodios(original, false), [1, 2, 3, 10.5]);
+  assert.deepEqual(ordenarEpisodios(original, true), [10.5, 3, 2, 1]);
+  assert.deepEqual(original, [3, 1, 2, 10.5]);
 });

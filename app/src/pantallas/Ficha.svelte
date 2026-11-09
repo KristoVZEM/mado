@@ -6,6 +6,7 @@
   import { abrir, buscarEnCatalogo, cerrarSuperior } from '../lib/navegacion.svelte.ts';
   import {
     alternarFavorito,
+    desmarcarVisto,
     episodiosVistos,
     esFavorito,
     estadoSerie,
@@ -18,6 +19,8 @@
   import { asegurarVinculo, elegirVinculo, refrescarSiHaceFalta } from '../lib/anilistServicio.ts';
   import { esDudoso, textoProximo } from '../lib/anilist.ts';
   import EscogerObra from '../lib/componentes/EscogerObra.svelte';
+  import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { ordenarEpisodios } from '../lib/ajustes.ts';
   import { idiomaGuardado } from '../lib/continuar.ts';
   import { avisarCambio } from '../lib/sync.svelte.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
@@ -121,6 +124,9 @@
   const larga = $derived((ficha?.synopsis.length ?? 0) > 280);
 
   const numeros = $derived(ficha ? ficha.episodes.map((e) => e.number).sort((a, b) => a - b) : []);
+  /** Orden de la lista en pantalla; `numeros` se queda ascendente porque el reproductor calcula el siguiente con él. */
+  const mostrados = $derived(ordenarEpisodios(numeros, ajustes.ordenDescendente));
+  let avisoDesmarcar = $state('');
   const serie = $derived({ aid: anime.aid, slug: anime.slug, titulo: ficha?.title || anime.title });
 
   onMount(async () => {
@@ -129,9 +135,10 @@
     const datos = Promise.all([
       episodiosVistos(anime.aid).catch(() => [] as number[]),
       leerAjuste(`idioma:${anime.aid}`).catch(() => null),
+      asegurarAjustes(),
     ]).then(([v, i]) => {
       vistos = new Set(v);
-      idioma = idiomaGuardado(i);
+      idioma = idiomaGuardado(i, ajustes.idiomaDefecto);
     });
     const biblioteca = Promise.all([estadoSerie(anime.aid), esFavorito(anime.aid)])
       .then(([e, f]) => {
@@ -151,6 +158,20 @@
     if (ficha) void cargarAniList();
     await Promise.all([datos, biblioteca]);
   });
+
+  /** Quita un episodio de los vistos; si falla, vuelve a ponerlo y avisa. */
+  async function desmarcar(n: number) {
+    const antes = vistos;
+    vistos = new Set([...vistos].filter((x) => x !== n));
+    avisoDesmarcar = '';
+    try {
+      await desmarcarVisto(anime.aid, n);
+    } catch (e) {
+      console.error(e);
+      vistos = antes;
+      avisoDesmarcar = `No se pudo quitar el episodio ${n} de los vistos: ${textoDeError(e)}`;
+    }
+  }
 
   function reproducir(numero: number) {
     abrir({ tipo: 'reproducir', anime, numeros, numero, idioma });
@@ -258,12 +279,24 @@
       · {numeros.length} episodios
     </p>
     <div class="episodios">
-      {#each numeros as n (n)}
-        <button class:visto={vistos.has(n)} onclick={() => reproducir(n)}>
-          {n}{#if vistos.has(n)}<span class="marca" aria-label="visto"> ✓</span>{/if}
-        </button>
+      {#each mostrados as n (n)}
+        <span class="episodio">
+          <button class:visto={vistos.has(n)} onclick={() => reproducir(n)}>
+            {n}{#if vistos.has(n)}<span class="marca" aria-label="visto"> ✓</span>{/if}
+          </button>
+          {#if vistos.has(n)}
+            <button
+              class="quitar"
+              onclick={() => desmarcar(n)}
+              aria-label={`Marcar el episodio ${n} como no visto`}
+              title="Marcar como no visto. Si la serie está sincronizada con AniList, el progreso de AniList puede volver a marcarlo."
+              >×</button
+            >
+          {/if}
+        </span>
       {/each}
     </div>
+    {#if avisoDesmarcar}<p class="error" role="alert">{avisoDesmarcar}</p>{/if}
   {/if}
 </main>
 
@@ -324,8 +357,16 @@
     flex-wrap: wrap;
     gap: 6px;
   }
+  .episodio {
+    display: inline-flex;
+    gap: 2px;
+  }
   .episodios button {
     min-width: 52px;
+  }
+  .episodios .quitar {
+    min-width: 0;
+    padding-inline: 6px;
   }
   .episodios button.visto {
     opacity: 0.65;

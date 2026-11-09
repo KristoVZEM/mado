@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ajustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
+  import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { LIMITES } from '../lib/ajustes.ts';
   import { validarSalto } from '../lib/continuar.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
@@ -13,7 +13,19 @@
   import SeccionAvisos from './SeccionAvisos.svelte';
 
   let datosOk = $state(false);
+
+  function elegirIdiomaDefecto(v: string) {
+    ajustes.idiomaDefecto = v === 'DUB' ? 'DUB' : 'SUB';
+    guardarAjusteSilencioso('idioma_defecto', ajustes.idiomaDefecto === 'DUB' ? '1' : '0');
+  }
+
+  function elegirOrden(v: string) {
+    ajustes.ordenDescendente = v === 'desc';
+    guardarAjusteSilencioso('orden_episodios', ajustes.ordenDescendente ? '1' : '0');
+  }
+
   onMount(async () => {
+    void asegurarAjustes();
     datosOk = (await estadoDatos().catch(() => 'error')) === null;
   });
 
@@ -98,6 +110,22 @@
     <button onclick={descartar}>Descartar cambios</button>
   </div>
   {#if guardado}<p role="status">Guardado.</p>{/if}
+
+  <label>
+    Idioma por defecto
+    <select value={ajustes.idiomaDefecto} onchange={(e) => elegirIdiomaDefecto(e.currentTarget.value)}>
+      <option value="SUB">SUB</option>
+      <option value="DUB">DUB</option>
+    </select>
+  </label>
+  <p>Solo para las series en las que todavía no elegiste uno; lo que elegiste por serie manda.</p>
+  <label>
+    Orden de los episodios
+    <select value={ajustes.ordenDescendente ? 'desc' : 'asc'} onchange={(e) => elegirOrden(e.currentTarget.value)}>
+      <option value="asc">Del primero al último</option>
+      <option value="desc">Del último al primero</option>
+    </select>
+  </label>
 
   <h3>Importar copia de Ukiku</h3>
   {#if !datosOk}

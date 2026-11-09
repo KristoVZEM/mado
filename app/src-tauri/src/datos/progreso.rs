@@ -238,6 +238,13 @@ pub fn descartar_progreso(conn: &Connection, aid: i64) -> Resultado<()> {
     Ok(())
 }
 
+/// Quita un episodio de los vistos (lo contrario de `marcar_visto` para un solo episodio). No falla si no estaba.
+pub fn desmarcar_visto(conn: &Connection, aid: i64, numero: f64) -> Resultado<()> {
+    validar_numero("numero", numero)?;
+    conn.execute("DELETE FROM historial WHERE aid = ?1 AND numero = ?2", params![aid, numero])?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod pruebas {
     use super::*;
@@ -252,6 +259,25 @@ mod pruebas {
             let titulo = format!("Serie {aid}");
             let serie = Serie { aid, slug: &slug, titulo: &titulo };
             marcar_visto(conn, ahora, &serie, numero, None, &[]).unwrap();
+        }
+    }
+
+    #[test]
+    fn desmarcar_visto_quita_solo_ese_episodio() {
+        let conn = abrir_en_memoria().unwrap();
+        sembrar_historial(&conn, &[(1, 1.0, 10), (1, 2.0, 20), (2, 2.0, 30)]);
+        desmarcar_visto(&conn, 1, 2.0).unwrap();
+        let h = listar_historial(&conn, 10, 0).unwrap();
+        let claves: Vec<(i64, f64)> = h.iter().map(|e| (e.aid, e.numero)).collect();
+        assert_eq!(claves, vec![(2, 2.0), (1, 1.0)]);
+    }
+
+    #[test]
+    fn desmarcar_visto_no_falla_si_no_estaba_y_rechaza_numeros_invalidos() {
+        let conn = abrir_en_memoria().unwrap();
+        desmarcar_visto(&conn, 1, 5.0).unwrap();
+        for malo in [-1.0, f64::NAN, f64::INFINITY] {
+            assert!(matches!(desmarcar_visto(&conn, 1, malo), Err(Error::Invalido(_))), "{malo}");
         }
     }
 

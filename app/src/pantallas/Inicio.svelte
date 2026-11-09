@@ -3,7 +3,7 @@
   import Portada from '../lib/componentes/Portada.svelte';
   import FilaDesplazable from '../lib/componentes/FilaDesplazable.svelte';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
-  import { asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
   import { entradasDe, textoUltimoVisto } from '../lib/biblioteca.ts';
   import { fraccionVista, idiomaGuardado, textoRestante } from '../lib/continuar.ts';
   import {
@@ -73,6 +73,7 @@
       const [ficha, idioma] = await Promise.all([
         fuentes.episodios(p.slug),
         leerAjuste(`idioma:${p.aid}`).catch(() => null),
+        asegurarAjustes(),
       ]);
       const numeros = ficha.episodes.map((e) => e.number).sort((a, b) => a - b);
       if (!numeros.includes(p.numero)) throw new Error(`El episodio ${p.numero} ya no está en la lista.`);
@@ -81,7 +82,7 @@
         anime: { aid: p.aid, slug: p.slug, title: p.titulo },
         numeros,
         numero: p.numero,
-        idioma: idiomaGuardado(idioma),
+        idioma: idiomaGuardado(idioma, ajustes.idiomaDefecto),
       });
     } catch (e) {
       console.error(e);

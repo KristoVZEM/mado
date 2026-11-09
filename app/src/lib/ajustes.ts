@@ -6,7 +6,24 @@ export const LIMITES = {
   saltoCorto: [5, 60],
   saltoLargo: [30, 180],
   velocidad: [0.5, 3],
+  idiomaDefecto: [0, 1],
+  ordenEpisodios: [0, 1],
 } as const;
+
+/** `idioma_defecto`: 1 = DUB; cualquier otra cosa (ausente, inválido) = SUB. */
+export function idiomaDefectoDe(valor: string | null | undefined): 'SUB' | 'DUB' {
+  return numeroDeAjuste(valor, 0, ...LIMITES.idiomaDefecto) === 1 ? 'DUB' : 'SUB';
+}
+
+/** `orden_episodios`: 1 = descendente; cualquier otra cosa = ascendente. */
+export function ordenDescendenteDe(valor: string | null | undefined): boolean {
+  return numeroDeAjuste(valor, 0, ...LIMITES.ordenEpisodios) === 1;
+}
+
+/** Copia de los números en el orden elegido; la lista original no se toca. */
+export function ordenarEpisodios(numeros: readonly number[], descendente: boolean): number[] {
+  return [...numeros].sort((a, b) => (descendente ? b - a : a - b));
+}
 
 /**
  * Lee un ajuste numérico guardado como texto: `Number()` tras `trim`, y el valor por defecto si

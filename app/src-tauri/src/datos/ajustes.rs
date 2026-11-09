@@ -17,6 +17,10 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("anilist_repaso_version", 0.0, 1000.0),
     // Avisos de episodios nuevos: 1 o ausente = activos; 0 = desactivados.
     ("avisos_activos", 0.0, 1.0),
+    // Idioma con el que arranca una serie sin idioma guardado: 0 = SUB, 1 = DUB.
+    ("idioma_defecto", 0.0, 1.0),
+    // Orden de la lista de episodios en la Ficha: 0 = ascendente, 1 = descendente.
+    ("orden_episodios", 0.0, 1.0),
 ];
 
 const PREFIJO_IDIOMA: &str = "idioma:";
@@ -116,6 +120,8 @@ mod pruebas {
             ("velocidad", "0.5", "3", "0.4", "3.1"),
             ("anilist_agenda_cargada", "0", "9000000000000000", "-1", "9000000000000001"),
             ("avisos_activos", "0", "1", "-1", "2"),
+            ("idioma_defecto", "0", "1", "-1", "2"),
+            ("orden_episodios", "0", "1", "-1", "2"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");

@@ -109,6 +109,7 @@ pub fn run() {
             datos::comandos::episodios_vistos,
             datos::comandos::continuar_viendo,
             datos::comandos::descartar_progreso,
+            datos::comandos::desmarcar_visto,
             datos::comandos::leer_ajuste,
             datos::comandos::guardar_ajuste,
             datos::comandos::estado_serie,

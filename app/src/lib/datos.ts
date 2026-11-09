@@ -66,6 +66,10 @@ export const continuarViendo = (limite: number) => invoke<EntradaContinuar[]>('c
 
 export const descartarProgreso = (aid: number) => enSerie(() => invoke<void>('descartar_progreso', { aid }));
 
+/** Quita un episodio de los vistos. */
+export const desmarcarVisto = (aid: number, numero: number) =>
+  enSerie(() => invoke<void>('desmarcar_visto', { aid, numero }));
+
 /** Los ajustes viajan como texto: leerlos con `lib/ajustes.ts`, que valida y cae al valor por defecto. */
 export const leerAjuste = (clave: string) => invoke<string | null>('leer_ajuste', { clave });
 

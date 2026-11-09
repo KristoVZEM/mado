@@ -24,9 +24,10 @@ export function fraccionVista(posicionS: number, duracionS: number): number | nu
   return Math.min(1, Math.max(0, posicionS / duracionS));
 }
 
-/** Idioma guardado de una serie (`idioma:<aid>`): SUB salvo que lo guardado sea exactamente DUB. */
-export function idiomaGuardado(valor: string | null | undefined): Idioma {
-  return valor?.trim() === 'DUB' ? 'DUB' : 'SUB';
+/** Idioma guardado de una serie (`idioma:<aid>`): el guardado si es exactamente SUB o DUB; si no, `defecto`. */
+export function idiomaGuardado(valor: string | null | undefined, defecto: Idioma = 'SUB'): Idioma {
+  const v = valor?.trim();
+  return v === 'DUB' ? 'DUB' : v === 'SUB' ? 'SUB' : defecto;
 }
 
 /** Entero dentro de `[min, max]` escrito en un campo; `null` si no vale. */

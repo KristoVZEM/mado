@@ -183,6 +183,11 @@ pub fn descartar_progreso(datos: State<'_, Datos>, aid: i64) -> Result<(), Strin
 }
 
 #[tauri::command(async)]
+pub fn desmarcar_visto(datos: State<'_, Datos>, aid: i64, numero: f64) -> Result<(), String> {
+    con(&datos, |c| progreso::desmarcar_visto(c, aid, numero))
+}
+
+#[tauri::command(async)]
 pub fn leer_ajuste(datos: State<'_, Datos>, clave: String) -> Result<Option<String>, String> {
     con(&datos, |c| ajustes::leer(c, &clave))
 }
