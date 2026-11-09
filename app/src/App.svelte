@@ -13,12 +13,15 @@
   import { estadoDatos, pendientesEmparejar } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
   import { nav } from './lib/navegacion.svelte.ts';
+  import { sincronizarAlAbrir } from './lib/sync.svelte.ts';
 
   const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
   // Empareja las series con AniList en segundo plano, poco a poco y reanudándose en cada arranque.
   // Todo es opcional: cualquier fallo se queda en la consola y no afecta a la app.
   onMount(() => {
+    // La sincronización con la cuenta de AniList corre aparte del emparejador y comparte su limitador.
+    void dormir(8000).then(sincronizarAlAbrir);
     void (async () => {
       try {
         await dormir(5000); // no competir con el arranque

@@ -28,6 +28,7 @@
   import { estadoSiguiente } from '../lib/siguiente.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { guardarProgreso, marcarVisto, progresoDe, type SerieRef } from '../lib/datos.ts';
+  import { avisarCambio } from '../lib/sync.svelte.ts';
   import { anterioresDe, debeGuardar, esVisto, posicionDeRetoma } from '../lib/progreso.ts';
   import { formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
@@ -220,7 +221,9 @@
   function marcarComoVisto() {
     if (visto) return;
     visto = true;
-    marcarVisto(serie, numero, siguiente, anterioresDe(numeros, numero)).catch(falloDeDatos);
+    marcarVisto(serie, numero, siguiente, anterioresDe(numeros, numero))
+      .then(() => avisarCambio(serie.aid))
+      .catch(falloDeDatos);
   }
 
   /** Cambia SUB/DUB conservando el segundo; si el idioma nuevo falla, el vídeo actual sigue. */

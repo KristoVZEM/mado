@@ -9,6 +9,7 @@
   import { estadoDatos, importarCopia, previsualizarCopia, type ModoImportacion, type ResumenCopia } from '../lib/datos.ts';
   import { textoDeError } from '../lib/errores.ts';
   import { lineasResumen, textoAviso, textoResultado } from '../lib/importar.ts';
+  import SeccionAnilist from './SeccionAnilist.svelte';
 
   let datosOk = $state(false);
   onMount(async () => {
@@ -129,6 +130,8 @@
   {:else}
     <p>Importando…</p>
   {/if}
+
+  <SeccionAnilist />
 </section>
 </main>
 

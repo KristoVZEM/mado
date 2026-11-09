@@ -98,7 +98,10 @@ export function planificar(locales: readonly LocalSync[], remotos: readonly Remo
     }
     if (estado === null) continue; // sin estado en ningún lado no se crea nada
 
-    let progreso = Math.min(Math.max(l.progreso, r?.progreso ?? 0), MAX_PROGRESO);
+    // animeav1 a veces numera de corrido (el 2.º cour como 14..25) y AniList por obra: un progreso local
+    // por encima del total conocido no es válido allí y no se sube ni se compara.
+    const progresoLocal = l.episodios !== null ? Math.min(l.progreso, l.episodios) : l.progreso;
+    let progreso = Math.min(Math.max(progresoLocal, r?.progreso ?? 0), MAX_PROGRESO);
     if (estado === 3 && l.episodios !== null && progreso < l.episodios) progreso = Math.min(l.episodios, MAX_PROGRESO);
 
     const bajar: Bajada = { aid: l.aid };

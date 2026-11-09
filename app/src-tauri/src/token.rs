@@ -8,13 +8,28 @@ const USUARIO: &str = "anilist-token";
 /// El Administrador de credenciales admite hasta 2560 bytes por entrada; un JWT de AniList ronda 1000-1400.
 const MAX_TOKEN: usize = 2000;
 
-/// Un JWT son letras, dígitos y `-_.`. Cualquier otra cosa se rechaza sin repetirla en el mensaje.
+/// Un JWT son letras, dígitos y `-_.`. Se quitan todos los espacios y saltos de línea (la página de AniList
+/// parte el token al copiarlo y un token nunca los lleva). Cualquier otra cosa se rechaza sin repetirla
+/// en el mensaje.
 fn validar(token: &str) -> Result<String, String> {
-    let t = token.trim();
-    let bien = !t.is_empty()
-        && t.len() <= MAX_TOKEN
-        && t.bytes().all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b));
-    if bien { Ok(t.to_string()) } else { Err("el token no tiene el formato esperado".into()) }
+    let t: String = token.chars().filter(|c| !c.is_whitespace()).collect();
+    if t.is_empty() {
+        return Err("el token está vacío".into());
+    }
+    if t.chars().count() > MAX_TOKEN {
+        return Err(format!("el token es demasiado largo ({} caracteres; el máximo es {MAX_TOKEN})", t.chars().count()));
+    }
+    // Se informa la posición y el código del primer carácter no permitido, nunca el contenido: por
+    // definición no puede ser parte de un token válido.
+    if let Some((i, c)) = t.chars().enumerate().find(|(_, c)| !(c.is_ascii_alphanumeric() || "-_.".contains(*c))) {
+        return Err(format!(
+            "el token tiene un carácter no permitido (U+{:04X}) en la posición {} de {}",
+            c as u32,
+            i + 1,
+            t.chars().count()
+        ));
+    }
+    Ok(t)
 }
 
 fn entrada() -> Result<Entry, String> {
@@ -67,8 +82,14 @@ mod pruebas {
     }
 
     #[test]
+    fn un_token_partido_en_lineas_o_con_espacios_se_junta() {
+        assert_eq!(validar("eyJ0eXAi.eyJhdWQi\r\n  .firma-_x \n").unwrap(), "eyJ0eXAi.eyJhdWQi.firma-_x");
+        assert_eq!(validar("abc def\tghi").unwrap(), "abcdefghi");
+    }
+
+    #[test]
     fn rechaza_vacio_enorme_o_con_caracteres_raros_sin_repetir_el_valor() {
-        for malo in ["", "   ", &"a".repeat(MAX_TOKEN + 1), "con espacio dentro", "ñandú", "a\nb"] {
+        for malo in ["", "   ", &"a".repeat(MAX_TOKEN + 1), "ñandú", "\"abc.def\"", "Bearer:abc"] {
             let e = validar(malo).unwrap_err();
             assert!(!e.contains(malo.trim()) || malo.trim().is_empty(), "el error no debe incluir el token");
         }

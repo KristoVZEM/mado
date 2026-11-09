@@ -23,12 +23,28 @@ pub struct SerieLocalSync {
     pub episodios: Option<i64>,
 }
 
+/// Cuántos episodios vistos hay seguidos desde el 1 (1, 2, 3, ...). Un hueco corta la cuenta, los
+/// decimales (especiales) se ignoran y una numeración que no arranca en 1 da 0. Es la regla de Mihon
+/// («solo cuenta la lectura continua»): ver el episodio 12 sin el resto no son 12 episodios vistos.
+/// Los números llegan ordenados de menor a mayor.
+fn racha_continua(numeros: impl Iterator<Item = f64>) -> i64 {
+    let mut siguiente = 1i64;
+    for n in numeros {
+        if n == siguiente as f64 {
+            siguiente += 1;
+        } else if n > siguiente as f64 {
+            break;
+        }
+    }
+    siguiente - 1
+}
+
 /// Series con vínculo `manual`, o `auto` con confianza >= 0,85 (las dudosas no se sincronizan).
-/// Con `solo_aid` devuelve únicamente esa serie.
+/// Con `solo_aid` devuelve únicamente esa serie. `progreso` es la racha continua del historial.
 pub fn series_para_sync(conn: &Connection, solo_aid: Option<i64>) -> Resultado<Vec<SerieLocalSync>> {
+    let mut vistos = conn.prepare("SELECT numero FROM historial WHERE aid = ?1 ORDER BY numero")?;
     let mut st = conn.prepare(
-        "SELECT v.aid, v.anilist_id, s.estado, COALESCE(s.actualizado, 0),
-                COALESCE((SELECT CAST(MAX(h.numero) AS INTEGER) FROM historial h WHERE h.aid = v.aid), 0),
+        "SELECT v.aid, v.anilist_id, s.estado, COALESCE(s.actualizado, 0), 0,
                 m.episodios
          FROM anilist_vinculo v
          LEFT JOIN anilist_media m ON m.anilist_id = v.anilist_id
@@ -48,7 +64,12 @@ pub fn series_para_sync(conn: &Connection, solo_aid: Option<i64>) -> Resultado<V
             episodios: f.get(5)?,
         })
     })?;
-    Ok(filas.collect::<Result<Vec<_>, _>>()?)
+    let mut series = filas.collect::<Result<Vec<_>, _>>()?;
+    for s in &mut series {
+        let numeros = vistos.query_map(params![s.aid], |f| f.get::<_, f64>(0))?;
+        s.progreso = racha_continua(numeros.collect::<Result<Vec<_>, _>>()?.into_iter());
+    }
+    Ok(series)
 }
 
 /// Lo que AniList manda a local para una serie. `estado_en` (ms) es la hora remota del estado.
@@ -201,17 +222,33 @@ mod pruebas {
     }
 
     #[test]
-    fn trae_estado_hora_progreso_entero_y_episodios() {
+    fn trae_estado_hora_progreso_y_episodios() {
         let conn = abrir_en_memoria().unwrap();
         vincular(&conn, 1, 100, 0.95, "auto", Some(12));
         conn.execute("INSERT INTO siguiendo (aid, estado, actualizado) VALUES (1, 3, 777)", []).unwrap();
-        conn.execute("INSERT INTO historial (aid, numero, visto_en) VALUES (1, 4.0, 1), (1, 5.5, 1)", []).unwrap();
+        conn.execute("INSERT INTO historial (aid, numero, visto_en) VALUES (1, 1.0, 1), (1, 2.0, 1)", []).unwrap();
         let s = &series_para_sync(&conn, None).unwrap()[0];
-        assert_eq!(
-            (s.anilist_id, s.estado, s.actualizado, s.progreso, s.episodios),
-            (100, Some(3), 777, 5, Some(12)),
-            "5.5 cuenta como 5: AniList guarda enteros"
-        );
+        assert_eq!((s.anilist_id, s.estado, s.actualizado, s.progreso, s.episodios), (100, Some(3), 777, 2, Some(12)));
+    }
+
+    fn progreso_con_historial(numeros: &[f64]) -> i64 {
+        let conn = abrir_en_memoria().unwrap();
+        vincular(&conn, 1, 100, 0.95, "auto", None);
+        for n in numeros {
+            conn.execute("INSERT INTO historial (aid, numero, visto_en) VALUES (1, ?1, 1)", params![n]).unwrap();
+        }
+        series_para_sync(&conn, None).unwrap()[0].progreso
+    }
+
+    #[test]
+    fn el_progreso_es_la_racha_continua_desde_el_episodio_1() {
+        assert_eq!(progreso_con_historial(&[]), 0);
+        assert_eq!(progreso_con_historial(&[1.0, 2.0, 3.0]), 3);
+        assert_eq!(progreso_con_historial(&[1.0, 2.0, 3.0, 5.0, 6.0]), 3, "un hueco corta la racha");
+        assert_eq!(progreso_con_historial(&[12.0]), 0, "ver solo el 12 no son 12 episodios");
+        assert_eq!(progreso_con_historial(&[14.0, 15.0, 25.0]), 0, "numeración corrida: no hay racha desde el 1");
+        assert_eq!(progreso_con_historial(&[1.0, 2.0, 2.5, 3.0]), 3, "un especial 2.5 no rompe la racha");
+        assert_eq!(progreso_con_historial(&[1.5, 2.0]), 0, "sin el episodio 1 entero no hay racha");
     }
 
     #[test]

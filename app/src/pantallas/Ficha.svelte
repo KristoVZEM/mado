@@ -19,6 +19,7 @@
   import { esDudoso, textoProximo } from '../lib/anilist.ts';
   import EscogerObra from '../lib/componentes/EscogerObra.svelte';
   import { idiomaGuardado } from '../lib/continuar.ts';
+  import { avisarCambio } from '../lib/sync.svelte.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
   import {
     confianza,
@@ -164,6 +165,7 @@
     avisoBiblioteca = '';
     try {
       await fijarEstado(serie, nuevo);
+      avisarCambio(serie.aid);
     } catch (e) {
       console.error(e);
       estado = anterior;

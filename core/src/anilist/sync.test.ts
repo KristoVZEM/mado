@@ -119,3 +119,17 @@ test('varias series: un plan con todas, en orden de aid', () => {
   assert.deepEqual(p.bajar.map((b) => b.aid), [1]);
   assert.deepEqual(p.subir.map((s) => s.anilistId), [200]);
 });
+
+test('un progreso local mayor que el total de episodios (numeración corrida) se acota y no se sube', () => {
+  // animeav1 numera el 2.º cour como 14..25; AniList tiene 13 episodios en esa obra.
+  const p = planificar([local({ estado: 1, progreso: 25, episodios: 13 })], [remoto({ estado: 1, progreso: 13 })]);
+  assert.deepEqual(p, vacio);
+  const nueva = planificar([local({ estado: 1, progreso: 25, episodios: 13 })], []);
+  assert.deepEqual(nueva.subir, [{ anilistId: 100, estado: 1, progreso: 13 }]);
+  assert.deepEqual(nueva.bajar, []);
+});
+
+test('con el total desconocido el progreso local no se acota', () => {
+  const p = planificar([local({ estado: 1, progreso: 25, episodios: null })], []);
+  assert.deepEqual(p.subir, [{ anilistId: 100, estado: 1, progreso: 25 }]);
+});

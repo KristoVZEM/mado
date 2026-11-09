@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import type { Bajada, LocalSync } from '../../../core/src/index.ts';
 
 /** Identifica una serie para guardar su progreso; `aid` y `slug` son los de animeav1. */
 export interface SerieRef {
@@ -271,3 +272,23 @@ export const guardarEmision = (desde: number, hasta: number, medias: MediaAnilis
 
 export const emisionEntre = (desde: number, hasta: number) => invoke<EntradaEmision[]>('emision_entre', { desde, hasta });
 export const resumenesVinculados = () => invoke<ResumenSerie[]>('resumenes_vinculados');
+
+/** Cuenta de AniList conectada. `ultimaSync` en ms; `null` = aún no hubo (la primera pide vista previa). */
+export interface Cuenta {
+  usuarioId: number;
+  nombre: string;
+  ultimaSync: number | null;
+}
+
+/** Series con vínculo firme y lo que hace falta para sincronizarlas; con `aid`, solo esa. */
+export const seriesParaSync = (aid?: number) => invoke<LocalSync[]>('series_para_sync', { aid: aid ?? null });
+export const aplicarBajadas = (bajadas: Bajada[]) => invoke<number>('aplicar_bajadas', { bajadas });
+export const guardarCuenta = (usuarioId: number, nombre: string) => invoke<void>('guardar_cuenta', { usuarioId, nombre });
+export const leerCuenta = () => invoke<Cuenta | null>('leer_cuenta');
+export const borrarCuenta = () => invoke<void>('borrar_cuenta');
+export const marcarSincronizada = () => invoke<void>('marcar_sincronizada');
+
+/** El token vive en el Administrador de credenciales de Windows; la interfaz solo lo pide al sincronizar. */
+export const guardarTokenAnilist = (token: string) => invoke<void>('guardar_token_anilist', { token });
+export const leerTokenAnilist = () => invoke<string | null>('leer_token_anilist');
+export const borrarTokenAnilist = () => invoke<void>('borrar_token_anilist');
