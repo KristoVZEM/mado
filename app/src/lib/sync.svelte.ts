@@ -167,11 +167,12 @@ export async function sincronizarAlAbrir() {
     if (await estadoDatos()) return;
     await cargarCuenta();
     if (!sync.cuenta || sync.cuenta.ultimaSync === null) return;
-    const r = await sincronizador.sincronizar();
-    if (typeof r === 'object') {
-      sync.cuenta = await leerCuenta();
+    // Si falla (sin red, AniList caído), se reintenta a los 30 s, 2 min, 10 min y 30 min.
+    await sincronizador.sincronizarConReintentos(async (r) => {
+      if (typeof r !== 'object') return;
+      sync.cuenta = await leerCuenta().catch(() => sync.cuenta);
       sync.mensaje = textoResumen(r);
-    }
+    });
   } catch (e) {
     console.error(e instanceof Error ? e.name : e);
   }
