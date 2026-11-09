@@ -11,6 +11,7 @@
   import { lineasResumen, textoAviso, textoResultado } from '../lib/importar.ts';
   import SeccionAnilist from './SeccionAnilist.svelte';
   import SeccionAvisos from './SeccionAvisos.svelte';
+  import SeccionTmdb from './SeccionTmdb.svelte';
 
   let datosOk = $state(false);
 
@@ -163,6 +164,8 @@
   <SeccionAnilist />
 
   <SeccionAvisos />
+
+  <SeccionTmdb />
 </section>
 </main>
 

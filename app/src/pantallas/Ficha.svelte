@@ -3,6 +3,8 @@
   import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import Portada from '../lib/componentes/Portada.svelte';
   import { portadaGrande, urlCaptura, urlPortada } from '../lib/imagenes.ts';
+  import { urlFondoTmdb, urlLogoTmdb } from '../lib/tmdb.ts';
+  import { imagenesTmdb } from '../lib/tmdbServicio.ts';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { abrir, buscarEnCatalogo, cerrarSuperior } from '../lib/navegacion.svelte.ts';
@@ -16,6 +18,7 @@
     leerAjuste,
     progresoDeSerie,
     vinculoConMedia,
+    type FilaTmdb,
     type RelacionAnilist,
     type VinculoConMedia,
   } from '../lib/datos.ts';
@@ -42,6 +45,8 @@
   let { anime }: { anime: ResultadoBusqueda } = $props();
 
   let ficha = $state<Ficha | null>(null);
+  let tmdb = $state<FilaTmdb | null>(null);
+  let logoFallido = $state(false);
   let cargando = $state(true);
   let error = $state('');
   let idioma = $state<Idioma>('SUB');
@@ -70,9 +75,16 @@
       const estadoV = await asegurarVinculo(serie, { anio: ficha?.anio ?? null, episodios: numeros.length || null });
       vinculo = await refrescarSiHaceFalta(estadoV.actual, serie.titulo);
       candidatos = estadoV.candidatos;
+      if (vinculo?.media) void cargarTmdb(vinculo.media);
     } catch (e) {
       console.error(e);
     }
+  }
+
+  /** Fondo y logo de TMDB: opcionales, llegan cuando llegan y no bloquean nada. */
+  async function cargarTmdb(m: MediaAnilist) {
+    tmdb = await imagenesTmdb(m);
+    logoFallido = false;
   }
 
   async function elegir(m: MediaAnilist) {
@@ -80,6 +92,8 @@
       await elegirVinculo(serie, m);
       vinculo = await vinculoConMedia(anime.aid);
       candidatos = [];
+      tmdb = null;
+      if (vinculo?.media) void cargarTmdb(vinculo.media);
     } catch (e) {
       console.error(e);
     }
@@ -153,12 +167,14 @@
   const principal = $derived(episodioPrincipal(numeros, vistos, progresos));
   let fondosFallidos = $state<string[]>([]);
   let fondoListo = $state(false);
-  /** Fondo de la cabecera: el banner de AniList, si no una captura del episodio que toca y, si no, el póster. */
+  const urlFondo = $derived(tmdb?.fondo ? urlFondoTmdb(tmdb.fondo) : null);
+  /** Fondo de la cabecera: el de TMDB (16:9), si no el banner de AniList, si no una captura y, si no, el póster. */
   const fondo = $derived(
-    [media?.banner ?? null, principal ? urlCaptura(anime.aid, principal.numero) : null, urlPortada(anime.aid)].find(
+    [urlFondo, media?.banner ?? null, principal ? urlCaptura(anime.aid, principal.numero) : null, urlPortada(anime.aid)].find(
       (u) => u !== null && !fondosFallidos.includes(u),
     ) ?? null,
   );
+  const logo = $derived(tmdb?.logo && !logoFallido ? urlLogoTmdb(tmdb.logo) : null);
   const serie = $derived({ aid: anime.aid, slug: anime.slug, titulo: ficha?.title || anime.title });
 
   onMount(async () => {
@@ -282,10 +298,10 @@
 
 <main class="pantalla ficha">
   {#if fondo}
-    <div class="fondo" aria-hidden="true">
+    <div class="fondo" class:panoramico={fondo === urlFondo} aria-hidden="true">
       <img
         class:listo={fondoListo}
-        class:difuso={fondo !== media?.banner}
+        class:difuso={fondo !== media?.banner && fondo !== urlFondo}
         src={fondo}
         alt=""
         onload={() => (fondoListo = true)}
@@ -302,7 +318,15 @@
           preferida={media?.portada ? portadaGrande(media.portada) : null}
         /></div>
       <div class="datos">
-        <h1>{ficha?.title || anime.title}</h1>
+        {#if logo}
+          <h1 class="titulo-logo">
+            <img src={logo} alt={ficha?.title || anime.title} onerror={() => (logoFallido = true)} />
+          </h1>
+          <!-- El logo suele estar en el idioma original: el título en letras latinas dice qué serie es. -->
+          <p class="subtitulo-logo" aria-hidden="true">{ficha?.title || anime.title}</p>
+        {:else}
+          <h1>{ficha?.title || anime.title}</h1>
+        {/if}
         {#if chips.length > 0}
           <ul class="chips" aria-label="Datos de la serie">
             {#each chips as c (c)}<li>{c}</li>{/each}
@@ -499,6 +523,10 @@
     z-index: 0;
     pointer-events: none;
   }
+  /* El fondo de TMDB es 16:9 y de 1920 px: se puede mostrar a toda altura. */
+  .fondo.panoramico {
+    height: 85vh;
+  }
   .fondo img {
     width: 100%;
     height: 100%;
@@ -574,6 +602,21 @@
     font-weight: 700;
     letter-spacing: -0.025em;
     text-wrap: balance;
+  }
+  /* El título bajo el logo se pega a él, no al resto de datos. */
+  .subtitulo-logo {
+    margin: -12px 0 0;
+    color: var(--texto-suave);
+    font-size: 1rem;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.85);
+  }
+  .titulo-logo img {
+    display: block;
+    max-width: min(100%, 560px);
+    max-height: 180px;
+    object-fit: contain;
+    object-position: left;
+    filter: drop-shadow(0 2px 8px rgb(0 0 0 / 0.6));
   }
   .chips {
     display: flex;

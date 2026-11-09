@@ -20,8 +20,8 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https://cdn.animeav1.com https://s4.anilist.co; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'",
-      "devCsp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420; img-src 'self' data: https://cdn.animeav1.com https://s4.anilist.co; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'"
+      "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost; img-src 'self' data: https://cdn.animeav1.com https://s4.anilist.co https://image.tmdb.org; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'",
+      "devCsp": "default-src 'self'; connect-src 'self' ipc: http://ipc.localhost ws://localhost:1420 http://localhost:1420; img-src 'self' data: https://cdn.animeav1.com https://s4.anilist.co https://image.tmdb.org; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'"
     }
   },
   "bundle": {

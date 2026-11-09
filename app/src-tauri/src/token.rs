@@ -1,10 +1,11 @@
-//! Token de AniList en el Administrador de credenciales de Windows. Nunca va a SQLite ni a archivos,
+//! Token de AniList y clave de TMDB en el Administrador de credenciales de Windows. Nunca va a SQLite ni a archivos,
 //! y ningún mensaje de error lo incluye.
 
 use keyring::Entry;
 
 const SERVICIO: &str = "dev.kristovzem.ukikupc";
 const USUARIO: &str = "anilist-token";
+const USUARIO_TMDB: &str = "tmdb-clave";
 /// El Administrador de credenciales admite hasta 2560 bytes por entrada; un JWT de AniList ronda 1000-1400.
 const MAX_TOKEN: usize = 2000;
 
@@ -54,6 +55,26 @@ fn borrar_de(e: &Entry) -> Result<(), String> {
         Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
         Err(_) => Err("no se pudo borrar el token del almacén de credenciales".to_string()),
     }
+}
+
+fn entrada_tmdb() -> Result<Entry, String> {
+    Entry::new(SERVICIO, USUARIO_TMDB).map_err(|_| "no se pudo abrir el almacén de credenciales".to_string())
+}
+
+/// La clave de TMDB (v3, 32 caracteres, o token v4 de lectura) se guarda como el de AniList: solo ahí.
+#[tauri::command(async)]
+pub fn guardar_clave_tmdb(clave: String) -> Result<(), String> {
+    guardar_en(&entrada_tmdb()?, &clave)
+}
+
+#[tauri::command(async)]
+pub fn leer_clave_tmdb() -> Result<Option<String>, String> {
+    leer_de(&entrada_tmdb()?)
+}
+
+#[tauri::command(async)]
+pub fn borrar_clave_tmdb() -> Result<(), String> {
+    borrar_de(&entrada_tmdb()?)
 }
 
 #[tauri::command(async)]

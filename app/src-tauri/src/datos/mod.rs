@@ -9,6 +9,7 @@ pub mod comandos;
 pub mod copia;
 pub mod progreso;
 pub mod sync;
+pub mod tmdb;
 
 use rusqlite::Connection;
 use std::fmt;
@@ -171,9 +172,22 @@ CREATE TABLE avisos (
 );
 ";
 
+/// Esquema de la versión 7: caché de imágenes de TMDB (fondo y logo) por obra de AniList. Solo agrega.
+/// Una fila con `tmdb_id` nulo es una búsqueda que no encontró nada; `consultado_en` va en milisegundos.
+const V7: &str = "
+CREATE TABLE tmdb_media (
+    anilist_id    INTEGER PRIMARY KEY,
+    tmdb_id       INTEGER,
+    tipo          TEXT CHECK (tipo IN ('tv', 'movie')),
+    fondo         TEXT,
+    logo          TEXT,
+    consultado_en INTEGER NOT NULL
+);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -288,7 +302,8 @@ mod pruebas {
                 "favoritos",
                 "historial",
                 "progreso",
-                "siguiendo"
+                "siguiendo",
+                "tmdb_media"
             ]);
     }
 

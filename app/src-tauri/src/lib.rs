@@ -134,6 +134,8 @@ pub fn run() {
             datos::comandos::aplicar_bajadas,
             datos::comandos::avisos_candidatas,
             datos::comandos::avisos_guardar,
+            datos::comandos::tmdb_leer,
+            datos::comandos::tmdb_guardar,
             datos::comandos::guardar_cuenta,
             datos::comandos::leer_cuenta,
             datos::comandos::borrar_cuenta,
@@ -141,6 +143,9 @@ pub fn run() {
             token::guardar_token_anilist,
             token::leer_token_anilist,
             token::borrar_token_anilist,
+            token::guardar_clave_tmdb,
+            token::leer_clave_tmdb,
+            token::borrar_clave_tmdb,
         ])
         .run(tauri::generate_context!())
         .expect("error al ejecutar la aplicación de Tauri");

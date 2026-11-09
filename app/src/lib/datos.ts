@@ -334,3 +334,19 @@ export interface CandidataAviso {
 }
 export const avisosCandidatas = () => invoke<CandidataAviso[]>('avisos_candidatas');
 export const avisosGuardar = (items: { aid: number; ultimo: number }[]) => invoke<void>('avisos_guardar', { items });
+
+/** Lo guardado de TMDB para una obra: rutas de fondo y logo. `tmdbId` es `null` si se buscó y no se encontró. */
+export interface FilaTmdb {
+  anilistId: number;
+  tmdbId: number | null;
+  tipo: 'tv' | 'movie' | null;
+  fondo: string | null;
+  logo: string | null;
+  consultadoEn: number;
+}
+
+export const tmdbLeer = (anilistId: number) => invoke<FilaTmdb | null>('tmdb_leer', { anilistId });
+export const tmdbGuardar = (fila: FilaTmdb) => invoke<void>('tmdb_guardar', { fila });
+export const guardarClaveTmdb = (clave: string) => invoke<void>('guardar_clave_tmdb', { clave });
+export const leerClaveTmdb = () => invoke<string | null>('leer_clave_tmdb');
+export const borrarClaveTmdb = () => invoke<void>('borrar_clave_tmdb');

@@ -53,3 +53,4 @@ export function crearFuentes(opts: OpcionesFuentes = {}) {
     },
   };
 }
+export * from './tmdb/index.ts';

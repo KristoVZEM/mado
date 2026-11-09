@@ -3,6 +3,7 @@
 
 use super::anilist;
 use super::avisos;
+use super::tmdb;
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
 use super::{ajustes, Error, Resultado};
@@ -273,6 +274,18 @@ pub fn avisos_candidatas(datos: State<'_, Datos>) -> Result<Vec<avisos::Candidat
 #[tauri::command(async)]
 pub fn avisos_guardar(datos: State<'_, Datos>, items: Vec<avisos::Avisado>) -> Result<(), String> {
     con(&datos, |c| avisos::guardar_avisados(c, ahora_ms(), &items))
+}
+
+/// Lo que se guardó de TMDB para una obra de AniList, o `None` si nunca se consultó.
+#[tauri::command(async)]
+pub fn tmdb_leer(datos: State<'_, Datos>, anilist_id: i64) -> Result<Option<tmdb::FilaTmdb>, String> {
+    con(&datos, |c| tmdb::leer(c, anilist_id))
+}
+
+/// Guarda el resultado de una búsqueda en TMDB (también el de «no encontrada»).
+#[tauri::command(async)]
+pub fn tmdb_guardar(datos: State<'_, Datos>, fila: tmdb::FilaTmdb) -> Result<(), String> {
+    con(&datos, |c| tmdb::guardar(c, &fila))
 }
 
 #[tauri::command(async)]
