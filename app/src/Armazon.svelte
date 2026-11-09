@@ -20,17 +20,18 @@
 </script>
 
 <div class="armazon">
-  <nav class="carril" aria-label="Secciones">
+  <nav class="cabecera" aria-label="Secciones">
     {#each CARRIL as e (e.id)}
       <button
         class="elemento"
-        class:abajo={e.id === 'ajustes'}
-        aria-label={e.nombre}
+        class:aparte={e.id === 'ajustes'}
         title={e.nombre}
-        aria-current={nav.seccion === e.id ? 'page' : undefined}
+        aria-label={e.nombre}
+        aria-current={nav.seccion === e.id && !nav.superior ? 'page' : undefined}
         onclick={() => irASeccion(e.id)}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d={ICONOS[e.id]} /></svg>
+        <span class="nombre">{e.nombre}</span>
       </button>
     {/each}
   </nav>
@@ -51,62 +52,80 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin: var(--espacio) var(--margen) 0;
+    margin: 72px var(--margen) 0;
     padding: 10px 14px;
     background: var(--superficie);
     border: 1px solid var(--borde);
     border-left: 3px solid var(--acento);
     border-radius: var(--radio);
   }
+  /* Con el aviso puesto, él ya deja el hueco de la cabecera. */
+  .aviso-fuente + :global(.pantalla) {
+    padding-top: 24px;
+  }
   .aviso-fuente span {
     flex: 1;
   }
   .armazon {
-    display: grid;
-    grid-template-columns: 64px 1fr;
     min-height: 100vh;
     background: var(--fondo);
   }
-  .carril {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    box-sizing: border-box;
+  /* Píldora flotante centrada: se queda fija sobre el contenido y sobre los banners. */
+  .cabecera {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 12px 0;
-    background: var(--superficie);
-    border-right: 1px solid var(--borde);
+    gap: 2px;
+    padding: 3px;
+    background: rgb(23 23 31 / 0.8);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--borde);
+    border-radius: 999px;
   }
   .elemento {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 0 12px;
     border: 0;
+    border-radius: 999px;
     background: none;
     color: var(--texto-suave);
   }
-  .elemento.abajo {
-    margin-top: auto;
+  .elemento.aparte {
+    margin-left: 6px;
   }
   .elemento:hover:not(:disabled) {
     background: var(--superficie-2);
     color: var(--texto);
   }
   .elemento[aria-current='page'] {
-    color: var(--acento);
+    color: var(--texto);
     background: var(--superficie-2);
+  }
+  .elemento[aria-current='page'] svg {
+    color: var(--acento);
   }
   .elemento:focus-visible {
     outline: 2px solid var(--acento);
   }
+  /* Con la ventana estrecha solo quedan los iconos. */
+  @media (max-width: 820px) {
+    .nombre {
+      display: none;
+    }
+    .elemento {
+      padding: 0 12px;
+    }
+  }
   svg {
-    width: 24px;
-    height: 24px;
+    width: 18px;
+    height: 18px;
     fill: none;
     stroke: currentColor;
     stroke-width: 2;

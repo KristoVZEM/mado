@@ -61,18 +61,6 @@
   const dudoso = $derived(vinculo ? esDudoso(vinculo.vinculo) : false);
   const opcionesObra = $derived([...(media ? [media] : []), ...candidatos]);
   const proximo = $derived(media ? textoProximo(media.siguienteEp, media.siguienteEn, Date.now() / 1000) : null);
-  /** Puntuación, estudio, formato y próximo episodio, en una sola línea. */
-  const extra = $derived(
-    media
-      ? [
-          media.puntuacion !== null ? `★ ${(media.puntuacion / 10).toFixed(1)}` : null,
-          media.estudio,
-          media.formato,
-          proximo ? `Próximo: ${proximo}` : null,
-        ].filter(Boolean)
-      : [],
-  );
-
   const textoPlano = (t: string) => t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
   async function cargarAniList() {
@@ -124,8 +112,23 @@
   }
 
   let sinopsisAbierta = $state(false);
-  /** Estado de emisión y géneros, en una sola línea. */
-  const meta = $derived(ficha ? [ficha.status, ...ficha.genres].filter(Boolean) : []);
+  /** Año, nota, formato, estado y próximo episodio, como chips bajo el título. */
+  const chips = $derived(
+    [
+      ficha?.anio ? String(ficha.anio) : null,
+      media?.puntuacion != null ? `★ ${(media.puntuacion / 10).toFixed(1)}` : null,
+      media?.formato ?? null,
+      ficha?.status || null,
+      proximo ? `Próximo: ${proximo}` : null,
+    ].filter((x): x is string => Boolean(x)),
+  );
+  /** Géneros y estudio, en filas con su etiqueta. */
+  const filas = $derived(
+    [
+      { nombre: 'Géneros', valores: ficha?.genres ?? [] },
+      { nombre: 'Estudio', valores: media?.estudio ? [media.estudio] : [] },
+    ].filter((f) => f.valores.length > 0),
+  );
   const larga = $derived((ficha?.synopsis.length ?? 0) > 280);
 
   const numeros = $derived(ficha ? ficha.episodes.map((e) => e.number).sort((a, b) => a - b) : []);
@@ -233,202 +236,300 @@
   }
 </script>
 
-<main class="pantalla">
-  <button onclick={cerrarSuperior}>← Volver</button>
-  {#if media?.banner}
-    <div class="banner" style:background-image={`url(${media.banner})`} role="img" aria-label="Banner de la serie"></div>
-  {/if}
-  <div class="cabecera">
-    <div class="portada-ficha"><Portada aid={anime.aid} titulo={ficha?.title || anime.title} /></div>
-    <div class="datos">
-      <h1>{ficha?.title || anime.title}</h1>
-      {#if meta.length > 0}<p class="meta">{meta.join(' · ')}</p>{/if}
-      {#if extra.length > 0}<p class="meta">{extra.join(' · ')}</p>{/if}
-      {#if ficha?.synopsis}
-        <p class="sinopsis" class:recortada={larga && !sinopsisAbierta}>{ficha.synopsis}</p>
-        {#if larga}
-          <button class="enlace" aria-expanded={sinopsisAbierta} onclick={() => (sinopsisAbierta = !sinopsisAbierta)}>
-            {sinopsisAbierta ? 'Ver menos' : 'Ver más'}
-          </button>
+<main class="pantalla ficha">
+  <div class="fondo" style:background-image={media?.banner ? `url(${media.banner})` : undefined} aria-hidden="true"></div>
+  <div class="capa">
+    <button class="volver" onclick={cerrarSuperior} aria-label="Volver" title="Volver">←</button>
+    <div class="cabecera">
+      <div class="portada-ficha"><Portada aid={anime.aid} titulo={ficha?.title || anime.title} /></div>
+      <div class="datos">
+        <h1>{ficha?.title || anime.title}</h1>
+        {#if chips.length > 0}
+          <ul class="chips" aria-label="Datos de la serie">
+            {#each chips as c (c)}<li>{c}</li>{/each}
+          </ul>
         {/if}
-      {/if}
-      {#if !ficha?.synopsis && media?.sinopsis}
-        <p class="sinopsis">{textoPlano(media.sinopsis)}</p>
-      {/if}
-      {#if principal}
-        <p>
-          <button class="principal" onclick={() => reproducir(principal.numero)}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
-            {textoPrincipal(principal)}
-          </button>
-        </p>
-      {/if}
-      {#if bibliotecaOk}
-        <p class="biblioteca">
-          <label>
-            Estado:
-            <select value={estado} onchange={cambiarEstado} disabled={guardando}>
-              <option value={0}>Ninguno</option>
-              {#each ESTADOS as e (e.valor)}<option value={e.valor}>{e.nombre}</option>{/each}
-            </select>
-          </label>
-          <button
-            onclick={alternar}
-            disabled={guardando}
-            aria-pressed={favorito}
-            aria-label={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}>{favorito ? '★' : '☆'}</button
-          >
-        </p>
-        {#if avisoBiblioteca}<p class="error" role="alert">{avisoBiblioteca}</p>{/if}
-      {/if}
-    </div>
-  </div>
-
-  {#if dudoso && !preguntaDescartada && opcionesObra.length > 0}
-    <EscogerObra candidatos={opcionesObra} alElegir={elegir} alDescartar={() => (preguntaDescartada = true)} />
-  {/if}
-
-  {#if media && media.relaciones.length > 0}
-    <section class="relacionadas" aria-label="Relacionadas">
-      <h2>Relacionadas</h2>
-      <p>
-        {#each media.relaciones as r (r.anilistId)}
-          <button onclick={() => abrirRelacionada(r)}>{r.titulo} ({r.tipo})</button>
-        {/each}
-      </p>
-    </section>
-  {/if}
-
-  {#if cargando}<Esqueleto variante="fila" cantidad={6} />{/if}
-  {#if error}
-    <p class="error">{error}</p>
-    {#if !ficha}<button onclick={cargarEpisodios} disabled={cargando}>Reintentar</button>{/if}
-  {/if}
-
-  {#if ficha}
-    <p>
-      Idioma:
-      <button disabled={idioma === 'SUB'} onclick={() => (idioma = 'SUB')}>SUB</button>
-      <button disabled={idioma === 'DUB'} onclick={() => (idioma = 'DUB')}>DUB</button>
-      · {numeros.length} episodios
-    </p>
-    <ul class="lista-episodios" aria-label="Episodios">
-      {#each mostrados as n (n)}
-        {@const p = progresoPorNumero.get(n)}
-        {@const fr = p ? fraccionVista(p.posicionS, p.duracionS) : null}
-        {@const quedan = p ? textoQuedan(p.posicionS, p.duracionS) : null}
-        <li class="episodio" class:visto={vistos.has(n)} class:actual={principal?.numero === n}>
-          <button class="fila" onclick={() => reproducir(n)}>
-            <span class="miniatura">
-              <Portada aid={anime.aid} titulo={serie.titulo} numero={n} />
-              {#if vistos.has(n)}
-                <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-              {/if}
-              {#if fr !== null}<progress value={fr} max="1" aria-hidden="true"></progress>{/if}
-            </span>
-            <span class="info">
-              <strong>Episodio {n}</strong>
-              {#if vistos.has(n)}<span>Visto</span>{:else if quedan}<span>{quedan}</span>{/if}
-            </span>
-          </button>
-          {#if vistos.has(n)}
-            <button
-              class="quitar"
-              onclick={() => desmarcar(n)}
-              aria-label={`Marcar el episodio ${n} como no visto`}
-              title={sync.cuenta ? 'Marcar como no visto. AniList puede volver a marcarlo.' : 'Marcar como no visto'}>×</button>
+        <div class="acciones">
+          {#if principal}
+            <button class="principal" onclick={() => reproducir(principal.numero)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
+              {textoPrincipal(principal)}
+            </button>
           {/if}
-        </li>
-      {/each}
-    </ul>
-    {#if avisoDesmarcar}<p class="error" role="alert">{avisoDesmarcar}</p>{/if}
-  {/if}
+          {#if bibliotecaOk}
+            <button
+              class="icono"
+              onclick={alternar}
+              disabled={guardando}
+              aria-pressed={favorito}
+              title={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}
+              aria-label={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}>{favorito ? '★' : '☆'}</button
+            >
+            <label class="estado">
+              <span class="solo-lectores">Estado</span>
+              <select value={estado} onchange={cambiarEstado} disabled={guardando} aria-label="Estado en tu biblioteca">
+                <option value={0}>Sin estado</option>
+                {#each ESTADOS as e (e.valor)}<option value={e.valor}>{e.nombre}</option>{/each}
+              </select>
+            </label>
+          {/if}
+        </div>
+        {#if avisoBiblioteca}<p class="error" role="alert">{avisoBiblioteca}</p>{/if}
+        {#if ficha?.synopsis}
+          <p class="sinopsis" class:recortada={larga && !sinopsisAbierta}>{ficha.synopsis}</p>
+          {#if larga}
+            <button class="enlace" aria-expanded={sinopsisAbierta} onclick={() => (sinopsisAbierta = !sinopsisAbierta)}>
+              {sinopsisAbierta ? 'Ver menos' : 'Ver más'}
+            </button>
+          {/if}
+        {/if}
+        {#if !ficha?.synopsis && media?.sinopsis}
+          <p class="sinopsis">{textoPlano(media.sinopsis)}</p>
+        {/if}
+        {#if filas.length > 0}
+          <dl class="filas">
+            {#each filas as f (f.nombre)}
+              <dt>{f.nombre}</dt>
+              <dd>
+                <ul class="chips">
+                  {#each f.valores as v (v)}<li>{v}</li>{/each}
+                </ul>
+              </dd>
+            {/each}
+          </dl>
+        {/if}
+      </div>
+    </div>
+
+    {#if dudoso && !preguntaDescartada && opcionesObra.length > 0}
+      <EscogerObra candidatos={opcionesObra} alElegir={elegir} alDescartar={() => (preguntaDescartada = true)} />
+    {/if}
+
+    {#if cargando}<Esqueleto variante="fila" cantidad={6} />{/if}
+    {#if error}
+      <p class="error">{error}</p>
+      {#if !ficha}<button onclick={cargarEpisodios} disabled={cargando}>Reintentar</button>{/if}
+    {/if}
+
+    {#if ficha}
+      <div class="barra-episodios">
+        <h2>Episodios <span class="cuenta">{numeros.length}</span></h2>
+        <div class="idioma" role="group" aria-label="Idioma">
+          <button disabled={idioma === 'SUB'} onclick={() => (idioma = 'SUB')}>SUB</button>
+          <button disabled={idioma === 'DUB'} onclick={() => (idioma = 'DUB')}>DUB</button>
+        </div>
+      </div>
+      <ul class="lista-episodios" aria-label="Episodios">
+        {#each mostrados as n (n)}
+          {@const p = progresoPorNumero.get(n)}
+          {@const fr = p ? fraccionVista(p.posicionS, p.duracionS) : null}
+          {@const quedan = p ? textoQuedan(p.posicionS, p.duracionS) : null}
+          <li class="episodio" class:visto={vistos.has(n)} class:actual={principal?.numero === n}>
+            <button class="fila" onclick={() => reproducir(n)}>
+              <span class="miniatura">
+                <Portada aid={anime.aid} titulo={serie.titulo} numero={n} />
+                {#if vistos.has(n)}
+                  <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+                {/if}
+                {#if fr !== null}<progress value={fr} max="1" aria-hidden="true"></progress>{/if}
+              </span>
+              <span class="info">
+                <strong>Episodio {n}</strong>
+                {#if vistos.has(n)}<span>Visto</span>{:else if quedan}<span>{quedan}</span>{:else if principal?.numero === n}<span>Siguiente</span>{/if}
+              </span>
+            </button>
+            {#if vistos.has(n)}
+              <button
+                class="quitar"
+                onclick={() => desmarcar(n)}
+                aria-label={`Marcar el episodio ${n} como no visto`}
+                title={sync.cuenta ? 'Marcar como no visto. AniList puede volver a marcarlo.' : 'Marcar como no visto'}>×</button>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+      {#if avisoDesmarcar}<p class="error" role="alert">{avisoDesmarcar}</p>{/if}
+    {/if}
+
+    {#if media && media.relaciones.length > 0}
+      <section class="relacionadas" aria-label="Relacionadas">
+        <h2>Relacionadas</h2>
+        <p>
+          {#each media.relaciones as r (r.anilistId)}
+            <button onclick={() => abrirRelacionada(r)}>{r.titulo} ({r.tipo})</button>
+          {/each}
+        </p>
+      </section>
+    {/if}
+  </div>
 </main>
 
 <style>
-  .banner {
-    height: 180px;
-    margin-top: 12px;
-    border-radius: var(--radio);
-    background-size: cover;
-    background-position: center;
-    box-shadow: inset 0 -80px 60px -40px var(--fondo);
+  .ficha {
+    position: relative;
+    overflow: hidden;
+    padding-inline: 56px;
   }
-  .relacionadas p {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+  /* El banner pasa por debajo de la cabecera y se funde con el fondo. */
+  .fondo {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 640px;
+    background-color: var(--superficie);
+    background-size: cover;
+    background-position: center 20%;
+    opacity: 0.55;
+    mask-image: linear-gradient(to bottom, #000 40%, transparent);
+    pointer-events: none;
+  }
+  .capa {
+    position: relative;
+  }
+  .volver {
+    width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    background: rgb(14 14 19 / 0.55);
+    font-size: 1.1rem;
   }
   .cabecera {
     display: grid;
-    grid-template-columns: 170px 1fr;
-    gap: 24px;
+    grid-template-columns: 240px 1fr;
+    gap: 36px;
     align-items: start;
-    margin: 16px 0 24px;
+    margin: 20px 0 8px;
+  }
+  .portada-ficha {
+    border-radius: var(--radio);
+    overflow: hidden;
+    box-shadow: 0 8px 28px rgb(0 0 0 / 0.5);
   }
   .datos h1 {
-    margin: 0 0 4px;
-  }
-  .meta {
     margin: 0 0 12px;
-    color: var(--texto-suave);
+    font-size: 3.2rem;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .chips li {
+    padding: 2px 10px;
+    border: 1px solid var(--borde);
+    border-radius: 999px;
+    background: rgb(14 14 19 / 0.5);
+    font-size: 0.85rem;
+  }
+  .acciones {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .icono {
+    width: 40px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 1.1rem;
+  }
+  .estado select {
+    min-height: 40px;
   }
   .sinopsis {
     margin: 0 0 4px;
-    max-width: 70ch;
-    line-height: 1.55;
+    max-width: 75ch;
+    line-height: 1.6;
   }
   .sinopsis.recortada {
     display: -webkit-box;
-    -webkit-line-clamp: 6;
-    line-clamp: 6;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
   .datos .enlace {
     margin-bottom: 12px;
   }
-  .biblioteca {
-    display: flex;
+  .filas {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 10px 16px;
     align-items: center;
-    gap: 8px;
+    margin: 16px 0 0;
+    padding-top: 16px;
+    border-top: 1px solid var(--borde);
+  }
+  .filas dt {
+    color: var(--texto-suave);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+  .filas dd {
+    margin: 0;
+  }
+  .relacionadas p {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .barra-episodios {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .cuenta {
+    margin-left: 6px;
+    color: var(--texto-suave);
+    font-weight: 400;
+  }
+  .idioma {
+    display: flex;
+    gap: 4px;
+  }
+  .idioma button:disabled {
+    background: var(--acento);
+    border-color: var(--acento);
+    color: var(--sobre-acento);
+    opacity: 1;
   }
   .lista-episodios {
     list-style: none;
-    margin: 12px 0 0;
+    margin: 4px 0 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 6px 16px;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 20px 16px;
   }
   /* Con series de cientos de episodios, el navegador solo pinta las filas que se ven. */
   .episodio {
     position: relative;
     content-visibility: auto;
-    contain-intrinsic-size: auto 92px;
+    contain-intrinsic-size: auto 160px;
   }
   .fila {
     display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: 12px;
-    align-items: center;
+    gap: 8px;
     width: 100%;
-    padding: 6px;
-    border-color: transparent;
+    padding: 0;
+    border: 0;
     background: none;
     text-align: left;
-    transition: background 150ms;
   }
   .fila:hover:not(:disabled) {
-    background: var(--superficie);
+    background: none;
   }
-  .fila:focus-visible {
+  .fila:hover:not(:disabled) .miniatura,
+  .fila:focus-visible .miniatura,
+  .episodio.actual .miniatura {
     outline: 2px solid var(--acento);
-    outline-offset: 1px;
-  }
-  .episodio.actual .fila {
-    background: var(--superficie);
-    border-color: var(--borde);
+    outline-offset: 2px;
   }
   .miniatura {
     position: relative;
@@ -436,19 +537,20 @@
     overflow: hidden;
     border-radius: var(--radio);
   }
-  .episodio.visto .miniatura {
-    opacity: 0.55;
+  .episodio.visto .miniatura :global(img),
+  .episodio.visto .miniatura :global(.portada) {
+    opacity: 0.75;
   }
   .marca {
     position: absolute;
-    right: 6px;
-    bottom: 6px;
-    width: 20px;
-    height: 20px;
-    padding: 2px;
+    right: 8px;
+    top: 8px;
+    width: 22px;
+    height: 22px;
+    padding: 3px;
     box-sizing: border-box;
     border-radius: 50%;
-    background: rgb(0 0 0 / 0.65);
+    background: rgb(0 0 0 / 0.7);
     fill: none;
     stroke: #fff;
     stroke-width: 2.5;
@@ -478,6 +580,7 @@
   }
   .info span {
     color: var(--texto-suave);
+    font-size: 0.9rem;
   }
   .episodio.visto strong {
     color: var(--texto-suave);
@@ -485,9 +588,10 @@
   .quitar {
     position: absolute;
     top: 8px;
-    right: 8px;
+    left: 8px;
     min-height: 0;
     padding: 0 8px;
+    background: rgb(0 0 0 / 0.7);
     opacity: 0;
     transition: opacity 150ms;
   }
@@ -496,7 +600,6 @@
     opacity: 1;
   }
   @media (prefers-reduced-motion: reduce) {
-    .fila,
     .quitar {
       transition: none;
     }

@@ -38,7 +38,8 @@ body {
 /* Pantallas normales: fondo opaco, tapan el vídeo de mpv que hay detrás. La altura la da el armazón. */
 .pantalla {
   box-sizing: border-box;
-  padding: 24px var(--margen);
+  /* El hueco de arriba lo ocupa la cabecera flotante. */
+  padding: 80px var(--margen) 24px;
   background: var(--fondo);
 }
 
