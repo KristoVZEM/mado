@@ -20,7 +20,14 @@
   import EscogerObra from '../lib/componentes/EscogerObra.svelte';
   import { idiomaGuardado } from '../lib/continuar.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
-  import { decidir, type Ficha, type Idioma, type MediaAnilist, type ResultadoBusqueda } from '../../../core/src/index.ts';
+  import {
+    confianza,
+    UMBRAL_AUTO,
+    type Ficha,
+    type Idioma,
+    type MediaAnilist,
+    type ResultadoBusqueda,
+  } from '../../../core/src/index.ts';
 
   let { anime }: { anime: ResultadoBusqueda } = $props();
 
@@ -82,14 +89,24 @@
   /** Abre una serie relacionada: la busca en animeav1 y, si hay una coincidencia firme, abre su Ficha. */
   async function abrirRelacionada(r: RelacionAnilist) {
     try {
+      const candidato = {
+        anilistId: r.anilistId,
+        tituloRomaji: r.titulo,
+        tituloIngles: null,
+        tituloNativo: null,
+        sinonimos: [],
+        anio: null,
+        episodios: null,
+      };
+      // Se abre el mejor resultado, no el primero que pase el umbral (las temporadas hermanas se parecen).
+      let mejor: { res: ResultadoBusqueda; c: number } | null = null;
       for (const res of await fuentes.buscar(r.titulo)) {
-        const d = decidir({ titulo: res.title }, [
-          { anilistId: r.anilistId, tituloRomaji: r.titulo, tituloIngles: null, tituloNativo: null, sinonimos: [], anio: null, episodios: null },
-        ]);
-        if (d.tipo === 'auto') {
-          abrir({ tipo: 'ficha', anime: res });
-          return;
-        }
+        const c = confianza({ titulo: res.title }, candidato);
+        if (!mejor || c > mejor.c) mejor = { res, c };
+      }
+      if (mejor && mejor.c >= UMBRAL_AUTO) {
+        abrir({ tipo: 'ficha', anime: mejor.res });
+        return;
       }
     } catch (e) {
       console.error(e);

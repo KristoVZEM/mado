@@ -3,6 +3,7 @@
   import Ajustes from './pantallas/Ajustes.svelte';
   import Biblioteca from './pantallas/Biblioteca.svelte';
   import Catalogo from './pantallas/Catalogo.svelte';
+  import Emision from './pantallas/Emision.svelte';
   import Inicio from './pantallas/Inicio.svelte';
   import Historial from './pantallas/Historial.svelte';
   import Ficha from './pantallas/Ficha.svelte';
@@ -57,6 +58,8 @@
       <Inicio />
     {:else if nav.seccion === 'catalogo'}
       <Catalogo />
+    {:else if nav.seccion === 'emision'}
+      <Emision />
     {:else if nav.seccion === 'biblioteca'}
       <Biblioteca />
     {:else if nav.seccion === 'historial'}

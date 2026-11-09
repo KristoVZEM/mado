@@ -1,4 +1,4 @@
-import { normalizar, parecido } from './titulos.ts';
+import { normalizar, parecido, temporadaDe } from './titulos.ts';
 
 export interface CandidatoAnilist {
   anilistId: number;
@@ -19,11 +19,23 @@ export interface SerieABuscar {
 export const UMBRAL_AUTO = 0.85;
 export const UMBRAL_MINIMO = 0.6;
 
-/** Mejor parecido entre el título buscado y cualquiera de los nombres del candidato. */
+/** Lo que se resta cuando dos títulos casi iguales son de temporadas distintas (la 1.ª cuenta como sin número). */
+const PENALIZA_TEMPORADA = 0.3;
+
+/**
+ * Mejor parecido entre el título buscado y cualquiera de los nombres del candidato. Si el número de
+ * temporada difiere («Kusuriya no Hitorigoto» frente a «… 3rd Season») se penaliza: son obras distintas.
+ */
 export function mejorParecido(titulo: string, c: CandidatoAnilist): number {
   const t = normalizar(titulo);
   const nombres = [c.tituloRomaji, c.tituloIngles, ...c.sinonimos].filter((x): x is string => !!x);
-  return nombres.reduce((m, n) => Math.max(m, parecido(t, normalizar(n))), 0);
+  const temporadaBuscada = temporadaDe(t) ?? 1;
+  return nombres.reduce((m, n) => {
+    const nombre = normalizar(n);
+    const p = parecido(t, nombre);
+    const distinta = (temporadaDe(nombre) ?? 1) !== temporadaBuscada;
+    return Math.max(m, distinta ? Math.max(0, p - PENALIZA_TEMPORADA) : p);
+  }, 0);
 }
 
 /** Confianza de 0 a 1: parecido del título, ajustado por año y número de episodios cuando se conocen. */

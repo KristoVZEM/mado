@@ -44,3 +44,12 @@ export function parecido(a: string, b: string): number {
   const total = [...A.values()].reduce((x, y) => x + y, 0) + [...B.values()].reduce((x, y) => x + y, 0);
   return Math.max(piso, total === 0 ? 0 : (2 * comunes) / total);
 }
+
+/**
+ * Número de temporada que lleva al final un título ya normalizado («… 2», «… 3rd»), o `null` si no
+ * lleva. Solo 1 o 2 cifras y con texto delante: «Mob Psycho 100» o «86» no son temporadas.
+ */
+export function temporadaDe(normalizado: string): number | null {
+  const m = /^.+ (\d{1,2})(?:st|nd|rd|th)?$/.exec(normalizado);
+  return m ? Number(m[1]) : null;
+}

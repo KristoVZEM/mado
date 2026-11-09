@@ -23,6 +23,11 @@ const FRIEREN = c(
 );
 const FMA03 = c(121, 'Fullmetal Alchemist', null, [], 2003, 51);
 const FMAB = c(5114, 'Fullmetal Alchemist: Brotherhood', null, ['Hagane no Renkinjutsushi: Fullmetal Alchemist'], 2009, 64);
+const KUS1 = c(139, 'Kusuriya no Hitorigoto', 'The Apothecary Diaries', [], 2023, 24);
+const KUS2 = c(176496, 'Kusuriya no Hitorigoto 2nd Season', 'The Apothecary Diaries Season 2', [], 2025, 24);
+const KUS3 = c(195516, 'Kusuriya no Hitorigoto 3rd Season', 'The Apothecary Diaries Season 3', [], 2026, null);
+const STEINS = c(9253, 'Steins;Gate', null, [], 2011, 24);
+const STEINS0 = c(30484, 'Steins;Gate 0', null, [], 2018, 23);
 const PELI = c(1, 'Kimi no Na wa.', 'Your Name.', ['Tu nombre'], 2016, 1);
 
 test('un título exacto vincula solo, también si coincide con un sinónimo en español', () => {
@@ -71,4 +76,25 @@ test('ordenar es estable: a igual confianza, el id más bajo primero', () => {
   const a = c(9, 'Igual', null, [], null, null);
   const b = c(3, 'Igual', null, [], null, null);
   assert.deepEqual(ordenar({ titulo: 'Igual' }, [a, b]).map((p) => p.candidato.anilistId), [3, 9]);
+});
+
+test('una temporada hermana no se vincula sola aunque el título sea casi igual', () => {
+  // Antes puntuaba 0,91 / 0,88: por encima del umbral automático.
+  assert.notEqual(decidir({ titulo: 'Kusuriya no Hitorigoto' }, [KUS3]).tipo, 'auto');
+  assert.notEqual(decidir({ titulo: 'Kusuriya no Hitorigoto 2nd Season' }, [KUS3]).tipo, 'auto');
+  assert.notEqual(decidir({ titulo: 'Kusuriya no Hitorigoto 3rd Season' }, [KUS1]).tipo, 'auto');
+  assert.notEqual(decidir({ titulo: 'Steins;Gate' }, [STEINS0]).tipo, 'auto');
+});
+
+test('entre varias temporadas gana la que coincide', () => {
+  const todas = [KUS3, KUS2, KUS1];
+  const id = (t: string) => {
+    const d = decidir({ titulo: t }, todas);
+    return d.tipo === 'auto' ? d.propuesta.candidato.anilistId : d.tipo;
+  };
+  assert.equal(id('Kusuriya no Hitorigoto'), 139);
+  assert.equal(id('Kusuriya no Hitorigoto 2nd Season'), 176496);
+  assert.equal(id('Kusuriya no Hitorigoto 3rd Season'), 195516);
+  assert.equal(id('The Apothecary Diaries Season 3'), 195516);
+  assert.equal(decidir({ titulo: 'Steins;Gate 0' }, [STEINS, STEINS0]).tipo === 'auto' && 30484, 30484);
 });

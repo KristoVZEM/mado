@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { normalizar, parecido, PISO_CONTENIDO } from './titulos.ts';
+import { normalizar, parecido, PISO_CONTENIDO, temporadaDe } from './titulos.ts';
 
 test('normalizar quita tildes, signos y palabras de relleno, y conserva los números', () => {
   assert.equal(normalizar('Sōsō no Frieren: 2ª Temporada!'), 'soso no frieren 2');
@@ -24,4 +24,15 @@ test('parecido: contenido en el otro sube al piso, sin llegar a 1', () => {
 
 test('parecido es simétrico', () => {
   assert.equal(parecido('shingeki no kyojin', 'attack on titan'), parecido('attack on titan', 'shingeki no kyojin'));
+});
+
+test('temporadaDe lee el número de temporada final del título normalizado', () => {
+  assert.equal(temporadaDe('kusuriya no hitorigoto 3rd'), 3);
+  assert.equal(temporadaDe('kusuriya no hitorigoto 2nd'), 2);
+  assert.equal(temporadaDe('shingeki no kyojin 2'), 2);
+  assert.equal(temporadaDe('steins gate 0'), 0);
+  assert.equal(temporadaDe('kusuriya no hitorigoto'), null);
+  assert.equal(temporadaDe('mob psycho 100'), null); // tres cifras: parte del nombre
+  assert.equal(temporadaDe('86 eighty six'), null);
+  assert.equal(temporadaDe('2'), null); // solo un número: no es una temporada
 });

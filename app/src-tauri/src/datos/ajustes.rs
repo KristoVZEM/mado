@@ -9,6 +9,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("salto_corto", 5.0, 60.0),
     ("salto_largo", 30.0, 180.0),
     ("velocidad", 0.5, 3.0),
+    // Cuándo se cargó por última vez la agenda de emisión de AniList (milisegundos desde 1970).
+    ("anilist_agenda_cargada", 0.0, 9.0e15),
 ];
 
 const PREFIJO_IDIOMA: &str = "idioma:";
@@ -97,6 +99,7 @@ mod pruebas {
             ("salto_corto", "5", "60", "4", "61"),
             ("salto_largo", "30", "180", "29", "181"),
             ("velocidad", "0.5", "3", "0.4", "3.1"),
+            ("anilist_agenda_cargada", "0", "9000000000000000", "-1", "9000000000000001"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");
