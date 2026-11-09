@@ -25,7 +25,7 @@
   import { ordenarEpisodios } from '../lib/ajustes.ts';
   import { fraccionVista, idiomaGuardado } from '../lib/continuar.ts';
   import { episodioPrincipal, textoPrincipal, textoQuedan, type ProgresoEp } from '../lib/episodiosFicha.ts';
-  import { avisarCambio } from '../lib/sync.svelte.ts';
+  import { avisarCambio, cargarCuenta, sync } from '../lib/sync.svelte.ts';
   import { ESTADOS } from '../lib/biblioteca.ts';
   import {
     confianza,
@@ -137,6 +137,7 @@
   const serie = $derived({ aid: anime.aid, slug: anime.slug, titulo: ficha?.title || anime.title });
 
   onMount(async () => {
+    if (!sync.cuenta) void cargarCuenta(); // para saber si la ayuda del «×» debe mencionar AniList
     // Los datos locales son accesorios: si fallan, la ficha funciona igual, sin ✓, en SUB y sin
     // estado ni favorito.
     const datos = Promise.all([
@@ -334,7 +335,7 @@
               class="quitar"
               onclick={() => desmarcar(n)}
               aria-label={`Marcar el episodio ${n} como no visto`}
-              title="Marcar como no visto. AniList puede volver a marcarlo.">×</button>
+              title={sync.cuenta ? 'Marcar como no visto. AniList puede volver a marcarlo.' : 'Marcar como no visto'}>×</button>
           {/if}
         </li>
       {/each}

@@ -38,6 +38,20 @@ export function nuevoDe(resumen: ResumenSerie | undefined, ultimoVisto: number |
   return hayNuevo(emitido, ultimoVisto) ? emitido : null;
 }
 
+/**
+ * Series que sigues y se están emitiendo con un episodio emitido que aún no has visto, en el orden de `viendo`.
+ * Una serie ya terminada con episodios sin ver no cuenta: no es «nuevo».
+ */
+export function conNuevoEpisodio(
+  viendo: readonly EntradaBiblioteca[],
+  resumenes: ReadonlyMap<number, ResumenSerie>,
+): EntradaBiblioteca[] {
+  return viendo.filter((v) => {
+    const r = resumenes.get(v.aid);
+    return r?.estado === 'RELEASING' && nuevoDe(r, v.ultimoEpisodio) !== null;
+  });
+}
+
 /** Texto de la pastilla de una tarjeta: «Nuevo · Ep. 7 emitido»; `undefined` si no hay episodio nuevo. */
 export function etiquetaNuevo(resumen: ResumenSerie | undefined, ultimoVisto: number | null): string | undefined {
   const n = nuevoDe(resumen, ultimoVisto);

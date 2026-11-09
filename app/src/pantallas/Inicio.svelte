@@ -17,23 +17,25 @@
     type EntradaContinuar,
     type ResumenSerie,
   } from '../lib/datos.ts';
-  import { elegirDestacado, etiquetaNuevo } from '../lib/destacado.ts';
+  import { conNuevoEpisodio, elegirDestacado, etiquetaNuevo } from '../lib/destacado.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { avisarFalloDeFuente } from '../lib/fuente.svelte.ts';
   import { fuentes } from '../lib/fuentes.ts';
-  import { abrir, buscarEnCatalogo, irASeccion, nav } from '../lib/navegacion.svelte.ts';
+  import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
 
   /** Tope de tarjetas por fila; el resto se ve en Biblioteca. */
   const MAX_FILA = 20;
 
-  let texto = $state('');
   let avisoDatos = $state('');
   let error = $state('');
   let pendientes = $state<EntradaContinuar[]>([]);
   let viendo = $state<EntradaBiblioteca[]>([]);
+  let considerando = $state<EntradaBiblioteca[]>([]);
   let resumenes = $state<ResumenSerie[]>([]);
   const destacado = $derived(elegirDestacado(pendientes, viendo, resumenes));
   const porAid = $derived(new Map(resumenes.map((r) => [r.aid, r])));
+  /** Lo que sigues y tiene un episodio emitido sin ver. */
+  const nuevos = $derived(conNuevoEpisodio(viendo, porAid));
   let cargando = $state(true);
   let abriendo = $state<number | null>(null);
 
@@ -49,8 +51,12 @@
         else console.error(r.reason);
         if (c.status === 'fulfilled') pendientes = c.value;
         else error = textoDeError(c.reason);
-        if (b.status === 'fulfilled') viendo = entradasDe(b.value, 'viendo');
-        else error = textoDeError(b.reason);
+        if (b.status === 'fulfilled') {
+          viendo = entradasDe(b.value, 'viendo');
+          considerando = entradasDe(b.value, 'considerando');
+        } else {
+          error = textoDeError(b.reason);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -59,12 +65,6 @@
       cargando = false;
     }
   });
-
-  function buscar(evento: SubmitEvent) {
-    evento.preventDefault();
-    const consulta = texto.trim();
-    if (consulta) buscarEnCatalogo(consulta);
-  }
 
   async function retomar(p: EntradaContinuar) {
     if (abriendo !== null) return;
@@ -109,6 +109,11 @@
     irASeccion('biblioteca');
   }
 
+  function verTodoPendientes() {
+    nav.pestana = 'considerando';
+    irASeccion('biblioteca');
+  }
+
   function usarDestacado() {
     const d = destacado;
     if (!d) return;
@@ -123,12 +128,7 @@
 </script>
 
 <main class="pantalla">
-  <h1>Inicio</h1>
-
-  <form onsubmit={buscar}>
-    <input bind:value={texto} placeholder="Buscar anime…" size="40" aria-label="Buscar anime" />
-    <button type="submit">Buscar</button>
-  </form>
+  <h1 class="solo-lectores">Inicio</h1>
 
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
@@ -167,6 +167,25 @@
     </section>
   {/if}
 
+  {#if nuevos.length > 0}
+    <section aria-label="Nuevos episodios">
+      <h2>Nuevos episodios</h2>
+      <FilaDesplazable etiqueta="Nuevos episodios">
+        {#each nuevos.slice(0, MAX_FILA) as e (e.aid)}
+          <li class="poster">
+            <TarjetaPoster
+              aid={e.aid}
+              titulo={e.titulo}
+              subtitulo={textoUltimoVisto(e.ultimoEpisodio) ?? undefined}
+              etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
+              alAbrir={() => abrirFicha(e)}
+            />
+          </li>
+        {/each}
+      </FilaDesplazable>
+    </section>
+  {/if}
+
   {#if viendo.length > 0}
     <section aria-label="Siguiendo">
       <h2>Siguiendo</h2>
@@ -189,12 +208,50 @@
     </section>
   {/if}
 
-  {#if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0}
-    <p>Aún no hay nada por aquí. Busca una serie en el Catálogo o importa tu copia de Ukiku desde Ajustes.</p>
+  {#if considerando.length > 0}
+    <section aria-label="Pendientes">
+      <h2>Pendientes</h2>
+      <FilaDesplazable etiqueta="Pendientes">
+        {#each considerando.slice(0, MAX_FILA) as e (e.aid)}
+          <li class="poster">
+            <TarjetaPoster aid={e.aid} titulo={e.titulo} alAbrir={() => abrirFicha(e)} />
+          </li>
+        {/each}
+      </FilaDesplazable>
+      {#if considerando.length > MAX_FILA}
+        <button onclick={verTodoPendientes}>Ver las {considerando.length} en Biblioteca</button>
+      {/if}
+    </section>
+  {/if}
+
+  {#if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0 && considerando.length === 0}
+    <section class="vacio" aria-label="Empezar">
+      <h2>Aquí aparecerá lo que veas</h2>
+      <p>Empieza por elegir una serie, o trae tu historial de Ukiku.</p>
+      <p>
+        <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
+        <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
+      </p>
+    </section>
   {/if}
 </main>
 
 <style>
+  .solo-lectores {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .vacio {
+    max-width: 52ch;
+    margin: 48px 0;
+  }
+  .vacio h2 {
+    margin-top: 0;
+  }
   .destacado {
     display: flex;
     flex-direction: column;

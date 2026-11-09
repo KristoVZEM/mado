@@ -1,5 +1,6 @@
 import { resolverPrimero } from './cadena.ts';
-import { buscar } from './busqueda.ts';
+import { buscar, catalogo } from './busqueda.ts';
+import type { OpcionesCatalogo } from './busqueda.ts';
 import { episodio } from './episodio.ts';
 import { episodios } from './episodios.ts';
 import { createHttp } from './http.ts';
@@ -15,7 +16,7 @@ export * from './anilist/index.ts';
 export * from './avisos.ts';
 export type { Embed, Idioma, Playable, ResolverServidor } from './types.ts';
 export type { Http, HttpOptions } from './http.ts';
-export type { ResultadoBusqueda } from './busqueda.ts';
+export type { OpcionesCatalogo, OrdenCatalogo, ResultadoBusqueda } from './busqueda.ts';
 export type { Episodio, Ficha } from './episodios.ts';
 export { crearResolverMP4Upload } from './resolver-mp4upload.ts';
 export type { CapturarStream } from './resolver-mp4upload.ts';
@@ -43,6 +44,7 @@ export function crearFuentes(opts: OpcionesFuentes = {}) {
   ];
   return {
     buscar: (query: string) => buscar(http, query),
+    catalogo: (opciones?: OpcionesCatalogo) => catalogo(http, opciones),
     episodios: (slug: string) => episodios(http, slug),
     async resolver(slug: string, n: number, idioma: Idioma = 'SUB'): Promise<Playable> {
       const detalle = await episodio(http, slug, n);

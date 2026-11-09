@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { EntradaBiblioteca, EntradaContinuar, ResumenSerie } from './datos.ts';
-import { elegirDestacado, etiquetaNuevo, nuevoDe } from './destacado.ts';
+import { conNuevoEpisodio, elegirDestacado, etiquetaNuevo, nuevoDe } from './destacado.ts';
 
 const cont = (aid: number, numero = 3): EntradaContinuar => ({
   aid,
@@ -60,4 +60,16 @@ test('etiquetaNuevo solo da texto si hay episodio nuevo', () => {
   assert.equal(etiquetaNuevo(emision, 5), 'Nuevo · Ep. 7 emitido');
   assert.equal(etiquetaNuevo(emision, 7), undefined);
   assert.equal(etiquetaNuevo(undefined, 0), undefined);
+});
+
+test('conNuevoEpisodio: solo series en emisión con un episodio emitido que no has visto', () => {
+  const emitiendo = (aid: number, siguienteEp: number) => res(aid, null, { estado: 'RELEASING', siguienteEp });
+  const mapa = new Map([
+    [1, emitiendo(1, 6)], // emitido 5, viste 2 -> nuevo
+    [2, emitiendo(2, 3)], // emitido 2, viste 2 -> al día
+    [3, res(3, null, { estado: 'FINISHED', episodios: 12 })], // terminada: no es nuevo
+  ]);
+  const lista = [bib(1), bib(2), bib(3), bib(4)]; // la 4 no tiene resumen
+  assert.deepEqual(conNuevoEpisodio(lista, mapa).map((v) => v.aid), [1]);
+  assert.deepEqual(conNuevoEpisodio([], mapa), []);
 });

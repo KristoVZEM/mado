@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buscar, parseBusqueda } from './busqueda.ts';
+import { buscar, catalogo, parseBusqueda, urlCatalogo } from './busqueda.ts';
 import { FuenteCambio } from './errors.ts';
 import type { Http } from './http.ts';
 
@@ -72,4 +72,31 @@ test('rechaza ids que no son un entero positivo', () => {
 test('acepta el id como string de dígitos o como número entero', () => {
   assert.equal(parseBusqueda(conId('21'))[0].aid, 21);
   assert.equal(parseBusqueda(conId(21))[0].aid, 21);
+});
+
+test('urlCatalogo: sin opciones pide lo más reciente; con opciones añade solo lo pedido', () => {
+  const base = 'https://animeav1.com/catalogo/__data.json';
+  assert.equal(urlCatalogo(), base);
+  assert.equal(urlCatalogo({ orden: 'popular' }), `${base}?order=popular`);
+  assert.equal(urlCatalogo({ estado: 'emision', orden: 'score' }), `${base}?status=emision&order=score`);
+  assert.equal(urlCatalogo({ orden: 'popular', pagina: 2 }), `${base}?order=popular&page=2`);
+  assert.equal(urlCatalogo({ pagina: 1 }), base, 'la página 1 no se escribe');
+});
+
+test('urlCatalogo rechaza páginas que no son enteros desde 1', () => {
+  for (const mala of [0, -1, 1.5, Number.NaN]) assert.throws(() => urlCatalogo({ pagina: mala }), RangeError);
+});
+
+test('catalogo pide el listado y lo lee como una búsqueda', async () => {
+  let pedida = '';
+  const http: Http = {
+    userAgent: 'UA',
+    get: async (url) => {
+      pedida = url;
+      return new Response(JSON.stringify(payload));
+    },
+  };
+  const r = await catalogo(http, { orden: 'popular' });
+  assert.equal(pedida, 'https://animeav1.com/catalogo/__data.json?order=popular');
+  assert.equal(r.length, 2);
 });
