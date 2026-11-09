@@ -22,8 +22,10 @@ con estado y favoritos), importación de la copia de Ukiku desde una carpeta
 (historial, siguiendo y favoritos, mezclando o reemplazando) y datos de
 [AniList](https://anilist.co) (banner, puntuación, próximo episodio, agenda
 semanal de emisión y aviso de episodio nuevo), con emparejado automático de
-las series. Pendiente: sincronizar la lista con una cuenta de AniList y las
-descargas.
+las series. También sincroniza la lista (estado y episodios vistos) con una
+cuenta de AniList, en los dos sentidos: al abrir, al cambiar algo y a demanda
+desde Ajustes, con vista previa en la primera vez. Pendiente: notificaciones
+de episodios nuevos y las descargas.
 
 ## Plan general
 
