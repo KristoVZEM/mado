@@ -58,6 +58,7 @@
     if (nav.catalogo.enfoque > 0) {
       enfoqueVisto = nav.catalogo.enfoque;
       entrada?.focus();
+      entrada?.select(); // si quedó una búsqueda anterior, escribir la sustituye
     }
     if (nav.catalogo.pendiente) {
       nav.catalogo.pendiente = false;

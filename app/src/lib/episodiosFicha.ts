@@ -37,6 +37,15 @@ export function textoPrincipal(p: Principal): string {
   return `Volver a ver desde el Ep. ${p.numero}`;
 }
 
+/**
+ * Minutos que dura un episodio: la duración real del vídeo si ya lo empezaste y, si no, la típica de la serie
+ * según AniList. `null` si no se sabe ninguna.
+ */
+export function minutosDe(progreso: ProgresoEp | undefined, tipica: number | null | undefined): number | null {
+  if (progreso && Number.isFinite(progreso.duracionS) && progreso.duracionS > 0) return Math.round(progreso.duracionS / 60);
+  return tipica && tipica > 0 ? tipica : null;
+}
+
 /** `quedan 9:12`; `null` si no se conoce la duración. */
 export function textoQuedan(posicionS: number, duracionS: number): string | null {
   if (!Number.isFinite(duracionS) || duracionS <= 0) return null;

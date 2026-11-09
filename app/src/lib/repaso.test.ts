@@ -7,7 +7,7 @@ import { repasarSiHaceFalta, VERSION_REPASO, type DepsRepaso } from './repaso.ts
 const media = (id: number, romaji: string): MediaAnilist => ({
   anilistId: id, malId: null, tituloRomaji: romaji, tituloIngles: null, tituloNativo: null, sinopsis: null,
   generos: [], formato: 'TV', estudio: null, puntuacion: null, episodios: 12, estado: null, portada: null,
-  banner: null, siguienteEp: null, siguienteEn: null, relaciones: [], sinonimos: [], anio: 2020,
+  banner: null, siguienteEp: null, siguienteEn: null, relaciones: [], sinonimos: [], anio: 2020, duracion: null,
 });
 const va = (aid: number, titulo: string, obra: string, confianza = 0.95): VinculoAuto => ({
   aid, slug: `s${aid}`, titulo, confianza, media: media(aid * 10, obra),

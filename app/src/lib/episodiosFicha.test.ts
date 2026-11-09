@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { episodioPrincipal, textoPrincipal, textoQuedan, type ProgresoEp } from './episodiosFicha.ts';
+import { episodioPrincipal, minutosDe, textoPrincipal, textoQuedan, type ProgresoEp } from './episodiosFicha.ts';
 
 const eps = [1, 2, 3, 4];
 const medio = (numero: number, posicionS = 100, duracionS = 1400): ProgresoEp => ({ numero, posicionS, duracionS });
@@ -43,4 +43,13 @@ test('textoQuedan resta lo visto y no inventa nada sin duración', () => {
   assert.equal(textoQuedan(2000, 1400), 'quedan 0:00');
   assert.equal(textoQuedan(-5, 60), 'quedan 1:00');
   for (const d of [0, -1, Number.NaN]) assert.equal(textoQuedan(10, d), null);
+});
+
+test('minutosDe usa la duración real si ya empezaste el episodio y, si no, la típica de la serie', () => {
+  assert.equal(minutosDe({ numero: 1, posicionS: 60, duracionS: 1450 }, 24), 24, '1450 s son unos 24 min');
+  assert.equal(minutosDe({ numero: 1, posicionS: 60, duracionS: 1800 }, 24), 30, 'manda la real');
+  assert.equal(minutosDe(undefined, 24), 24);
+  assert.equal(minutosDe({ numero: 1, posicionS: 0, duracionS: 0 }, 24), 24, 'sin duración real vale la típica');
+  assert.equal(minutosDe(undefined, null), null);
+  assert.equal(minutosDe(undefined, 0), null);
 });

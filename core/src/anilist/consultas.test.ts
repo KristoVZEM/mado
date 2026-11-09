@@ -10,6 +10,7 @@ const crudo = (id: number, extra: Record<string, unknown> = {}) => ({
   synonyms: [`Alias ${id}`, '', 5],
   seasonYear: 2023,
   episodes: 12,
+  duration: 24,
   status: 'RELEASING',
   format: 'TV',
   description: 'Sinopsis<br>en inglés',
@@ -50,6 +51,7 @@ test('parseMedia normaliza los campos y descarta lo que no sirve', () => {
     relaciones: [{ anilistId: 99, tipo: 'SEQUEL', titulo: 'Secuela' }],
     sinonimos: ['Alias 10'],
     anio: 2023,
+    duracion: 24,
   });
 });
 

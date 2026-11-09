@@ -6,7 +6,7 @@ const FRAGMENTO = `fragment CamposMedia on Media {
   id idMal isAdult
   title { romaji english native }
   synonyms seasonYear startDate { year }
-  episodes status format description(asHtml: false) genres averageScore
+  episodes duration status format description(asHtml: false) genres averageScore
   coverImage { large } bannerImage
   nextAiringEpisode { episode airingAt }
   studios(isMain: true) { nodes { name } }
@@ -56,6 +56,7 @@ export function parseMedia(raw: any): MediaAnilist | null {
     relaciones,
     sinonimos: (Array.isArray(raw.synonyms) ? raw.synonyms : []).map(txt).filter((s: string | null): s is string => s !== null),
     anio: ent(raw.seasonYear) ?? ent(raw.startDate?.year),
+    duracion: ent(raw.duration),
   };
 }
 

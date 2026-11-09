@@ -45,3 +45,11 @@ test('necesitaRefresco: más de 24 h, o en emisión con la hora ya pasada', () =
   assert.equal(necesitaRefresco({ actualizado: ahora - 60 * 60 * 1000, siguienteEn: ahora / 1000 + 3600 }, ahora), false);
   assert.equal(necesitaRefresco({ siguienteEn: null }, ahora), true);
 });
+
+test('necesitaRefresco: una obra sin duración se vuelve a pedir pasada 1 h, no 24', () => {
+  const ahora = 10 * 24 * 60 * 60 * 1000;
+  const hace = (h: number) => ahora - h * 60 * 60 * 1000;
+  assert.equal(necesitaRefresco({ actualizado: hace(2), siguienteEn: null, duracion: null }, ahora), true);
+  assert.equal(necesitaRefresco({ actualizado: hace(0.5), siguienteEn: null, duracion: null }, ahora), false);
+  assert.equal(necesitaRefresco({ actualizado: hace(2), siguienteEn: null, duracion: 24 }, ahora), false);
+});

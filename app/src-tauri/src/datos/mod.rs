@@ -185,9 +185,15 @@ CREATE TABLE tmdb_media (
 );
 ";
 
+/// Esquema de la versión 8: duración típica de un episodio (minutos) de cada obra de AniList. Solo agrega; las filas
+/// previas quedan en NULL hasta que se vuelven a pedir (a las 24 h o al abrir la Ficha).
+const V8: &str = "
+ALTER TABLE anilist_media ADD COLUMN duracion INTEGER;
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7, V8];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;

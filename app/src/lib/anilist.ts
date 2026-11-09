@@ -35,8 +35,16 @@ export function esDudoso(v: { origen: string; confianza: number }): boolean {
   return v.origen === 'auto' && v.confianza < UMBRAL_AUTO;
 }
 
-/** Hay que volver a pedir la obra: pasaron más de 24 h, o está en emisión y ya pasó su hora de episodio. */
-export function necesitaRefresco(m: { actualizado?: number; siguienteEn: number | null }, ahoraMs: number): boolean {
-  if (m.actualizado === undefined || ahoraMs - m.actualizado > DIA_MS) return true;
+const HORA_MS = 60 * 60 * 1000;
+
+/**
+ * Hay que volver a pedir la obra: pasaron más de 24 h, o está en emisión y ya pasó su hora de episodio. Si todavía
+ * no tiene la duración del episodio (obras guardadas antes de pedirla), basta con 1 h.
+ */
+export function necesitaRefresco(
+  m: { actualizado?: number; siguienteEn: number | null; duracion?: number | null },
+  ahoraMs: number,
+): boolean {
+  if (m.actualizado === undefined || ahoraMs - m.actualizado > (m.duracion === null ? HORA_MS : DIA_MS)) return true;
   return m.siguienteEn !== null && m.siguienteEn * 1000 <= ahoraMs;
 }

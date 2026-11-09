@@ -41,6 +41,9 @@ pub struct MediaAnilist {
     pub relaciones: Vec<Relacion>,
     pub sinonimos: Vec<String>,
     pub anio: Option<i64>,
+    /// Duración típica de un episodio, en minutos.
+    #[serde(default)]
+    pub duracion: Option<i64>,
     /// Lo pone Rust al guardar (milisegundos); lo que llegue de fuera se ignora.
     #[serde(default)]
     pub actualizado: i64,
@@ -111,8 +114,8 @@ pub fn guardar_media(conn: &Connection, ahora: i64, m: &MediaAnilist) -> Resulta
     conn.execute(
         "INSERT INTO anilist_media (anilist_id, mal_id, titulo_romaji, titulo_ingles, titulo_nativo, sinopsis,
              generos, formato, estudio, puntuacion, episodios, estado, portada, banner, siguiente_ep,
-             siguiente_en, relaciones, sinonimos, anio, actualizado)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20)
+             siguiente_en, relaciones, sinonimos, anio, actualizado, duracion)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)
          ON CONFLICT(anilist_id) DO UPDATE SET
              mal_id = excluded.mal_id, titulo_romaji = excluded.titulo_romaji,
              titulo_ingles = excluded.titulo_ingles, titulo_nativo = excluded.titulo_nativo,
@@ -121,7 +124,7 @@ pub fn guardar_media(conn: &Connection, ahora: i64, m: &MediaAnilist) -> Resulta
              estado = excluded.estado, portada = excluded.portada, banner = excluded.banner,
              siguiente_ep = excluded.siguiente_ep, siguiente_en = excluded.siguiente_en,
              relaciones = excluded.relaciones, sinonimos = excluded.sinonimos, anio = excluded.anio,
-             actualizado = excluded.actualizado",
+             actualizado = excluded.actualizado, duracion = excluded.duracion",
         params![
             m.anilist_id,
             m.mal_id,
@@ -143,6 +146,7 @@ pub fn guardar_media(conn: &Connection, ahora: i64, m: &MediaAnilist) -> Resulta
             json(&m.sinonimos)?,
             m.anio,
             ahora,
+            m.duracion,
         ],
     )?;
     Ok(())
@@ -151,7 +155,7 @@ pub fn guardar_media(conn: &Connection, ahora: i64, m: &MediaAnilist) -> Resulta
 /// Columnas de `anilist_media` con alias `m`, en el orden que lee `fila_media`.
 pub(super) const COLS_MEDIA: &str = "m.anilist_id, m.mal_id, m.titulo_romaji, m.titulo_ingles, m.titulo_nativo,
     m.sinopsis, m.generos, m.formato, m.estudio, m.puntuacion, m.episodios, m.estado, m.portada, m.banner,
-    m.siguiente_ep, m.siguiente_en, m.relaciones, m.sinonimos, m.anio, m.actualizado";
+    m.siguiente_ep, m.siguiente_en, m.relaciones, m.sinonimos, m.anio, m.actualizado, m.duracion";
 
 /// Lee una obra a partir de la columna `desde` (para consultas con `JOIN` que antepongan otras columnas).
 pub(super) fn fila_media(f: &rusqlite::Row, desde: usize) -> rusqlite::Result<MediaAnilist> {
@@ -177,6 +181,7 @@ pub(super) fn fila_media(f: &rusqlite::Row, desde: usize) -> rusqlite::Result<Me
         sinonimos: serde_json::from_str(&lista(17)?).unwrap_or_default(),
         anio: f.get(desde + 18)?,
         actualizado: f.get(desde + 19)?,
+        duracion: f.get(desde + 20)?,
     })
 }
 
@@ -499,6 +504,7 @@ mod pruebas {
             relaciones: vec![Relacion { anilist_id: 2, tipo: "SEQUEL".into(), titulo: "Frieren 2".into() }],
             sinonimos: vec!["Frieren en el funeral".into()],
             anio: Some(2023),
+            duracion: Some(24),
             actualizado: 0,
         };
         guardar_media(&conn, 5000, &m).unwrap();

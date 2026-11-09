@@ -203,6 +203,8 @@ export interface MediaAnilist {
   relaciones: RelacionAnilist[];
   sinonimos: string[];
   anio: number | null;
+  /** Duración típica de un episodio, en minutos. */
+  duracion: number | null;
   actualizado?: number;
 }
 

@@ -6,7 +6,7 @@ import type { MediaAnilist } from './tipos.ts';
 const media = (id: number, romaji: string, o: Partial<MediaAnilist> = {}): MediaAnilist => ({
   anilistId: id, malId: null, tituloRomaji: romaji, tituloIngles: null, tituloNativo: null, sinopsis: null,
   generos: [], formato: 'TV', estudio: null, puntuacion: null, episodios: 12, estado: null, portada: null,
-  banner: null, siguienteEp: null, siguienteEn: null, relaciones: [], sinonimos: [], anio: 2020, ...o,
+  banner: null, siguienteEp: null, siguienteEn: null, relaciones: [], sinonimos: [], anio: 2020, duracion: null, ...o,
 });
 const v = (aid: number, titulo: string, m: MediaAnilist, confianza = 0.95): VinculoAutoRepaso => ({ aid, titulo, confianza, media: m });
 

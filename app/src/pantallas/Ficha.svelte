@@ -30,7 +30,7 @@
   import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { ordenarEpisodios } from '../lib/ajustes.ts';
   import { fraccionVista, idiomaGuardado } from '../lib/continuar.ts';
-  import { episodioPrincipal, textoPrincipal, textoQuedan, type ProgresoEp } from '../lib/episodiosFicha.ts';
+  import { episodioPrincipal, minutosDe, textoPrincipal, textoQuedan, type ProgresoEp } from '../lib/episodiosFicha.ts';
   import { avisarCambio, cargarCuenta, sync } from '../lib/sync.svelte.ts';
   import { ESTADOS, nombreEstado } from '../lib/biblioteca.ts';
   import {
@@ -155,6 +155,7 @@
       media?.puntuacion != null ? `★ ${(media.puntuacion / 10).toFixed(1)}` : null,
       media?.formato ?? null,
       numeros.length > 0 ? `${numeros.length} episodios` : null,
+      media?.duracion ? `${media.duracion} min` : null,
       ficha?.status || null,
       proximo ? `Próximo: ${proximo}` : null,
     ].filter((x): x is string => Boolean(x)),
@@ -466,6 +467,7 @@
                 <span class="reproducir" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
                 </span>
+                {#if minutosDe(p, media?.duracion)}<span class="duracion">{minutosDe(p, media?.duracion)} min</span>{/if}
                 {#if vistos.has(n)}
                   <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
                 {/if}
@@ -876,6 +878,18 @@
   .fila:focus-visible .reproducir {
     opacity: 1;
     background: rgb(0 0 0 / 0.75);
+  }
+  /* Duración: abajo a la derecha, por encima de la barra de progreso. */
+  .duracion {
+    position: absolute;
+    right: 8px;
+    bottom: 12px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.7);
+    font-size: 0.75rem;
+    font-weight: 500;
+    pointer-events: none;
   }
   .marca {
     position: absolute;

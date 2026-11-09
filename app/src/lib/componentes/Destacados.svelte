@@ -56,16 +56,24 @@
       pintadas[aid] = true;
       if (it.media && !(aid in tmdb)) {
         tmdb[aid] = null;
-        void imagenesTmdb(it.media).then((f) => (tmdb[aid] = f));
+        void imagenesTmdb(it.media).then((f) => {
+          tmdb[aid] = f;
+        });
       }
       if (!pedidos.has(aid)) {
         pedidos.add(aid); // hasta que llega la respuesta no se enseña ni sinopsis ni géneros, para que no cambien de idioma
         void fuentes
           .episodios(it.destacado.slug)
-          .then((f) => (datosEs[aid] = { sinopsis: f.synopsis || null, generos: f.genres }))
-          .catch(() => (datosEs[aid] = 'fallo'));
+          .then((f) => {
+            datosEs[aid] = { sinopsis: f.synopsis || null, generos: f.genres };
+          })
+          .catch(() => {
+            datosEs[aid] = 'fallo';
+          });
         void Promise.all([esFavorito(aid), estadoSerie(aid)])
-          .then(([favorito, estado]) => (biblio[aid] = { favorito, estado: estado ?? 0 }))
+          .then(([favorito, estado]) => {
+            biblio[aid] = { favorito, estado: estado ?? 0 };
+          })
           .catch((e) => console.error(e));
       }
     }
