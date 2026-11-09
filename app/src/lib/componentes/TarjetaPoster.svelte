@@ -5,12 +5,16 @@
     aid,
     titulo,
     subtitulo,
+    etiqueta,
     alAbrir,
-  }: { aid: number; titulo: string; subtitulo?: string; alAbrir: () => void } = $props();
+  }: { aid: number; titulo: string; subtitulo?: string; etiqueta?: string; alAbrir: () => void } = $props();
 </script>
 
 <button class="tarjeta" onclick={alAbrir}>
-  <Portada {aid} {titulo} />
+  <span class="marco">
+    <Portada {aid} {titulo} />
+    {#if etiqueta}<span class="pastilla">{etiqueta}</span>{/if}
+  </span>
   <strong>{titulo}</strong>
   {#if subtitulo}<span>{subtitulo}</span>{/if}
 </button>
@@ -31,6 +35,23 @@
   .tarjeta:hover :global(.portada),
   .tarjeta:focus-visible :global(.portada) {
     outline: 2px solid var(--acento);
+  }
+  .marco {
+    position: relative;
+    display: block;
+  }
+  .pastilla {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    max-width: calc(100% - 12px);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--acento);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.3;
   }
   strong {
     overflow: hidden;

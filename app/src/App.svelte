@@ -7,7 +7,35 @@
   import Historial from './pantallas/Historial.svelte';
   import Ficha from './pantallas/Ficha.svelte';
   import Reproductor from './pantallas/Reproductor.svelte';
+  import { onMount } from 'svelte';
+  import { asegurarVinculo } from './lib/anilistServicio.ts';
+  import { estadoDatos, pendientesEmparejar } from './lib/datos.ts';
+  import { crearEmparejador } from './lib/emparejado.ts';
   import { nav } from './lib/navegacion.svelte.ts';
+
+  const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+  // Empareja las series con AniList en segundo plano, poco a poco y reanudándose en cada arranque.
+  // Todo es opcional: cualquier fallo se queda en la consola y no afecta a la app.
+  onMount(() => {
+    void (async () => {
+      try {
+        await dormir(5000); // no competir con el arranque
+        if (await estadoDatos()) return;
+        await crearEmparejador({
+          pendientes: pendientesEmparejar,
+          emparejar: async (p) => {
+            const r = await asegurarVinculo({ aid: p.aid, slug: p.slug, titulo: p.titulo });
+            return r.actual ? 'ok' : 'error';
+          },
+          pausa: dormir,
+          activo: () => !document.hidden,
+        }).correr();
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  });
 </script>
 
 {#if nav.superior?.tipo === 'reproducir'}

@@ -12,9 +12,12 @@
     estadoDatos,
     leerAjuste,
     listarBiblioteca,
+    resumenesVinculados,
     type EntradaBiblioteca,
     type EntradaContinuar,
+    type ResumenSerie,
   } from '../lib/datos.ts';
+  import { elegirDestacado, etiquetaNuevo } from '../lib/destacado.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { fuentes } from '../lib/fuentes.ts';
   import { abrir, buscarEnCatalogo, irASeccion, nav } from '../lib/navegacion.svelte.ts';
@@ -27,6 +30,9 @@
   let error = $state('');
   let pendientes = $state<EntradaContinuar[]>([]);
   let viendo = $state<EntradaBiblioteca[]>([]);
+  let resumenes = $state<ResumenSerie[]>([]);
+  const destacado = $derived(elegirDestacado(pendientes, viendo, resumenes));
+  const porAid = $derived(new Map(resumenes.map((r) => [r.aid, r])));
   let cargando = $state(true);
   let abriendo = $state<number | null>(null);
 
@@ -36,7 +42,10 @@
       avisoDatos = (await estadoDatos()) ?? '';
       if (!avisoDatos) {
         // Cada fila carga por separado: que falle una no tapa la otra.
-        const [c, b] = await Promise.allSettled([continuarViendo(12), listarBiblioteca()]);
+        const [c, b, r] = await Promise.allSettled([continuarViendo(12), listarBiblioteca(), resumenesVinculados()]);
+        // Los datos de AniList son un extra: si faltan, simplemente no hay cabecera ni marcas.
+        if (r.status === 'fulfilled') resumenes = r.value;
+        else console.error(r.reason);
         if (c.status === 'fulfilled') pendientes = c.value;
         else error = textoDeError(c.reason);
         if (b.status === 'fulfilled') viendo = entradasDe(b.value, 'viendo');
@@ -97,6 +106,14 @@
     irASeccion('biblioteca');
   }
 
+  function usarDestacado() {
+    const d = destacado;
+    if (!d) return;
+    const p = d.numero !== null ? pendientes.find((x) => x.aid === d.aid) : undefined;
+    if (p) void retomar(p);
+    else abrir({ tipo: 'ficha', anime: { aid: d.aid, slug: d.slug, title: d.titulo } });
+  }
+
   function abrirFicha(e: EntradaBiblioteca) {
     abrir({ tipo: 'ficha', anime: { aid: e.aid, slug: e.slug, title: e.titulo } });
   }
@@ -113,6 +130,19 @@
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
   {#if cargando}<p>Cargando…</p>{/if}
+
+  {#if destacado}
+    <section
+      class="destacado"
+      style:background-image={`linear-gradient(90deg, var(--fondo) 5%, transparent 70%), url(${destacado.banner})`}
+      aria-label="Destacado"
+    >
+      <h2>{destacado.titulo}</h2>
+      <button class="principal" disabled={abriendo !== null} onclick={usarDestacado}>
+        {destacado.numero !== null ? `Continuar Ep. ${destacado.numero}` : 'Ver serie'}
+      </button>
+    </section>
+  {/if}
 
   {#if pendientes.length > 0}
     <section aria-label="Continuar viendo">
@@ -144,6 +174,7 @@
               aid={e.aid}
               titulo={e.titulo}
               subtitulo={textoUltimoVisto(e.ultimoEpisodio) ?? undefined}
+              etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
               alAbrir={() => abrirFicha(e)}
             />
           </li>
@@ -161,6 +192,29 @@
 </main>
 
 <style>
+  .destacado {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    height: 260px;
+    padding: 24px;
+    margin: 16px 0;
+    border-radius: var(--radio);
+    background-size: cover;
+    background-position: center;
+  }
+  .destacado h2 {
+    margin: 0 0 12px;
+    font-size: 1.8rem;
+    max-width: 60%;
+  }
+  .principal {
+    align-self: flex-start;
+    background: var(--acento);
+    border-color: var(--acento);
+    color: #fff;
+    font-weight: 600;
+  }
   .continuar {
     position: relative;
     flex: 0 0 var(--ancho-captura);

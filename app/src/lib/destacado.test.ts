@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import type { EntradaBiblioteca, EntradaContinuar, ResumenSerie } from './datos.ts';
+import { elegirDestacado, etiquetaNuevo, nuevoDe } from './destacado.ts';
+
+const cont = (aid: number, numero = 3): EntradaContinuar => ({
+  aid,
+  slug: `s${aid}`,
+  titulo: `S${aid}`,
+  numero,
+  posicionS: 10,
+  duracionS: 100,
+  actualizado: 0,
+});
+const bib = (aid: number): EntradaBiblioteca => ({ aid, slug: `s${aid}`, titulo: `S${aid}`, estado: 1, ultimoEpisodio: 2 });
+const res = (aid: number, banner: string | null, extra: Partial<ResumenSerie> = {}): ResumenSerie => ({
+  aid,
+  anilistId: aid * 10,
+  confianza: 0.9,
+  origen: 'auto',
+  banner,
+  portada: null,
+  siguienteEp: null,
+  siguienteEn: null,
+  episodios: null,
+  estado: null,
+  ...extra,
+});
+
+test('elegirDestacado prefiere la primera de "continuar" que tenga banner', () => {
+  const d = elegirDestacado([cont(1), cont(2)], [bib(9)], [res(1, null), res(2, 'https://b/2.jpg'), res(9, 'https://b/9.jpg')]);
+  assert.deepEqual(d, { aid: 2, slug: 's2', titulo: 'S2', banner: 'https://b/2.jpg', numero: 3 });
+});
+
+test('elegirDestacado cae a "siguiendo" (sin episodio que continuar) si ninguna de continuar tiene banner', () => {
+  const d = elegirDestacado([cont(1)], [bib(8), bib(9)], [res(1, null), res(9, 'https://b/9.jpg')]);
+  assert.deepEqual(d, { aid: 9, slug: 's9', titulo: 'S9', banner: 'https://b/9.jpg', numero: null });
+});
+
+test('elegirDestacado devuelve null si nadie tiene banner o no hay resúmenes', () => {
+  assert.equal(elegirDestacado([cont(1)], [bib(2)], [res(1, null)]), null);
+  assert.equal(elegirDestacado([cont(1)], [bib(2)], []), null);
+  assert.equal(elegirDestacado([], [], [res(1, 'https://b/1.jpg')]), null);
+});
+
+test('nuevoDe devuelve el último episodio emitido solo si es mayor que el último visto', () => {
+  const emision = res(1, null, { siguienteEp: 8, episodios: 12, estado: 'RELEASING' });
+  assert.equal(nuevoDe(emision, 5), 7);
+  assert.equal(nuevoDe(emision, 7), null);
+  assert.equal(nuevoDe(emision, null), 7);
+  const terminada = res(2, null, { episodios: 24, estado: 'FINISHED' });
+  assert.equal(nuevoDe(terminada, null), 24);
+  assert.equal(nuevoDe(terminada, 24), null);
+  assert.equal(nuevoDe(undefined, 3), null);
+  assert.equal(nuevoDe(res(3, null), 3), null);
+});
+
+test('etiquetaNuevo solo da texto si hay episodio nuevo', () => {
+  const emision = res(1, null, { siguienteEp: 8, episodios: 12, estado: 'RELEASING' });
+  assert.equal(etiquetaNuevo(emision, 5), 'Nuevo · Ep. 7 emitido');
+  assert.equal(etiquetaNuevo(emision, 7), undefined);
+  assert.equal(etiquetaNuevo(undefined, 0), undefined);
+});

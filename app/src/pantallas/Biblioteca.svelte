@@ -1,7 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { abrir, nav } from '../lib/navegacion.svelte.ts';
-  import { estadoDatos, listarBiblioteca, type Biblioteca, type EntradaBiblioteca } from '../lib/datos.ts';
+  import {
+    estadoDatos,
+    listarBiblioteca,
+    resumenesVinculados,
+    type Biblioteca,
+    type EntradaBiblioteca,
+    type ResumenSerie,
+  } from '../lib/datos.ts';
+  import { etiquetaNuevo } from '../lib/destacado.ts';
   import { textoDeError } from '../lib/errores.ts';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
   import {
@@ -15,6 +23,8 @@
   } from '../lib/biblioteca.ts';
 
   let biblioteca = $state<Biblioteca | null>(null);
+  let resumenes = $state<ResumenSerie[]>([]);
+  const porAid = $derived(new Map(resumenes.map((r) => [r.aid, r])));
   let cargando = $state(true);
   let avisoDatos = $state('');
   let error = $state('');
@@ -26,7 +36,14 @@
   onMount(async () => {
     try {
       avisoDatos = (await estadoDatos()) ?? '';
-      if (!avisoDatos) biblioteca = await listarBiblioteca();
+      if (!avisoDatos) {
+        biblioteca = await listarBiblioteca();
+        // Extra opcional: si falla, simplemente no hay marcas «Nuevo».
+        resumenes = await resumenesVinculados().catch((e) => {
+          console.error(e);
+          return [];
+        });
+      }
     } catch (e) {
       console.error(e);
       error = textoDeError(e);
@@ -63,7 +80,9 @@
           {@const ultimo = textoUltimoVisto(e.ultimoEpisodio)}
           {@const partes = [muestraEstado(pestana) ? nombreEstado(e.estado) : '', ultimo ?? ''].filter(Boolean)}
           <li>
-            <TarjetaPoster aid={e.aid} titulo={e.titulo} subtitulo={partes.join(' · ')} alAbrir={() => abrirFicha(e)} />
+            <TarjetaPoster aid={e.aid} titulo={e.titulo} subtitulo={partes.join(' · ')}
+              etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}
+              alAbrir={() => abrirFicha(e)} />
           </li>
         {/each}
       </ul>
