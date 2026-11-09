@@ -10,11 +10,18 @@
     titulo,
     numero,
     progreso = null,
-  }: { aid: number; titulo: string; numero: number; progreso?: number | null } = $props();
+    imagen,
+  }: { aid: number; titulo: string; numero: number; progreso?: number | null; imagen?: string | null } = $props();
+  /** Con `imagen` (o `imagen: null` si la serie no tiene banner) se ve la serie en vez del episodio. */
+  const deSerie = $derived(imagen !== undefined);
 </script>
 
 <span class="miniatura">
-  <Portada {aid} {titulo} {numero} />
+  {#if deSerie}
+    <Portada {aid} {titulo} apaisada preferida={imagen} />
+  {:else}
+    <Portada {aid} {titulo} {numero} />
+  {/if}
   <span class="reproducir" aria-hidden="true">
     <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
   </span>

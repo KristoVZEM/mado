@@ -74,3 +74,52 @@ export function titulosParaBuscar(e: Pick<EntradaEmision, 'tituloRomaji' | 'titu
   }
   return [...vistos].slice(0, MAX_TITULOS_BUSQUEDA);
 }
+
+/**
+ * Lo que enseña la cabecera de Emisión: lo próximo que sale de lo que sigues (estado Viendo) en la semana y, si ya
+ * salió todo, lo último que salió. `null` si no sigues nada de lo que se emite.
+ */
+export function proximoQueSigues(entradas: readonly EntradaEmision[], ahoraS: number): EntradaEmision | null {
+  const mias = entradas.filter((e) => e.estado === 1);
+  const proximas = mias.filter((e) => e.emiteEn > ahoraS).sort((a, b) => a.emiteEn - b.emiteEn);
+  if (proximas[0]) return proximas[0];
+  return mias.sort((a, b) => b.emiteEn - a.emiteEn)[0] ?? null;
+}
+
+/** Lo próximo que sale de toda la agenda (con banner, si lo hay): para cuando no sigues nada que se emita. */
+export function proximoEnSalir(entradas: readonly EntradaEmision[], ahoraS: number): EntradaEmision | null {
+  const proximas = entradas.filter((e) => e.emiteEn > ahoraS).sort((a, b) => a.emiteEn - b.emiteEn);
+  return proximas.find((e) => e.banner) ?? proximas[0] ?? null;
+}
+
+const NOMBRES_DIA_LARGO = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+/** «Sale hoy», «Sale mañana», «Sale el jueves»; en pasado, «Salió hoy», «Salió ayer», «Salió el lunes». */
+export function etiquetaSalida(emiteEnS: number, ahoraS: number): string {
+  const dia = (s: number) => {
+    const d = new Date(s * 1000);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+  const diff = Math.round((dia(emiteEnS) - dia(ahoraS)) / 86_400_000);
+  const futuro = emiteEnS > ahoraS;
+  const verbo = futuro ? 'Sale' : 'Salió';
+  if (diff === 0) return `${verbo} hoy`;
+  if (diff === 1) return `${verbo} mañana`;
+  if (diff === -1) return `${verbo} ayer`;
+  return `${verbo} el ${NOMBRES_DIA_LARGO[new Date(emiteEnS * 1000).getDay()]}`;
+}
+
+/** «Sale en 25 min», «Sale en 2 h 15 min» o «Ya salió». */
+export function textoSale(emiteEnS: number, ahoraS: number): string {
+  const min = Math.ceil((emiteEnS - ahoraS) / 60);
+  if (min <= 0) return 'Ya salió';
+  if (min < 60) return `Sale en ${min} min`;
+  const h = Math.floor(min / 60);
+  const resto = min % 60;
+  return resto < 5 ? `Sale en ${h} h` : `Sale en ${h} h ${resto} min`;
+}
+
+/** Un episodio de una serie que sigues, ya emitido y que no has visto (`ultimoVisto` es el último que viste). */
+export function sinVer(e: EntradaEmision, ahoraS: number, ultimoVisto: number | null | undefined): boolean {
+  return e.estado === 1 && e.emiteEn <= ahoraS && (ultimoVisto ?? 0) < e.episodio;
+}

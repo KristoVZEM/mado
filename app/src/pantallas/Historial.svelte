@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Esqueleto from '../lib/componentes/Esqueleto.svelte';
-  import Portada from '../lib/componentes/Portada.svelte';
+  import Miniatura from '../lib/componentes/Miniatura.svelte';
   import Vacio from '../lib/componentes/Vacio.svelte';
   import { estadoDatos, listarHistorial, type EntradaHistorial } from '../lib/datos.ts';
   import { textoDeError } from '../lib/errores.ts';
@@ -48,6 +48,11 @@
     await cargarMas();
   });
 
+  /** Hora local a la que se vio, «21:35». */
+  function horaDe(ms: number): string {
+    return new Date(ms).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  }
+
   function abrirFicha(e: EntradaHistorial) {
     abrir({ tipo: 'ficha', anime: { aid: e.aid, slug: e.slug, title: e.titulo } });
   }
@@ -62,15 +67,15 @@
 
   {#each grupos as g (g.etiqueta + g.entradas[0]?.vistoEn)}
     <section aria-label={g.etiqueta}>
-      <h2>{g.etiqueta}</h2>
+      <h2 class="dia">{g.etiqueta}</h2>
       <ul class="lista">
         {#each g.entradas as e (`${e.aid}-${e.numero}`)}
           <li>
             <button class="fila" onclick={() => abrirFicha(e)}>
-              <span class="captura"><Portada aid={e.aid} titulo={e.titulo} numero={e.numero} /></span>
+              <Miniatura aid={e.aid} titulo={e.titulo} numero={e.numero} />
               <span class="texto">
                 <strong>{e.titulo}</strong>
-                <span>Ep. {e.numero}</span>
+                <span>Ep. {e.numero} · {horaDe(e.vistoEn)}</span>
               </span>
             </button>
           </li>
@@ -91,17 +96,24 @@
 </main>
 
 <style>
+  section + section {
+    margin-top: 32px;
+  }
+  .dia {
+    margin: 0 0 16px;
+    font-size: 1.5rem;
+  }
   .lista {
     list-style: none;
     padding: 0;
     margin: 0;
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px 16px;
   }
   .fila {
-    display: flex;
-    align-items: center;
-    gap: 16px;
+    display: grid;
+    gap: 8px;
     width: 100%;
     padding: 0;
     border: 0;
@@ -111,18 +123,19 @@
   .fila:hover:not(:disabled) {
     background: none;
   }
-  .fila:hover :global(.portada),
-  .fila:focus-visible :global(.portada) {
-    outline: 2px solid var(--anillo);
-  }
-  .captura {
-    flex: 0 0 160px;
-  }
   .texto {
     display: grid;
     gap: 2px;
   }
+  .texto strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 1rem;
+    font-weight: 500;
+  }
   .texto span {
     color: var(--texto-suave);
+    font-size: 0.875rem;
   }
 </style>

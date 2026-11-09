@@ -28,6 +28,8 @@ interface Estado {
     listados: Partial<Record<ListadoId, { resultados: ResultadoBusqueda[]; pagina: number; fin: boolean }>>;
     /** El listado que se está viendo entero, o `null` para ver las filas. */
     abierto: ListadoId | null;
+    /** Sube cada vez que se pide la búsqueda (Ctrl+K): el Catálogo pone el cursor en su campo. */
+    enfoque: number;
   };
   pestana: Pestana;
 }
@@ -35,7 +37,7 @@ interface Estado {
 export const nav = $state<Estado>({
   seccion: SECCION_INICIAL,
   superior: null,
-  catalogo: { texto: '', resultados: [], buscado: false, pendiente: false, listados: {}, abierto: null },
+  catalogo: { texto: '', resultados: [], buscado: false, pendiente: false, listados: {}, abierto: null, enfoque: 0 },
   pestana: 'todos',
 });
 
@@ -50,6 +52,12 @@ export function abrir(superior: Superior): void {
 
 export function cerrarSuperior(): void {
   nav.superior = null;
+}
+
+/** Ctrl+K: va al Catálogo con el cursor en el campo de búsqueda. */
+export function irABusqueda(): void {
+  nav.catalogo.enfoque++;
+  irASeccion('catalogo');
 }
 
 /** Va a Catálogo con el texto puesto; Catálogo lanza la búsqueda al montarse. */

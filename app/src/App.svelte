@@ -14,7 +14,7 @@
   import { asegurarVinculo } from './lib/anilistServicio.ts';
   import { estadoDatos, pendientesEmparejar } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
-  import { nav } from './lib/navegacion.svelte.ts';
+  import { nav, irABusqueda } from './lib/navegacion.svelte.ts';
   import { iniciarAvisos } from './lib/avisosApp.ts';
   import { repasarVinculosAlAbrir, sincronizarAlAbrir } from './lib/sync.svelte.ts';
 
@@ -53,6 +53,16 @@
     })();
   });
 </script>
+
+<!-- Ctrl+K lleva a la búsqueda del Catálogo desde cualquier pantalla menos el Reproductor (ahí manda el vídeo). -->
+<svelte:window
+  onkeydown={(e) => {
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k' && nav.superior?.tipo !== 'reproducir') {
+      e.preventDefault();
+      irABusqueda();
+    }
+  }}
+/>
 
 {#if nav.superior?.tipo === 'reproducir'}
   {#key nav.superior.numero}

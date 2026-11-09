@@ -176,7 +176,7 @@
             {@const fr = fraccionVista(p.posicionS, p.duracionS)}
             <li class="continuar">
               <button class="abrir" disabled={abriendo !== null} onclick={() => retomar(p)}>
-                <Miniatura aid={p.aid} titulo={p.titulo} numero={p.numero} progreso={fr} />
+                <Miniatura aid={p.aid} titulo={p.titulo} numero={p.numero} progreso={fr} imagen={porAid.get(p.aid)?.banner ?? null} />
                 <strong>{p.titulo}</strong>
                 <span class="detalle">{abriendo === p.aid ? 'Abriendo…' : textoRestante(p.numero, p.posicionS, p.duracionS)}</span>
               </button>
@@ -257,10 +257,6 @@
   .pantalla.con-destacado {
     padding: 0;
   }
-  /* El texto del destacado y las filas empiezan en el mismo margen. */
-  .pantalla.inicio {
-    --margen: 48px;
-  }
   .cuerpo {
     position: relative;
     z-index: 1;
@@ -295,12 +291,12 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 500;
   }
   .detalle {
     color: var(--texto-suave);
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
   .x {
     position: absolute;

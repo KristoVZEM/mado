@@ -24,10 +24,10 @@
   --radio-control: 8px;
   --radio-grande: 14px;
   /* Medidas de la interfaz: se retocan aquí. */
-  --margen: 28px;
+  --margen: 48px;
   --espacio: 16px;
-  --ancho-poster: 150px;
-  --ancho-captura: 290px;
+  --ancho-poster: 188px;
+  --ancho-captura: 360px;
 }
 
 /* El fondo del documento es transparente: solo la pantalla del Reproductor deja ver el vídeo de mpv. */
@@ -48,15 +48,16 @@ body {
 .pantalla {
   box-sizing: border-box;
   /* El hueco de arriba lo ocupa la cabecera flotante. */
-  padding: 80px var(--margen) 24px;
+  padding: 80px var(--margen) 32px;
   background: var(--fondo);
 }
 
 .pantalla h1 {
-  margin: 16px 0 12px;
-  font-size: 2rem;
+  margin: 0 0 20px;
+  font-size: 1.875rem;
+  line-height: 1.2;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
 }
 
 .pantalla h2 {
@@ -183,10 +184,40 @@ input:not([type]) {
 /* Cuadrícula de tarjetas de póster (Catálogo, Biblioteca). */
 .cuadricula {
   list-style: none;
+  margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--espacio);
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 24px 16px;
+}
+
+/* Filtros en fila (pestañas de Biblioteca, días de Emisión): el activo va en claro, como el botón principal. */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 24px;
+}
+
+.filtros button[aria-pressed='true'] {
+  background: var(--boton-claro);
+  border-color: var(--boton-claro);
+  color: var(--boton-claro-texto);
+  font-weight: 600;
+}
+
+/* Bloque de Ajustes: una tarjeta por tema. */
+.bloque {
+  padding: 20px 24px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-grande);
+  background: var(--superficie);
+}
+
+.bloque :is(h2, h3) {
+  margin: 0 0 12px;
+  font-size: 1.15rem;
+  font-weight: 700;
 }
 
 @media (prefers-reduced-motion: reduce) {

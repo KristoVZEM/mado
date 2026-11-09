@@ -20,7 +20,6 @@
     nombreEstado,
     PESTANAS,
     recuentos,
-    textoUltimoVisto,
     estadoVacio,
   } from '../lib/biblioteca.ts';
 
@@ -69,7 +68,7 @@
   {:else if error}
     <p class="error" role="alert">{error}</p>
   {:else if cuentas}
-    <div class="pestanas">
+    <div class="filtros" role="group" aria-label="Estado">
       {#each PESTANAS as p (p.id)}
         <button aria-pressed={pestana === p.id} onclick={() => (nav.pestana = p.id)}>{p.nombre} ({cuentas[p.id]})</button>
       {/each}
@@ -88,7 +87,7 @@
     {:else}
       <ul class="cuadricula">
         {#each lista as e (e.aid)}
-          {@const ultimo = textoUltimoVisto(e.ultimoEpisodio)}
+          {@const ultimo = e.ultimoEpisodio !== null ? `Ep. ${e.ultimoEpisodio}` : null}
           {@const partes = [muestraEstado(pestana) ? nombreEstado(e.estado) : '', ultimo ?? ''].filter(Boolean)}
           <li>
             <TarjetaPoster aid={e.aid} titulo={e.titulo} subtitulo={partes.join(' · ')}
@@ -100,16 +99,3 @@
     {/if}
   {/if}
 </main>
-
-<style>
-  .pestanas {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin: 8px 0;
-  }
-  .pestanas button[aria-pressed='true'] {
-    font-weight: bold;
-    outline: 2px solid currentColor;
-  }
-</style>

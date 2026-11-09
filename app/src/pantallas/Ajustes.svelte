@@ -96,99 +96,134 @@
 
 <main class="pantalla">
 <h1>Ajustes</h1>
-<section class="ajustes" aria-label="Ajustes">
-  <label>
-    Salto corto (s, {LIMITES.saltoCorto[0]}–{LIMITES.saltoCorto[1]})
-    <input bind:value={corto} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={cortoOk === null} />
-  </label>
-  <label>
-    Salto largo (s, {LIMITES.saltoLargo[0]}–{LIMITES.saltoLargo[1]})
-    <input bind:value={largo} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={largoOk === null} />
-  </label>
-  <div class="acciones">
-    <button onclick={guardar} disabled={cortoOk === null || largoOk === null}>Guardar</button>
-    <button onclick={restablecer}>Restablecer</button>
-    <button onclick={descartar}>Descartar cambios</button>
-  </div>
-  {#if guardado}<p role="status">Guardado.</p>{/if}
+<div class="ajustes">
+  <section class="bloque" aria-label="Reproductor">
+    <h2>Reproductor</h2>
+    <div class="campos">
+      <label>
+        Salto corto (s, {LIMITES.saltoCorto[0]}–{LIMITES.saltoCorto[1]})
+        <input bind:value={corto} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={cortoOk === null} />
+      </label>
+      <label>
+        Salto largo (s, {LIMITES.saltoLargo[0]}–{LIMITES.saltoLargo[1]})
+        <input bind:value={largo} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={largoOk === null} />
+      </label>
+    </div>
+    <div class="acciones">
+      <button class="principal" onclick={guardar} disabled={cortoOk === null || largoOk === null}>Guardar</button>
+      <button onclick={restablecer}>Restablecer</button>
+      <button onclick={descartar}>Descartar cambios</button>
+    </div>
+    {#if guardado}<p role="status">Guardado.</p>{/if}
+  </section>
 
-  <label>
-    Idioma por defecto
-    <select value={ajustes.idiomaDefecto} onchange={(e) => elegirIdiomaDefecto(e.currentTarget.value)}>
-      <option value="SUB">SUB</option>
-      <option value="DUB">DUB</option>
-    </select>
-  </label>
-  <p>Solo para las series en las que todavía no elegiste uno; lo que elegiste por serie manda.</p>
-  <label>
-    Orden de los episodios
-    <select value={ajustes.ordenDescendente ? 'desc' : 'asc'} onchange={(e) => elegirOrden(e.currentTarget.value)}>
-      <option value="asc">Del primero al último</option>
-      <option value="desc">Del último al primero</option>
-    </select>
-  </label>
+  <section class="bloque" aria-label="Episodios">
+    <h2>Episodios</h2>
+    <div class="campos">
+      <label>
+        Idioma por defecto
+        <select value={ajustes.idiomaDefecto} onchange={(e) => elegirIdiomaDefecto(e.currentTarget.value)}>
+          <option value="SUB">SUB</option>
+          <option value="DUB">DUB</option>
+        </select>
+      </label>
+      <label>
+        Orden de los episodios
+        <select value={ajustes.ordenDescendente ? 'desc' : 'asc'} onchange={(e) => elegirOrden(e.currentTarget.value)}>
+          <option value="asc">Del primero al último</option>
+          <option value="desc">Del último al primero</option>
+        </select>
+      </label>
+    </div>
+    <p class="nota">El idioma es solo para las series en las que todavía no elegiste uno; lo que elegiste por serie manda.</p>
+  </section>
 
-  <h3>Importar copia de Ukiku</h3>
-  {#if !datosOk}
-    <p class="error">Los datos locales no están disponibles; no se puede importar.</p>
-  {:else if fase.tipo === 'inicio' || fase.tipo === 'error' || fase.tipo === 'listo'}
-    <p>
-      Elige la carpeta de tu copia de seguridad de Ukiku (local o de Dropbox). Solo se leen los archivos
-      <code>history</code>, <code>following</code> y <code>favs</code>.
-    </p>
-    <button onclick={elegirCarpeta}>Elegir carpeta…</button>
-    {#if fase.tipo === 'error'}<p class="error" role="alert">{fase.texto}</p>{/if}
-    {#if fase.tipo === 'listo'}<p role="status">{fase.texto}</p>{/if}
-  {:else if fase.tipo === 'vista'}
-    <ul class="resumen">
-      {#each lineasResumen(fase.resumen) as linea}<li>{linea}</li>{/each}
-    </ul>
-    {#if fase.confirmando}
-      <p class="error" role="alert">{textoAviso('reemplazar', fase.resumen)}</p>
-      <div class="acciones">
-        <button onclick={() => importar('reemplazar')}>Sí, reemplazar</button>
-        <button onclick={() => confirmar(false)}>Cancelar</button>
-      </div>
+  <section class="bloque" aria-label="Importar copia de Ukiku">
+    <h2>Importar copia de Ukiku</h2>
+    {#if !datosOk}
+      <p class="error">Los datos locales no están disponibles; no se puede importar.</p>
+    {:else if fase.tipo === 'inicio' || fase.tipo === 'error' || fase.tipo === 'listo'}
+      <p>
+        Elige la carpeta de tu copia de seguridad de Ukiku (local o de Dropbox). Solo se leen los archivos
+        <code>history</code>, <code>following</code> y <code>favs</code>.
+      </p>
+      <button onclick={elegirCarpeta}>Elegir carpeta…</button>
+      {#if fase.tipo === 'error'}<p class="error" role="alert">{fase.texto}</p>{/if}
+      {#if fase.tipo === 'listo'}<p role="status">{fase.texto}</p>{/if}
+    {:else if fase.tipo === 'vista'}
+      <ul class="resumen">
+        {#each lineasResumen(fase.resumen) as linea}<li>{linea}</li>{/each}
+      </ul>
+      {#if fase.confirmando}
+        <p class="error" role="alert">{textoAviso('reemplazar', fase.resumen)}</p>
+        <div class="acciones">
+          <button onclick={() => importar('reemplazar')}>Sí, reemplazar</button>
+          <button onclick={() => confirmar(false)}>Cancelar</button>
+        </div>
+      {:else}
+        <p>{textoAviso('mezclar', fase.resumen)}</p>
+        <div class="acciones">
+          <button onclick={() => importar('mezclar')}>Mezclar</button>
+          <button onclick={() => confirmar(true)}>Reemplazar…</button>
+          <button onclick={() => (fase = { tipo: 'inicio' })}>Cancelar</button>
+        </div>
+      {/if}
     {:else}
-      <p>{textoAviso('mezclar', fase.resumen)}</p>
-      <div class="acciones">
-        <button onclick={() => importar('mezclar')}>Mezclar</button>
-        <button onclick={() => confirmar(true)}>Reemplazar…</button>
-        <button onclick={() => (fase = { tipo: 'inicio' })}>Cancelar</button>
-      </div>
+      <p>Importando…</p>
     {/if}
-  {:else}
-    <p>Importando…</p>
-  {/if}
 
-  <SeccionAnilist />
+  </section>
 
-  <SeccionAvisos />
+  <section class="bloque" aria-label="Cuenta de AniList"><SeccionAnilist /></section>
 
-  <SeccionTmdb />
-</section>
+  <section class="bloque" aria-label="Avisos"><SeccionAvisos /></section>
+
+  <section class="bloque" aria-label="Imágenes de TMDB"><SeccionTmdb /></section>
+</div>
 </main>
 
 <style>
   .ajustes {
     display: grid;
-    gap: 8px;
-    max-width: 420px;
-    margin: 12px 0;
+    gap: 16px;
+    max-width: 760px;
+  }
+  .campos {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
   }
   label {
     display: grid;
-    gap: 4px;
+    gap: 6px;
+    color: var(--texto-suave);
+    font-size: 0.875rem;
+  }
+  label input,
+  label select {
+    color: var(--texto);
+    font-size: 1rem;
   }
   input[aria-invalid='true'] {
     outline: 2px solid #e53935;
   }
   .acciones {
     display: flex;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .nota {
+    margin: 0;
+    color: var(--texto-suave);
+    font-size: 0.875rem;
   }
   .resumen {
     margin: 0;
     padding-left: 18px;
+  }
+  .ajustes :global(h3) {
+    margin: 0 0 12px;
+    font-size: 1.15rem;
   }
 </style>

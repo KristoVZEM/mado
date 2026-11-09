@@ -1,10 +1,9 @@
 import type { OpcionesCatalogo, ResultadoBusqueda } from '../../../core/src/index.ts';
 
-export type ListadoId = 'emision' | 'populares' | 'recientes';
+export type ListadoId = 'populares' | 'recientes';
 
-/** Las filas del Catálogo al entrar, en el orden en que se ven. */
+/** Las filas del Catálogo al entrar, en el orden en que se ven. Lo que se emite hoy está en la pestaña Emisión. */
 export const LISTADOS: readonly { id: ListadoId; titulo: string; opciones: OpcionesCatalogo }[] = [
-  { id: 'emision', titulo: 'En emisión', opciones: { estado: 'emision', orden: 'score' } },
   { id: 'populares', titulo: 'Populares', opciones: { orden: 'popular' } },
   { id: 'recientes', titulo: 'Añadidos recientemente', opciones: {} },
 ];
