@@ -539,6 +539,10 @@
   .reproductor.sin-cursor {
     cursor: none;
   }
+  /* Los controles del reproductor llevan su propio tamaño: no heredan el alto mínimo de los botones de las pantallas. */
+  .reproductor :global(button) {
+    min-height: 0;
+  }
   .superficie {
     position: absolute;
     inset: 0;

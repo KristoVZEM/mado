@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { abrir, nav } from '../lib/navegacion.svelte.ts';
+  import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
   import {
     estadoDatos,
     listarBiblioteca,
@@ -11,7 +11,9 @@
   } from '../lib/datos.ts';
   import { etiquetaNuevo } from '../lib/destacado.ts';
   import { textoDeError } from '../lib/errores.ts';
+  import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
+  import Vacio from '../lib/componentes/Vacio.svelte';
   import {
     entradasDe,
     muestraEstado,
@@ -19,7 +21,7 @@
     PESTANAS,
     recuentos,
     textoUltimoVisto,
-    textoVacio,
+    estadoVacio,
   } from '../lib/biblioteca.ts';
 
   let biblioteca = $state<Biblioteca | null>(null);
@@ -63,7 +65,7 @@
   {#if avisoDatos}
     <p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>
   {:else if cargando}
-    <p>Cargando…</p>
+    <Esqueleto variante="cuadricula" cantidad={12} />
   {:else if error}
     <p class="error" role="alert">{error}</p>
   {:else if cuentas}
@@ -73,7 +75,16 @@
       {/each}
     </div>
     {#if lista.length === 0}
-      <p>{textoVacio(pestana)}</p>
+      {@const vacio = estadoVacio(pestana)}
+      <Vacio titulo={vacio.titulo} texto={vacio.texto}>
+        {#each vacio.acciones as accion (accion)}
+          {#if accion === 'catalogo'}
+            <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
+          {:else}
+            <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
+          {/if}
+        {/each}
+      </Vacio>
     {:else}
       <ul class="cuadricula">
         {#each lista as e (e.aid)}

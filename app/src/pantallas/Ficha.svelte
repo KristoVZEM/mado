@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import Portada from '../lib/componentes/Portada.svelte';
   import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
@@ -298,7 +299,7 @@
     </section>
   {/if}
 
-  {#if cargando}<p>Cargando episodios…</p>{/if}
+  {#if cargando}<Esqueleto variante="fila" cantidad={6} />{/if}
   {#if error}
     <p class="error">{error}</p>
     {#if !ficha}<button onclick={cargarEpisodios} disabled={cargando}>Reintentar</button>{/if}
@@ -384,35 +385,13 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .enlace {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--acento);
+  .datos .enlace {
     margin-bottom: 12px;
   }
   .biblioteca {
     display: flex;
     align-items: center;
     gap: 8px;
-  }
-  .principal {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 9px 20px;
-    background: var(--acento);
-    border-color: var(--acento);
-    color: #fff;
-    font-weight: 600;
-  }
-  .principal:hover:not(:disabled) {
-    background: #ff6a85;
-  }
-  .principal svg {
-    width: 16px;
-    height: 16px;
-    fill: currentColor;
   }
   .lista-episodios {
     list-style: none;
@@ -507,6 +486,7 @@
     position: absolute;
     top: 8px;
     right: 8px;
+    min-height: 0;
     padding: 0 8px;
     opacity: 0;
     transition: opacity 150ms;

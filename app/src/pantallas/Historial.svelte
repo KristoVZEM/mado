@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import Portada from '../lib/componentes/Portada.svelte';
+  import Vacio from '../lib/componentes/Vacio.svelte';
   import { estadoDatos, listarHistorial, type EntradaHistorial } from '../lib/datos.ts';
   import { textoDeError } from '../lib/errores.ts';
   import { agruparPorDia } from '../lib/historial.ts';
-  import { abrir } from '../lib/navegacion.svelte.ts';
+  import { abrir, irASeccion } from '../lib/navegacion.svelte.ts';
 
   const PAGINA = 50;
 
@@ -56,7 +58,7 @@
 
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
-  {#if cargando && entradas.length === 0}<p>Cargando…</p>{/if}
+  {#if cargando && entradas.length === 0}<Esqueleto variante="fila" cantidad={6} />{/if}
 
   {#each grupos as g (g.etiqueta + g.entradas[0]?.vistoEn)}
     <section aria-label={g.etiqueta}>
@@ -82,7 +84,9 @@
   {/if}
 
   {#if !cargando && !avisoDatos && !error && entradas.length === 0}
-    <p>Todavía no has visto nada.</p>
+    <Vacio titulo="Todavía no has visto nada" texto="Lo que veas aparecerá aquí, agrupado por el día en que lo viste.">
+      <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
+    </Vacio>
   {/if}
 </main>
 

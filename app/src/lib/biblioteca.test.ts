@@ -10,7 +10,7 @@ import {
   PESTANAS,
   recuentos,
   textoUltimoVisto,
-  textoVacio,
+  estadoVacio,
 } from './biblioteca.ts';
 
 const e = (aid: number, titulo: string, estado: number | null, ultimoEpisodio: number | null = null): EntradaBiblioteca => ({
@@ -91,8 +91,16 @@ test('muestraEstado solo en las pestañas que mezclan estados', () => {
   assert.equal(muestraEstado('viendo'), false);
 });
 
-test('textoVacio explica cada pestaña vacía', () => {
-  assert.equal(textoVacio('considerando'), 'No hay series en «Considerando».');
-  assert.ok(textoVacio('todos').includes('Ajustes'));
-  assert.ok(textoVacio('favoritos').includes('☆'));
+test('estadoVacio dice qué pasa, qué hacer y adónde ir en cada pestaña', () => {
+  const considerando = estadoVacio('considerando');
+  assert.equal(considerando.titulo, 'No hay series en «Considerando»');
+  assert.deepEqual(considerando.acciones, ['catalogo']);
+  const todos = estadoVacio('todos');
+  assert.ok(todos.texto.includes('Ukiku'));
+  assert.deepEqual(todos.acciones, ['catalogo', 'ajustes']);
+  assert.ok(estadoVacio('favoritos').texto.includes('☆'));
+  for (const p of ['todos', 'viendo', 'considerando', 'completado', 'dropeado', 'pausado', 'favoritos'] as const) {
+    const v = estadoVacio(p);
+    assert.ok(v.titulo && v.texto && v.acciones.length > 0, p);
+  }
 });

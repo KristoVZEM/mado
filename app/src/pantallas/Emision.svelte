@@ -19,6 +19,8 @@
     inicioDeSemana,
     titulosParaBuscar,
   } from '../lib/emision.ts';
+  import Esqueleto from '../lib/componentes/Esqueleto.svelte';
+  import Vacio from '../lib/componentes/Vacio.svelte';
   import { textoDeError } from '../lib/errores.ts';
   import { fuentes } from '../lib/fuentes.ts';
   import { inicialDe } from '../lib/imagenes.ts';
@@ -152,12 +154,18 @@
     </label>
   </div>
 
-  {#if cargando}<p>Cargando…</p>{/if}
+  {#if cargando}<Esqueleto variante="fila" cantidad={6} />{/if}
   {#if actualizando}<p class="aviso">Actualizando la agenda…</p>{/if}
 
   {#if !cargando && !avisoDatos}
     {#if lista.length === 0}
-      <p>{soloSigues ? 'Nada de lo que sigues se emite este día.' : 'No hay emisiones guardadas para este día.'}</p>
+      {#if soloSigues}
+        <Vacio titulo="Nada de lo que sigues sale este día" texto="Prueba otro día o mira toda la agenda.">
+          <button onclick={() => (soloSigues = false)}>Ver toda la agenda</button>
+        </Vacio>
+      {:else}
+        <Vacio titulo="Sin emisiones guardadas este día" texto="La agenda se actualiza al abrir esta sección con conexión." />
+      {/if}
     {:else}
       <ul class="agenda">
         {#each lista as e (`${e.anilistId}-${e.episodio}`)}
@@ -209,8 +217,8 @@
   .dias button[aria-pressed='true'] {
     background: var(--acento);
     border-color: var(--acento);
-    color: #fff;
-    font-weight: 600;
+    color: var(--sobre-acento);
+    font-weight: 700;
   }
   .interruptor {
     display: flex;
@@ -276,7 +284,7 @@
     padding: 2px 10px;
     border-radius: 999px;
     background: var(--acento);
-    color: #fff;
+    color: var(--sobre-acento);
     font-size: 0.8rem;
     font-weight: 600;
   }

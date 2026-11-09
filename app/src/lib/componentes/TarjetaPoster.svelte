@@ -48,7 +48,7 @@
     padding: 2px 8px;
     border-radius: 999px;
     background: var(--acento);
-    color: #fff;
+    color: var(--sobre-acento);
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.3;

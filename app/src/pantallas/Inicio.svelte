@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Portada from '../lib/componentes/Portada.svelte';
+  import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import FilaDesplazable from '../lib/componentes/FilaDesplazable.svelte';
+  import Vacio from '../lib/componentes/Vacio.svelte';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
   import { entradasDe, textoUltimoVisto } from '../lib/biblioteca.ts';
@@ -132,7 +134,7 @@
 
   {#if avisoDatos}<p class="error" role="alert">Datos locales no disponibles: {avisoDatos}</p>{/if}
   {#if error}<p class="error" role="alert">{error}</p>{/if}
-  {#if cargando}<p>Cargando…</p>{/if}
+  {#if cargando}<Esqueleto variante="poster" cantidad={8} />{/if}
 
   {#if destacado}
     <section
@@ -225,33 +227,14 @@
   {/if}
 
   {#if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0 && considerando.length === 0}
-    <section class="vacio" aria-label="Empezar">
-      <h2>Aquí aparecerá lo que veas</h2>
-      <p>Empieza por elegir una serie, o trae tu historial de Ukiku.</p>
-      <p>
-        <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
-        <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
-      </p>
-    </section>
+    <Vacio titulo="Aquí aparecerá lo que veas" texto="Empieza por elegir una serie, o trae tu historial de Ukiku.">
+      <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
+      <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
+    </Vacio>
   {/if}
 </main>
 
 <style>
-  .solo-lectores {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .vacio {
-    max-width: 52ch;
-    margin: 48px 0;
-  }
-  .vacio h2 {
-    margin-top: 0;
-  }
   .destacado {
     display: flex;
     flex-direction: column;
@@ -268,12 +251,8 @@
     font-size: 1.8rem;
     max-width: 60%;
   }
-  .principal {
+  .destacado .principal {
     align-self: flex-start;
-    background: var(--acento);
-    border-color: var(--acento);
-    color: #fff;
-    font-weight: 600;
   }
   .continuar {
     position: relative;
@@ -308,6 +287,7 @@
     position: absolute;
     top: 6px;
     right: 6px;
+    min-height: 0;
     padding: 0 6px;
     background: rgb(0 0 0 / 0.6);
   }

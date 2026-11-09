@@ -58,11 +58,29 @@ export function muestraEstado(p: Pestana): boolean {
   return p === 'todos' || p === 'favoritos';
 }
 
-/** Texto cuando la pestaña no tiene series. */
-export function textoVacio(p: Pestana): string {
+export interface EstadoVacio {
+  titulo: string;
+  texto: string;
+  /** Adónde puede ir quien lo ve. */
+  acciones: ('catalogo' | 'ajustes')[];
+}
+
+/** Qué se le dice a quien abre una pestaña sin series: qué pasa, qué hacer y adónde ir. */
+export function estadoVacio(p: Pestana): EstadoVacio {
   if (p === 'todos') {
-    return 'Todavía no sigues ninguna serie. Importa tu copia de Ukiku desde Ajustes o elige un estado en la ficha de una serie.';
+    return {
+      titulo: 'Tu biblioteca está vacía',
+      texto: 'Elige un estado en la Ficha de una serie, o trae tu historial desde una copia de Ukiku.',
+      acciones: ['catalogo', 'ajustes'],
+    };
   }
-  if (p === 'favoritos') return 'Todavía no tienes favoritos. Márcalos con ☆ en la ficha de una serie.';
-  return `No hay series en «${PESTANAS.find((x) => x.id === p)?.nombre}».`;
+  if (p === 'favoritos') {
+    return { titulo: 'Sin favoritos todavía', texto: 'Marca una serie con ☆ en su Ficha y aparecerá aquí.', acciones: ['catalogo'] };
+  }
+  const nombre = PESTANAS.find((x) => x.id === p)?.nombre ?? '';
+  return {
+    titulo: `No hay series en «${nombre}»`,
+    texto: 'Cambia el estado de una serie en su Ficha para verla aquí.',
+    acciones: ['catalogo'],
+  };
 }

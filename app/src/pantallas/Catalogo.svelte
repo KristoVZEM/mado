@@ -1,7 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import FilaDesplazable from '../lib/componentes/FilaDesplazable.svelte';
+  import Esqueleto from '../lib/componentes/Esqueleto.svelte';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
+  import Vacio from '../lib/componentes/Vacio.svelte';
   import { mensajeDeError } from '../lib/errores.ts';
   import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { fuentes } from '../lib/fuentes.ts';
@@ -130,7 +132,9 @@
     <p><button onclick={volverAlCatalogo}>← Volver al catálogo</button></p>
     {#if cargando || nav.catalogo.pendiente}<p role="status">Buscando…</p>{/if}
     {#if error}<p class="error">{error}</p>{/if}
-    {#if nav.catalogo.buscado && !cargando && !error && nav.catalogo.resultados.length === 0}<p>Sin resultados.</p>{/if}
+    {#if nav.catalogo.buscado && !cargando && !error && nav.catalogo.resultados.length === 0}
+      <Vacio titulo="Sin resultados" texto="Prueba con otro título, con el nombre en romaji o con una sola palabra." />
+    {/if}
     <ul class="cuadricula">
       {#each nav.catalogo.resultados as r (r.aid)}
         <li><TarjetaPoster aid={r.aid} titulo={r.title} alAbrir={() => abrir({ tipo: 'ficha', anime: r })} /></li>
@@ -165,9 +169,7 @@
             {/each}
           </FilaDesplazable>
         {:else if cargandoFilas}
-          <ul class="esqueleto" aria-hidden="true">
-            {#each Array(8) as _, i (i)}<li></li>{/each}
-          </ul>
+          <Esqueleto variante="poster" cantidad={8} />
         {/if}
       </section>
     {/each}
@@ -184,31 +186,7 @@
     align-items: baseline;
     justify-content: space-between;
   }
-  .enlace {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--acento);
-  }
-  .enlace:hover:not(:disabled) {
-    background: none;
-    text-decoration: underline;
-  }
   .poster {
     flex: 0 0 var(--ancho-poster);
-  }
-  .esqueleto {
-    list-style: none;
-    margin: 0;
-    padding: 0 0 8px;
-    display: flex;
-    gap: var(--espacio);
-    overflow: hidden;
-  }
-  .esqueleto li {
-    flex: 0 0 var(--ancho-poster);
-    aspect-ratio: 2 / 3;
-    border-radius: var(--radio);
-    background: var(--superficie-2);
   }
 </style>
