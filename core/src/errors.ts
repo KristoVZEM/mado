@@ -24,3 +24,8 @@ export class SinServidor extends Error {
     this.causas = causas;
   }
 }
+
+/** AniList rechazó el token (caducó o se revocó): hay que volver a iniciar sesión. */
+export class NoAutorizado extends Error {
+  name = 'NoAutorizado';
+}

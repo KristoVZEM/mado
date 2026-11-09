@@ -1,4 +1,4 @@
-import { FuenteCambio, SinRed } from '../errors.ts';
+import { FuenteCambio, NoAutorizado, SinRed } from '../errors.ts';
 
 export const URL_ANILIST = 'https://graphql.anilist.co';
 
@@ -13,6 +13,8 @@ export interface OpcionesCliente {
   sleep?: (ms: number) => Promise<void>;
   /** Cuántas veces se reintenta tras un 429 (por defecto 2). */
   reintentos429?: number;
+  /** Token de la cuenta; si devuelve texto, la petición va autenticada. Nunca se imprime. */
+  token?: () => string | null | Promise<string | null>;
 }
 
 /** Cliente mínimo de GraphQL (POST). Cada petición pasa por el limitador. */
@@ -24,13 +26,12 @@ export function crearClienteAnilist(op: OpcionesCliente): ClienteAnilist {
   async function consultar<T = any>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
     for (let intento = 0; ; intento++) {
       await op.limitador.esperar();
+      const token = op.token ? await op.token() : null;
+      const headers: Record<string, string> = { 'content-type': 'application/json', accept: 'application/json' };
+      if (token) headers.authorization = `Bearer ${token}`;
       let res: Response;
       try {
-        res = await hacerFetch(URL_ANILIST, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', accept: 'application/json' },
-          body: JSON.stringify({ query, variables }),
-        });
+        res = await hacerFetch(URL_ANILIST, { method: 'POST', headers, body: JSON.stringify({ query, variables }) });
       } catch (e) {
         throw new SinRed(`sin respuesta de AniList: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
       }
@@ -40,11 +41,14 @@ export function crearClienteAnilist(op: OpcionesCliente): ClienteAnilist {
         await dormir((Number.isFinite(segundos) && segundos > 0 ? Math.min(segundos, 120) : 60) * 1000);
         continue;
       }
+      if (res.status === 401) throw new NoAutorizado('AniList rechazó el token (HTTP 401)');
       if (res.status >= 500) throw new SinRed(`AniList no responde (HTTP ${res.status})`);
+      const texto = await res.text();
+      if (/invalid token/i.test(texto)) throw new NoAutorizado('AniList rechazó el token');
       if (!res.ok) throw new FuenteCambio(`AniList: HTTP ${res.status}`);
       let cuerpo: any;
       try {
-        cuerpo = JSON.parse(await res.text());
+        cuerpo = JSON.parse(texto);
       } catch {
         throw new FuenteCambio('AniList: la respuesta no es JSON');
       }

@@ -8,3 +8,7 @@ export { confianza, decidir, mejorParecido, ordenar, UMBRAL_AUTO, UMBRAL_MINIMO 
 export type { CandidatoAnilist, Decision, Propuesta, SerieABuscar } from './emparejar.ts';
 export { normalizar, parecido } from './titulos.ts';
 export type { MediaAnilist, RelacionAnilist } from './tipos.ts';
+export { aEstadoLocal, MAX_PROGRESO, planificar, STATUS } from './sync.ts';
+export type { Bajada, EstadoLocal, LocalSync, Plan, RemotoSync, Subida } from './sync.ts';
+export { entradaDe, guardarEntradas, listaUsuario, obtenerUsuario } from './lista.ts';
+export type { ResultadoSubida } from './lista.ts';
