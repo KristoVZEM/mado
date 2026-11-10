@@ -157,6 +157,8 @@ button:disabled {
 
 select,
 input[type='text'],
+input[type='password'],
+input[type='search'],
 input:not([type]) {
   min-height: 34px;
   box-sizing: border-box;
@@ -165,6 +167,17 @@ input:not([type]) {
   border-radius: var(--radio-control);
   background: rgb(255 255 255 / 0.045);
   color: inherit;
+}
+
+/* El desplegable de un select se pinta con el fondo del propio select: si fuera translúcido saldría blanco con letra blanca. */
+select {
+  background-color: var(--superficie);
+  color: var(--texto);
+}
+
+option {
+  background-color: var(--superficie-2);
+  color: var(--texto);
 }
 
 .error {

@@ -1,196 +1,148 @@
 <script lang="ts">
-  import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
-  import { LIMITES } from '../lib/ajustes.ts';
-  import { validarSalto } from '../lib/continuar.ts';
-  import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
-
   import { onMount } from 'svelte';
-  import { estadoDatos } from '../lib/datos.ts';
-  import { cancelar, confirmar, elegirCarpeta, importacion, importar } from '../lib/importacion.svelte.ts';
-  import { lineasResumen, textoAviso } from '../lib/importar.ts';
+  import { asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { CATEGORIAS, categoriaPorDefecto, type CategoriaAjuste } from '../lib/ajustesCategorias.ts';
   import SeccionAnilist from './SeccionAnilist.svelte';
+  import SeccionApariencia from './SeccionApariencia.svelte';
   import SeccionAvisos from './SeccionAvisos.svelte';
+  import SeccionImportar from './SeccionImportar.svelte';
+  import SeccionReproduccion from './SeccionReproduccion.svelte';
   import SeccionTmdb from './SeccionTmdb.svelte';
 
-  let datosOk = $state(false);
+  let categoria = $state<CategoriaAjuste>(categoriaPorDefecto());
 
-  function elegirIdiomaDefecto(v: string) {
-    ajustes.idiomaDefecto = v === 'DUB' ? 'DUB' : 'SUB';
-    guardarAjusteSilencioso('idioma_defecto', ajustes.idiomaDefecto === 'DUB' ? '1' : '0');
-  }
-
-  function elegirOrden(v: string) {
-    ajustes.ordenDescendente = v === 'desc';
-    guardarAjusteSilencioso('orden_episodios', ajustes.ordenDescendente ? '1' : '0');
-  }
-
-  onMount(async () => {
+  onMount(() => {
     void asegurarAjustes();
-    datosOk = (await estadoDatos().catch(() => 'error')) === null;
   });
-
-  // El estado de la importación vive en su propio módulo: sobrevive a cerrar y reabrir Ajustes.
-  const fase = $derived(importacion.fase);
-
-  let guardado = $state(false);
-  let corto = $state(String(ajustes.saltoCorto));
-  let largo = $state(String(ajustes.saltoLargo));
-
-  const cortoOk = $derived(validarSalto(corto, ...LIMITES.saltoCorto));
-  const largoOk = $derived(validarSalto(largo, ...LIMITES.saltoLargo));
-
-  function guardar() {
-    if (cortoOk === null || largoOk === null) return;
-    ajustes.saltoCorto = cortoOk;
-    ajustes.saltoLargo = largoOk;
-    guardarAjusteSilencioso('salto_corto', String(cortoOk));
-    guardarAjusteSilencioso('salto_largo', String(largoOk));
-    guardado = true;
-  }
-
-  function restablecer() {
-    corto = String(SALTO_CORTO_S);
-    largo = String(SALTO_LARGO_S);
-    guardado = false;
-  }
-
-  function descartar() {
-    corto = String(ajustes.saltoCorto);
-    largo = String(ajustes.saltoLargo);
-    guardado = false;
-  }
 </script>
 
 <main class="pantalla">
-<h1>Ajustes</h1>
-<div class="ajustes">
-  <section class="bloque" aria-label="Reproductor">
-    <h2>Reproductor</h2>
-    <div class="campos">
-      <label>
-        Salto corto (s, {LIMITES.saltoCorto[0]}–{LIMITES.saltoCorto[1]})
-        <input bind:value={corto} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={cortoOk === null} />
-      </label>
-      <label>
-        Salto largo (s, {LIMITES.saltoLargo[0]}–{LIMITES.saltoLargo[1]})
-        <input bind:value={largo} oninput={() => (guardado = false)} inputmode="numeric" aria-invalid={largoOk === null} />
-      </label>
-    </div>
-    <div class="acciones">
-      <button class="principal" onclick={guardar} disabled={cortoOk === null || largoOk === null}>Guardar</button>
-      <button onclick={restablecer}>Restablecer</button>
-      <button onclick={descartar}>Descartar cambios</button>
-    </div>
-    {#if guardado}<p role="status">Guardado.</p>{/if}
-  </section>
+  <h1>Ajustes</h1>
+  <div class="disposicion">
+    <nav class="lateral" aria-label="Categorías de ajustes">
+      {#each CATEGORIAS as c (c.id)}
+        <button
+          class="categoria"
+          class:activa={categoria === c.id}
+          aria-current={categoria === c.id ? 'page' : undefined}
+          onclick={() => (categoria = c.id)}
+        >
+          {c.nombre}
+        </button>
+      {/each}
+    </nav>
 
-  <section class="bloque" aria-label="Episodios">
-    <h2>Episodios</h2>
-    <div class="campos">
-      <label>
-        Idioma por defecto
-        <select value={ajustes.idiomaDefecto} onchange={(e) => elegirIdiomaDefecto(e.currentTarget.value)}>
-          <option value="SUB">SUB</option>
-          <option value="DUB">DUB</option>
-        </select>
-      </label>
-      <label>
-        Orden de los episodios
-        <select value={ajustes.ordenDescendente ? 'desc' : 'asc'} onchange={(e) => elegirOrden(e.currentTarget.value)}>
-          <option value="asc">Del primero al último</option>
-          <option value="desc">Del último al primero</option>
-        </select>
-      </label>
-    </div>
-    <p class="nota">El idioma es solo para las series en las que todavía no elegiste uno; lo que elegiste por serie manda.</p>
-  </section>
-
-  <section class="bloque" aria-label="Importar copia de Ukiku">
-    <h2>Importar copia de Ukiku</h2>
-    {#if !datosOk}
-      <p class="error">Los datos locales no están disponibles; no se puede importar.</p>
-    {:else if fase.tipo === 'inicio' || fase.tipo === 'error' || fase.tipo === 'listo'}
-      <p>
-        Elige la carpeta de tu copia de seguridad de Ukiku (local o de Dropbox). Solo se leen los archivos
-        <code>history</code>, <code>following</code> y <code>favs</code>.
-      </p>
-      <button onclick={elegirCarpeta}>Elegir carpeta…</button>
-      {#if fase.tipo === 'error'}<p class="error" role="alert">{fase.texto}</p>{/if}
-      {#if fase.tipo === 'listo'}<p role="status">{fase.texto}</p>{/if}
-    {:else if fase.tipo === 'vista'}
-      <ul class="resumen">
-        {#each lineasResumen(fase.resumen) as linea}<li>{linea}</li>{/each}
-      </ul>
-      {#if fase.confirmando}
-        <p class="error" role="alert">{textoAviso('reemplazar', fase.resumen)}</p>
-        <div class="acciones">
-          <button onclick={() => importar('reemplazar')}>Sí, reemplazar</button>
-          <button onclick={() => confirmar(false)}>Cancelar</button>
-        </div>
+    <div class="panel">
+      {#if categoria === 'reproduccion'}
+        <SeccionReproduccion />
+      {:else if categoria === 'apariencia'}
+        <SeccionApariencia />
+      {:else if categoria === 'avisos'}
+        <h2>Avisos</h2>
+        <div class="formulario"><SeccionAvisos /></div>
+      {:else if categoria === 'datos'}
+        <h2>Datos</h2>
+        <div class="formulario"><SeccionImportar /></div>
       {:else}
-        <p>{textoAviso('mezclar', fase.resumen)}</p>
-        <div class="acciones">
-          <button onclick={() => importar('mezclar')}>Mezclar</button>
-          <button onclick={() => confirmar(true)}>Reemplazar…</button>
-          <button onclick={cancelar}>Cancelar</button>
-        </div>
+        <h2>Cuentas</h2>
+        <section class="bloque formulario" aria-label="Cuenta de AniList"><SeccionAnilist /></section>
+        <section class="bloque formulario" aria-label="Imágenes de TMDB"><SeccionTmdb /></section>
       {/if}
-    {:else}
-      <p>Importando…</p>
-    {/if}
-
-  </section>
-
-  <section class="bloque" aria-label="Cuenta de AniList"><SeccionAnilist /></section>
-
-  <section class="bloque" aria-label="Avisos"><SeccionAvisos /></section>
-
-  <section class="bloque" aria-label="Imágenes de TMDB"><SeccionTmdb /></section>
-</div>
+    </div>
+  </div>
 </main>
 
 <style>
-  .ajustes {
+  .disposicion {
     display: grid;
-    gap: 16px;
-    max-width: 760px;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 32px;
+    max-width: 960px;
   }
-  .campos {
+  .lateral {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-    margin-bottom: 16px;
+    align-content: start;
+    gap: 2px;
   }
-  label {
+  .categoria {
+    min-height: 38px;
+    border-color: transparent;
+    background: none;
+    text-align: left;
+    color: var(--texto-suave);
+  }
+  .categoria:hover:not(:disabled) {
+    color: var(--texto);
+  }
+  .categoria.activa {
+    background: var(--boton-claro);
+    border-color: var(--boton-claro);
+    color: var(--boton-claro-texto);
+    font-weight: 600;
+  }
+  .categoria.activa:hover:not(:disabled) {
+    background: var(--boton-claro-hover);
+    color: var(--boton-claro-texto);
+  }
+  .panel {
+    max-width: 720px;
+  }
+  .panel :global(h2) {
+    margin-top: 0;
+  }
+  .panel :global(h3) {
+    margin: 0 0 12px;
+    font-size: 1.15rem;
+  }
+  /* Las secciones con texto y botones (Avisos, Datos, Cuentas): espacios parejos entre párrafos, casillas y botones. */
+  .formulario :global(p),
+  .formulario :global(ol),
+  .formulario :global(ul) {
+    margin: 0 0 14px;
+  }
+  .formulario :global(ol),
+  .formulario :global(ul) {
+    padding-left: 20px;
+  }
+  .formulario :global(li) {
+    margin-bottom: 6px;
+  }
+  .formulario :global(label) {
     display: grid;
     gap: 6px;
+    max-width: 420px;
+    margin: 0 0 14px;
     color: var(--texto-suave);
     font-size: 0.875rem;
   }
-  label input,
-  label select {
+  .formulario :global(label input) {
     color: var(--texto);
     font-size: 1rem;
   }
-  input[aria-invalid='true'] {
-    outline: 2px solid #e53935;
+  .formulario :global(label:has(input[type='checkbox'])) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: none;
+    color: var(--texto);
+    font-size: 1rem;
   }
-  .acciones {
+  .formulario :global(.acciones) {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
+    margin: 0 0 16px;
   }
-  .nota {
-    margin: 0;
-    color: var(--texto-suave);
-    font-size: 0.875rem;
+  .formulario :global(input[aria-invalid='true']) {
+    outline: 2px solid #e53935;
   }
-  .resumen {
-    margin: 0;
-    padding-left: 18px;
+  .bloque {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--borde);
   }
-  .ajustes :global(h3) {
-    margin: 0 0 12px;
-    font-size: 1.15rem;
+  .bloque:last-child {
+    border-bottom: 0;
   }
 </style>
