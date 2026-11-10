@@ -1,9 +1,9 @@
 //! El archivo `favs` de la copia: series favoritas con su categoría.
 
-use super::{existe_aid, lista_de, lista_por_aid, resumen_por_aid, texto, Aplicado, Lista, ResumenLista};
+use super::{lista_de, lista_por_aid, resumen_por_aid, texto, Aplicado, Lista, ResumenLista};
 use crate::datos::progreso::{registrar_anime_sin_pisar, Serie};
 use crate::datos::Resultado;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;
 
 /// Lo que Ukiku guarda como "sin categoría".
@@ -57,10 +57,13 @@ pub(super) fn aplicar_en(conn: &Connection, l: &Lista<EntradaFavorito>, reemplaz
     let (mut nuevos, mut actualizados) = (0u32, 0u32);
     for e in &l.registros {
         registrar_anime_sin_pisar(conn, &Serie { aid: e.aid, slug: &e.slug, titulo: &e.nombre })?;
-        if existe_aid(conn, "favoritos", e.aid)? {
-            actualizados += 1;
-        } else {
-            nuevos += 1;
+        let previa: Option<Option<String>> = conn
+            .query_row("SELECT categoria FROM favoritos WHERE aid = ?1", params![e.aid], |f| f.get(0))
+            .optional()?;
+        match previa {
+            None => nuevos += 1,
+            Some(categoria) if categoria != e.categoria => actualizados += 1,
+            Some(_) => {}
         }
         conn.execute(
             "INSERT INTO favoritos (aid, categoria) VALUES (?1, ?2)
@@ -133,5 +136,24 @@ mod pruebas {
     #[test]
     fn una_lista_con_registros_y_ninguno_valido_es_error() {
         assert!(parsear(&json(&rec(0, "null"))).is_err());
+    }
+
+    #[test]
+    fn actualizados_cuenta_solo_los_favoritos_cuya_categoria_cambia() {
+        let conn = crate::datos::abrir_en_memoria().unwrap();
+        conn.execute_batch(
+            "INSERT INTO anime VALUES (1, 's1', 'S1'), (2, 's2', 'S2'), (3, 's3', 'S3');
+             INSERT INTO favoritos VALUES (1, 'A'), (2, NULL), (3, 'B');",
+        )
+        .unwrap();
+        let e = |aid: i64, c: Option<&str>| EntradaFavorito {
+            aid,
+            nombre: format!("S{aid}"),
+            slug: format!("s{aid}"),
+            categoria: c.map(str::to_string),
+        };
+        let l = Lista { registros: vec![e(1, Some("A")), e(2, None), e(3, None), e(4, None)], invalidos: 0 };
+        let r = aplicar_en(&conn, &l, false).unwrap();
+        assert_eq!((r.nuevos, r.actualizados), (1, 1));
     }
 }

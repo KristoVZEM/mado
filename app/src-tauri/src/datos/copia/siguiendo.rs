@@ -1,9 +1,9 @@
 //! El archivo `following` de la copia: series con su estado de seguimiento.
 
-use super::{existe_aid, lista_de, lista_por_aid, resumen_por_aid, texto, Aplicado, Lista, ResumenLista};
+use super::{lista_de, lista_por_aid, resumen_por_aid, texto, Aplicado, Lista, ResumenLista};
 use crate::datos::progreso::{registrar_anime_sin_pisar, Serie};
 use crate::datos::Resultado;
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;
 
 /// Una serie seguida, ya validada. `estado`: 1 Viendo, 2 Considerando, 3 Completado, 4 Dropeado,
@@ -43,10 +43,13 @@ pub(super) fn aplicar_en(conn: &Connection, l: &Lista<EntradaSiguiendo>, reempla
     let (mut nuevos, mut actualizados) = (0u32, 0u32);
     for e in &l.registros {
         registrar_anime_sin_pisar(conn, &Serie { aid: e.aid, slug: &e.slug, titulo: &e.nombre })?;
-        if existe_aid(conn, "siguiendo", e.aid)? {
-            actualizados += 1;
-        } else {
-            nuevos += 1;
+        let previo: Option<u8> = conn
+            .query_row("SELECT estado FROM siguiendo WHERE aid = ?1", params![e.aid], |f| f.get(0))
+            .optional()?;
+        match previo {
+            None => nuevos += 1,
+            Some(estado) if estado != e.estado => actualizados += 1,
+            Some(_) => {}
         }
         conn.execute(
             "INSERT INTO siguiendo (aid, estado, actualizado)
@@ -130,5 +133,19 @@ mod pruebas {
         assert!(parsear(r#"{"version":3,"data":[]}"#).unwrap_err().to_string().contains('3'));
         assert!(parsear("no es json").is_err());
         assert!(parsear(r#"{"version":2}"#).is_err());
+    }
+
+    #[test]
+    fn actualizados_cuenta_solo_las_series_cuyo_estado_cambia() {
+        let conn = crate::datos::abrir_en_memoria().unwrap();
+        conn.execute_batch(
+            "INSERT INTO anime VALUES (1, 's1', 'S1'), (2, 's2', 'S2');
+             INSERT INTO siguiendo (aid, estado) VALUES (1, 3), (2, 1);",
+        )
+        .unwrap();
+        let e = |aid: i64, estado: u8| EntradaSiguiendo { aid, nombre: format!("S{aid}"), slug: format!("s{aid}"), estado };
+        let l = Lista { registros: vec![e(1, 3), e(2, 4), e(3, 1)], invalidos: 0 };
+        let r = aplicar_en(&conn, &l, false).unwrap();
+        assert_eq!((r.nuevos, r.actualizados), (1, 1));
     }
 }

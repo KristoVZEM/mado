@@ -14,12 +14,16 @@ pub fn estado_serie(conn: &Connection, aid: i64) -> Resultado<Option<u8>> {
 
 /// Fija el estado de una serie: `0` deja de seguirla (borra la fila); `1..=5` crea o cambia la fila.
 pub fn fijar_estado(conn: &Connection, serie: &Serie, estado: u8) -> Resultado<()> {
-    validar_serie(serie)?;
     match estado {
         0 => {
+            // Solo se usa el `aid`: slug y título no hacen falta para quitar de la lista.
+            if serie.aid <= 0 {
+                return Err(Error::Invalido("aid inválido".into()));
+            }
             conn.execute("DELETE FROM siguiendo WHERE aid = ?1", params![serie.aid])?;
         }
         1..=5 => {
+            validar_serie(serie)?;
             let tx = conn.unchecked_transaction()?;
             registrar_anime_sin_pisar(&tx, serie)?;
             tx.execute(
@@ -153,6 +157,16 @@ mod pruebas {
         assert_eq!(estado_serie(&conn, 10).unwrap(), None);
         assert_eq!(contar(&conn, "siguiendo"), 0);
         assert_eq!(contar(&conn, "anime"), 1, "dejar de seguir no borra la serie");
+    }
+
+    #[test]
+    fn fijar_estado_cero_no_exige_titulo_ni_slug_pero_si_aid() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 2).unwrap();
+        fijar_estado(&conn, &Serie { aid: 10, slug: "", titulo: "" }, 0).unwrap();
+        assert_eq!(estado_serie(&conn, 10).unwrap(), None);
+        assert!(fijar_estado(&conn, &Serie { aid: 0, slug: "", titulo: "" }, 0).is_err());
+        assert!(fijar_estado(&conn, &Serie { aid: 10, slug: "x", titulo: "" }, 1).is_err(), "con 1 a 5 sí exige título");
     }
 
     #[test]

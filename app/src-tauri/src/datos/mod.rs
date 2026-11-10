@@ -574,4 +574,26 @@ mod pruebas {
             let _ = std::fs::remove_file(format!("{}{sufijo}", ruta.display()));
         }
     }
+
+    #[test]
+    fn borrar_una_serie_arrastra_todo_lo_que_cuelga_de_ella() {
+        let conn = abrir_en_memoria().unwrap();
+        conn.execute_batch(
+            "INSERT INTO anime VALUES (1, 'a', 'A'), (2, 'b', 'B');
+             INSERT INTO progreso (aid, numero, posicion_s, duracion_s, actualizado) VALUES (1, 1, 5, 100, 1), (2, 1, 5, 100, 1);
+             INSERT INTO historial (aid, numero, visto_en) VALUES (1, 1, 1), (2, 1, 1);
+             INSERT INTO siguiendo (aid, estado) VALUES (1, 1), (2, 1);
+             INSERT INTO favoritos (aid, categoria) VALUES (1, NULL), (2, NULL);
+             INSERT INTO anilist_vinculo (aid, anilist_id, confianza, origen, actualizado) VALUES (1, NULL, 0, 'ninguno', 1), (2, NULL, 0, 'ninguno', 1);
+             INSERT INTO avisos (aid, ultimo_episodio, avisado_en) VALUES (1, 3, 1), (2, 3, 1);",
+        )
+        .unwrap();
+        conn.execute("DELETE FROM anime WHERE aid = 1", []).unwrap();
+        for tabla in ["progreso", "historial", "siguiendo", "favoritos", "anilist_vinculo", "avisos"] {
+            let de = |aid: i64| -> i64 {
+                conn.query_row(&format!("SELECT COUNT(*) FROM {tabla} WHERE aid = ?1"), [aid], |f| f.get(0)).unwrap()
+            };
+            assert_eq!((de(1), de(2)), (0, 1), "{tabla}: borra la serie 1 y deja la 2");
+        }
+    }
 }

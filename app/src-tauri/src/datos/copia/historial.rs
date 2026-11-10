@@ -3,7 +3,7 @@
 use super::{lista_de, texto, Aplicado};
 use crate::datos::progreso::{registrar_anime_sin_pisar, Serie};
 use crate::datos::{Error, Resultado};
-use rusqlite::{params, Connection};
+use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 
@@ -104,10 +104,18 @@ pub(super) fn aplicar_en(conn: &Connection, l: &Lectura, reemplazar: bool) -> Re
     let (mut nuevos, mut actualizados) = (0u32, 0u32);
     for r in &l.registros {
         registrar_anime_sin_pisar(conn, &Serie { aid: r.aid, slug: &r.slug, titulo: &r.nombre })?;
-        if existe(conn, r.aid, r.numero)? {
-            actualizados += 1;
-        } else {
-            nuevos += 1;
+        let previo: Option<(i64, Option<i64>)> = conn
+            .query_row(
+                "SELECT visto_en, eid FROM historial WHERE aid = ?1 AND numero = ?2",
+                params![r.aid, r.numero],
+                |f| Ok((f.get(0)?, f.get(1)?)),
+            )
+            .optional()?;
+        match previo {
+            None => nuevos += 1,
+            // Solo cuenta si la fila realmente cambia: fecha más reciente o un eid que faltaba.
+            Some((visto_en, eid)) if r.fecha > visto_en || (eid.is_none() && r.eid.is_some()) => actualizados += 1,
+            Some(_) => {}
         }
         conn.execute(
             "INSERT INTO historial (aid, numero, visto_en, eid) VALUES (?1, ?2, ?3, ?4)
@@ -300,5 +308,23 @@ mod pruebas {
         assert!(fila(&conn, 10, 1.0).is_none());
         assert_eq!(contar(&conn, "anime"), 2, "las series de antes siguen en la base");
         assert_eq!(contar(&conn, "progreso"), 1, "el progreso de un episodio no importado sobrevive");
+    }
+
+    #[test]
+    fn actualizados_cuenta_solo_las_filas_que_realmente_cambian() {
+        let conn = abrir_en_memoria().unwrap();
+        conn.execute_batch(
+            "INSERT INTO anime VALUES (10, 'one-piece', 'One Piece');
+             INSERT INTO historial (aid, numero, visto_en, eid) VALUES (10, 1.0, 5000, 5), (10, 2.0, 5000, 6), (10, 3.0, 5000, NULL);",
+        )
+        .unwrap();
+        let l = lectura(vec![
+            reg(10, 1.0, 100, Some(5)),  // idéntica en lo que cuenta: no cambia
+            reg(10, 2.0, 9000, Some(6)), // fecha más reciente: cambia
+            reg(10, 3.0, 100, Some(7)),  // rellena un eid que faltaba: cambia
+            reg(10, 4.0, 100, None),     // nueva
+        ]);
+        let r = aplicar_en(&conn, &l, false).unwrap();
+        assert_eq!((r.nuevos, r.actualizados), (1, 2));
     }
 }
