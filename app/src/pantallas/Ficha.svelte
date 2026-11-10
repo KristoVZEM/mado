@@ -100,6 +100,20 @@
   }
 
   /** Abre una serie relacionada: la busca en animeav1 y, si hay una coincidencia firme, abre su Ficha. */
+  const TIPOS_RELACION: Record<string, string> = {
+    PREQUEL: 'Precuela',
+    SEQUEL: 'Secuela',
+    PARENT: 'Historia principal',
+    SIDE_STORY: 'Historia paralela',
+    SPIN_OFF: 'Spin-off',
+    ALTERNATIVE: 'Versión alternativa',
+    SUMMARY: 'Resumen',
+    CHARACTER: 'Mismos personajes',
+    ADAPTATION: 'Adaptación',
+    OTHER: 'Relacionada',
+  };
+  const nombreRelacion = (t: string) => TIPOS_RELACION[t] ?? 'Relacionada';
+
   async function abrirRelacionada(r: RelacionAnilist) {
     try {
       const candidato = {
@@ -499,11 +513,23 @@
     {#if media && media.relaciones.length > 0}
       <section class="relacionadas" aria-label="Relacionadas">
         <h2>Relacionadas</h2>
-        <p>
+        <ul class="tarjetas-rel">
           {#each media.relaciones as r (r.anilistId)}
-            <button onclick={() => abrirRelacionada(r)}>{r.titulo} ({r.tipo})</button>
+            <li>
+              <button class="rel" onclick={() => abrirRelacionada(r)}>
+                <span class="rel-marco">
+                  <span class="rel-inicial" aria-hidden="true">{r.titulo.trim().charAt(0).toUpperCase()}</span>
+                  {#if r.portada}
+                    <img src={r.portada} alt="" loading="lazy" onerror={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')} />
+                  {/if}
+                  <span class="rel-contorno"></span>
+                </span>
+                <strong>{r.titulo}</strong>
+                <span class="rel-tipo">{nombreRelacion(r.tipo)}</span>
+              </button>
+            </li>
           {/each}
-        </p>
+        </ul>
       </section>
     {/if}
   </div>
@@ -789,11 +815,81 @@
     color: var(--boton-claro-texto);
     opacity: 1;
   }
-  .relacionadas p {
+  .tarjetas-rel {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 20px 16px;
     margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .rel {
+    display: grid;
+    gap: 6px;
+    width: 150px;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    align-content: start;
+  }
+  .rel:hover:not(:disabled) {
+    background: none;
+  }
+  .rel-marco {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--radio);
+    background: var(--superficie-2);
+  }
+  .rel-marco img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+  }
+  .rel:hover .rel-marco img,
+  .rel:focus-visible .rel-marco img {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+  .rel-inicial {
+    color: var(--texto-suave);
+    font-size: 2rem;
+  }
+  .rel-contorno {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--borde);
+    border-radius: var(--radio);
+    pointer-events: none;
+  }
+  .rel strong {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  .rel-tipo {
+    color: var(--texto-suave);
+    font-size: 0.8rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rel-marco img {
+      transition: none;
+    }
+    .rel:hover .rel-marco img,
+    .rel:focus-visible .rel-marco img {
+      transform: none;
+    }
   }
   .lista-episodios {
     list-style: none;

@@ -17,6 +17,8 @@ pub struct Relacion {
     pub anilist_id: i64,
     pub tipo: String,
     pub titulo: String,
+    #[serde(default)]
+    pub portada: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -501,7 +503,7 @@ mod pruebas {
             banner: Some("https://s4.anilist.co/b.jpg".into()),
             siguiente_ep: Some(29),
             siguiente_en: Some(1_800_000_000),
-            relaciones: vec![Relacion { anilist_id: 2, tipo: "SEQUEL".into(), titulo: "Frieren 2".into() }],
+            relaciones: vec![Relacion { anilist_id: 2, tipo: "SEQUEL".into(), titulo: "Frieren 2".into(), portada: None }],
             sinonimos: vec!["Frieren en el funeral".into()],
             anio: Some(2023),
             duracion: Some(24),

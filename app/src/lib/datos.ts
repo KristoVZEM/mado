@@ -179,6 +179,7 @@ export interface RelacionAnilist {
   anilistId: number;
   tipo: string;
   titulo: string;
+  portada: string | null;
 }
 
 /** Una obra de AniList tal como la guarda y devuelve Rust. `actualizado` en ms (lo pone Rust). */

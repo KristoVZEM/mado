@@ -2,6 +2,8 @@ export interface RelacionAnilist {
   anilistId: number;
   tipo: string;
   titulo: string;
+  /** Portada de la obra relacionada. */
+  portada: string | null;
 }
 
 /** Una obra de AniList normalizada. Mismos campos y nombres que guarda Rust (`datos/anilist.rs`). */

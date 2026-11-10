@@ -28,6 +28,7 @@
     type Destacado,
     type ItemDestacado,
   } from '../lib/destacado.ts';
+  import { popularesDeInicio } from '../lib/popularesInicio.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { avisarFalloDeFuente } from '../lib/fuente.svelte.ts';
   import { fuentes } from '../lib/fuentes.ts';
@@ -67,7 +68,10 @@
         } else {
           error = textoDeError(b.reason);
         }
-        destacados = await cargarDestacados();
+        // Sin esperar: buscar las series populares en la fuente tarda y las filas no dependen de ello.
+        void cargarDestacados()
+          .then((d) => (destacados = d))
+          .catch((e) => console.error(e));
       }
     } catch (e) {
       console.error(e);
@@ -77,8 +81,30 @@
     }
   });
 
-  /** Las series de la cabecera, cada una con sus datos de AniList (géneros, año, sinopsis…). */
+  /**
+   * La cabecera enseña las series más populares en emisión; si AniList o la fuente no responden, las de tu
+   * biblioteca. Si una de las populares ya tiene un episodio a medias, el botón retoma ese episodio.
+   */
   async function cargarDestacados(): Promise<ItemDestacado[]> {
+    // Mientras se buscan las populares ya se enseña lo de tu biblioteca, para que la cabecera no tarde en salir.
+    void deBiblioteca().then((d) => {
+      if (destacados.length === 0) destacados = d;
+    });
+    try {
+      const populares = await popularesDeInicio();
+      if (populares.length > 0) {
+        return populares.map((it) => {
+          const p = pendientes.find((x) => x.aid === it.destacado.aid);
+          return p ? { ...it, destacado: { ...it.destacado, numero: p.numero } } : it;
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return deBiblioteca();
+  }
+
+  async function deBiblioteca(): Promise<ItemDestacado[]> {
     const elegidos = elegirDestacados(pendientes, viendo, resumenes);
     return Promise.all(
       elegidos.map(async (destacado) => ({

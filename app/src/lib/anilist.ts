@@ -42,9 +42,17 @@ const HORA_MS = 60 * 60 * 1000;
  * no tiene la duración del episodio (obras guardadas antes de pedirla), basta con 1 h.
  */
 export function necesitaRefresco(
-  m: { actualizado?: number; siguienteEn: number | null; duracion?: number | null },
+  m: {
+    actualizado?: number;
+    siguienteEn: number | null;
+    duracion?: number | null;
+    relaciones?: { portada: string | null }[];
+  },
   ahoraMs: number,
 ): boolean {
-  if (m.actualizado === undefined || ahoraMs - m.actualizado > (m.duracion === null ? HORA_MS : DIA_MS)) return true;
+  // Las relaciones guardadas antes de pedir sus portadas no las traen: se vuelven a pedir en una hora.
+  const sinPortadas = (m.relaciones?.length ?? 0) > 0 && m.relaciones!.every((r) => !r.portada);
+  const caduca = m.duracion === null || sinPortadas ? HORA_MS : DIA_MS;
+  if (m.actualizado === undefined || ahoraMs - m.actualizado > caduca) return true;
   return m.siguienteEn !== null && m.siguienteEn * 1000 <= ahoraMs;
 }

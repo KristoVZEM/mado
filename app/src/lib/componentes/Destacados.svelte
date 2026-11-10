@@ -79,6 +79,18 @@
     }
   });
 
+  /** Pasa sola a la siguiente cada 8 s y, tras la última, vuelve a la primera. Se detiene con el cursor encima, con el foco dentro, con el menú abierto o si el sistema pide menos movimiento. */
+  const SEGUNDOS_AUTO = 8;
+  let encima = $state(false);
+  let foco = $state(false);
+  $effect(() => {
+    // Leer `indice` aquí reinicia la cuenta cada vez que se cambia de serie, sea a mano o sola.
+    void indice;
+    if (reducido || items.length < 2 || encima || foco || menuAbierto) return;
+    const t = setTimeout(() => ir(1), SEGUNDOS_AUTO * 1000);
+    return () => clearTimeout(t);
+  });
+
   function ir(delta: number) {
     const n = items.length;
     if (n > 0) indice = (indice + delta + n) % n;
@@ -148,12 +160,14 @@
 
 {#if actual}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <section class="destacados" aria-roledescription="carrusel" aria-label="Destacados" onkeydown={tecla}>
+  <section class="destacados" aria-roledescription="carrusel" aria-label="Destacados" onkeydown={tecla} onmouseenter={() => (encima = true)} onmouseleave={() => (encima = false)} onfocusin={() => (foco = true)} onfocusout={() => (foco = false)}>
     <div class="fondos" aria-hidden="true">
       {#each items as it, i (it.destacado.aid)}
         {#if pintadas[it.destacado.aid]}
           {@const f = fondoDe(it)}
-          <img class="fondo" class:activo={i === indice} class:panoramico={f.panoramico} src={f.url} alt="" style:transition-duration={`${MS_FUNDIDO}ms`} />
+          {#if f.url}
+            <img class="fondo" class:activo={i === indice} class:panoramico={f.panoramico} src={f.url} alt="" style:transition-duration={`${MS_FUNDIDO}ms`} />
+          {/if}
         {/if}
       {/each}
       <div class="velo velo-lateral"></div>
@@ -162,8 +176,9 @@
     </div>
 
     {#if items.length > 1}
-      <button class="flecha izquierda" aria-label="Serie anterior" onclick={() => ir(-1)}>‹</button>
-      <button class="flecha derecha" aria-label="Serie siguiente" onclick={() => ir(1)}>›</button>
+      <!-- Las flechas son los dos laterales de la cabecera: invisibles hasta que el cursor pasa por encima. -->
+      <button class="flecha izquierda" aria-label="Serie anterior" onclick={() => ir(-1)}><span aria-hidden="true">‹</span></button>
+      <button class="flecha derecha" aria-label="Serie siguiente" onclick={() => ir(1)}><span aria-hidden="true">›</span></button>
     {/if}
 
     {#key indice}
@@ -307,7 +322,7 @@
   }
   .contenido {
     position: relative;
-    z-index: 1;
+    z-index: 3;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -426,26 +441,63 @@
     border-color: var(--boton-claro);
     backdrop-filter: none;
   }
+  /* Franja a cada lado, de arriba abajo: sin nada a la vista; al pasar el cursor se difumina el fondo y sale la flecha. */
   .flecha {
     position: absolute;
-    top: 50%;
+    top: 0;
+    bottom: 0;
     z-index: 2;
-    width: 32px;
-    min-height: 32px;
+    display: grid;
+    width: 112px;
+    min-height: 0;
     padding: 0;
-    border-radius: 50%;
-    background: rgb(10 10 10 / 0.6);
-    backdrop-filter: blur(8px);
-    border-color: rgb(255 255 255 / 0.25);
-    font-size: 1.2rem;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 2rem;
     line-height: 1;
-    transform: translateY(-50%);
+    align-items: center;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+  .flecha:hover:not(:disabled),
+  .flecha:focus-visible {
+    background: transparent;
+    opacity: 1;
+  }
+  /* El difuminado va en un pseudo-elemento para poder desvanecerlo hacia el centro con una máscara. */
+  .flecha::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: rgb(10 10 10 / 0.35);
+    backdrop-filter: blur(6px);
   }
   .izquierda {
-    left: 8px;
+    left: 0;
+    justify-items: start;
+    padding-left: 20px;
+  }
+  .izquierda::before {
+    mask-image: linear-gradient(to right, #000 30%, transparent);
   }
   .derecha {
-    right: 8px;
+    right: 0;
+    justify-items: end;
+    padding-right: 20px;
+  }
+  .derecha::before {
+    mask-image: linear-gradient(to left, #000 30%, transparent);
+  }
+  .flecha span {
+    text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flecha {
+      transition: none;
+    }
   }
   /* Las flechas estorban en ventanas estrechas. */
   @media (max-width: 640px) {

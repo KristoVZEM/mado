@@ -10,7 +10,7 @@ const FRAGMENTO = `fragment CamposMedia on Media {
   coverImage { large } bannerImage
   nextAiringEpisode { episode airingAt }
   studios(isMain: true) { nodes { name } }
-  relations { edges { relationType node { id type title { romaji } } } }
+  relations { edges { relationType node { id type title { romaji } coverImage { large } } } }
 }`;
 
 const TITULOS_POR_PETICION = 3;
@@ -35,6 +35,7 @@ export function parseMedia(raw: any): MediaAnilist | null {
       anilistId: ent(e.node.id)!,
       tipo: txt(e.relationType) ?? 'OTHER',
       titulo: txt(e.node.title?.romaji) ?? '',
+      portada: https(e.node.coverImage?.large),
     }));
   return {
     anilistId: id,
@@ -124,6 +125,20 @@ export async function agendaSemana(
     if (data?.Page?.pageInfo?.hasNextPage !== true) break;
   }
   return { medias: [...medias.values()], items };
+}
+
+const CONSULTA_POPULARES = `query ($n: Int) {
+  Page(page: 1, perPage: $n) {
+    media(type: ANIME, status: RELEASING, sort: POPULARITY_DESC, isAdult: false) { ...CamposMedia }
+  }
+}
+${FRAGMENTO}`;
+
+/** Las `n` obras que se están emitiendo ahora, de más a menos populares en AniList. */
+export async function popularesEnEmision(cliente: ClienteAnilist, n = 12): Promise<MediaAnilist[]> {
+  const data = await cliente.consultar<any>(CONSULTA_POPULARES, { n });
+  const lista = Array.isArray(data?.Page?.media) ? data.Page.media : [];
+  return lista.map(parseMedia).filter((m: MediaAnilist | null): m is MediaAnilist => m !== null);
 }
 
 /** Los datos de una obra que necesita el emparejador. */

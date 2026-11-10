@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ClienteAnilist } from './cliente.ts';
-import { agendaSemana, aCandidato, buscarCandidatos, consultaBuscar, parseMedia } from './consultas.ts';
+import { agendaSemana, aCandidato, buscarCandidatos, consultaBuscar, parseMedia, popularesEnEmision } from './consultas.ts';
 
 const crudo = (id: number, extra: Record<string, unknown> = {}) => ({
   id,
@@ -48,7 +48,7 @@ test('parseMedia normaliza los campos y descarta lo que no sirve', () => {
     banner: 'https://s4.anilist.co/b.jpg',
     siguienteEp: 5,
     siguienteEn: 1_800_000_000,
-    relaciones: [{ anilistId: 99, tipo: 'SEQUEL', titulo: 'Secuela' }],
+    relaciones: [{ anilistId: 99, tipo: 'SEQUEL', titulo: 'Secuela', portada: null }],
     sinonimos: ['Alias 10'],
     anio: 2023,
     duracion: 24,
@@ -164,4 +164,17 @@ test('aCandidato conserva los nombres, el año y los episodios', () => {
     anio: 2023,
     episodios: 12,
   });
+});
+
+test('popularesEnEmision pide n obras y descarta las inválidas', async () => {
+  let pedido: Record<string, unknown> = {};
+  const cliente: ClienteAnilist = {
+    consultar: (async (_q: string, v: Record<string, unknown>) => {
+      pedido = v;
+      return { Page: { media: [crudo(1), { id: 0 }, crudo(2, { isAdult: true }), crudo(3)] } };
+    }) as ClienteAnilist['consultar'],
+  };
+  const r = await popularesEnEmision(cliente, 5);
+  assert.deepEqual(pedido, { n: 5 });
+  assert.deepEqual(r.map((m) => m.anilistId), [1, 3]);
 });
