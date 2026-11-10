@@ -119,7 +119,7 @@
     padding: 0;
     border: 0;
     border-radius: var(--radio);
-    background: rgb(10 10 10 / 0.75);
+    background: rgb(var(--fondo-rgb) / 0.75);
     font-size: 2rem;
     opacity: 0;
     transition: opacity 0.15s;

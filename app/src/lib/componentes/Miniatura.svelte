@@ -56,7 +56,7 @@
   }
   :global(button:hover) .contorno,
   :global(button:focus-visible) .contorno {
-    box-shadow: inset 0 0 0 1px rgb(250 250 250 / 0.15);
+    box-shadow: inset 0 0 0 1px var(--borde);
   }
   .reproducir {
     position: absolute;

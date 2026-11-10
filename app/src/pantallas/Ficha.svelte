@@ -311,7 +311,7 @@
   }
 </script>
 
-<main class="pantalla ficha">
+<main class="pantalla ficha zona-oscura">
   {#if fondo}
     <div class="fondo" class:panoramico={fondo === urlFondo} aria-hidden="true">
       <img
@@ -782,8 +782,8 @@
   }
   .etiquetas li {
     padding: 2px 10px;
-    border-color: rgb(255 255 255 / 0.05);
-    background: rgb(255 255 255 / 0.05);
+    border-color: var(--borde);
+    background: var(--relleno);
   }
   .etiquetas li.mas {
     padding: 0 4px;
@@ -947,7 +947,7 @@
   .fila:hover .contorno,
   .fila:focus-visible .contorno,
   .episodio.actual .contorno {
-    box-shadow: inset 0 0 0 1px rgb(250 250 250 / 0.15);
+    box-shadow: inset 0 0 0 1px var(--borde);
   }
   .fila:focus-visible {
     outline: 2px solid var(--anillo);

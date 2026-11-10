@@ -82,7 +82,7 @@
     inset: 0 0 auto 0;
     height: 88px;
     z-index: 19;
-    background: linear-gradient(to bottom, rgb(10 10 10 / 0.7), transparent);
+    background: var(--velo-cabecera);
     pointer-events: none;
     transition: opacity 300ms;
   }
@@ -100,14 +100,14 @@
     align-items: center;
     gap: 4px;
     padding: 4px;
-    background: rgb(10 10 10 / 0.2);
+    background: var(--cabecera-fondo);
     backdrop-filter: blur(12px);
     border: 1px solid var(--borde);
     border-radius: 999px;
     transition: all 300ms;
   }
   .cabecera.desplazado {
-    background: rgb(10 10 10 / 0.6);
+    background: var(--cabecera-fondo-desplazada);
     backdrop-filter: blur(5px);
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   }
@@ -127,7 +127,7 @@
     margin-left: 6px;
   }
   .elemento:hover:not(:disabled) {
-    background: rgb(38 38 38 / 0.5);
+    background: var(--hover-cabecera);
     color: var(--texto);
   }
   .elemento[aria-current='page'] {

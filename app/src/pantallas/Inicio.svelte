@@ -8,6 +8,7 @@
   import Vacio from '../lib/componentes/Vacio.svelte';
   import TarjetaPoster from '../lib/componentes/TarjetaPoster.svelte';
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
+  import { parteOculta, type ParteInicio } from '../lib/apariencia.ts';
   import { entradasDe, textoUltimoVisto } from '../lib/biblioteca.ts';
   import { fraccionVista, idiomaGuardado, textoRestante } from '../lib/continuar.ts';
   import {
@@ -45,6 +46,9 @@
   let considerando = $state<EntradaBiblioteca[]>([]);
   let resumenes = $state<ResumenSerie[]>([]);
   let destacados = $state<ItemDestacado[]>([]);
+  // Partes que el usuario ocultó en Ajustes → Apariencia.
+  const oculta = (parte: ParteInicio) => parteOculta(ajustes.inicioOcultas, parte);
+  const verDestacados = $derived(destacados.length > 0 && !oculta('destacados'));
   const porAid = $derived(new Map(resumenes.map((r) => [r.aid, r])));
   /** Lo que sigues y tiene un episodio emitido sin ver. */
   const nuevos = $derived(conNuevoEpisodio(viendo, porAid));
@@ -186,10 +190,10 @@
   }
 </script>
 
-<main class="pantalla inicio" class:con-destacado={destacados.length > 0}>
+<main class="pantalla inicio" class:con-destacado={verDestacados}>
   <h1 class="solo-lectores">Inicio</h1>
 
-  {#if destacados.length > 0}
+  {#if verDestacados}
     <Destacados
       items={destacados}
       abriendo={abriendo !== null}
@@ -203,7 +207,7 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if cargando}<Esqueleto variante="poster" cantidad={8} />{/if}
 
-    {#if pendientes.length > 0}
+    {#if pendientes.length > 0 && !oculta('continuar')}
       <section aria-label="Continuar viendo">
         <FilaDesplazable etiqueta="Continuar viendo" titulo="Continuar viendo">
           {#each pendientes as p (p.aid)}
@@ -226,7 +230,7 @@
       </section>
     {/if}
 
-    {#if nuevos.length > 0}
+    {#if nuevos.length > 0 && !oculta('nuevos')}
       <section aria-label="Nuevos episodios">
         <FilaDesplazable etiqueta="Nuevos episodios" titulo="Nuevos episodios">
           {#each nuevos.slice(0, MAX_FILA) as e (e.aid)}
@@ -244,7 +248,7 @@
       </section>
     {/if}
 
-    {#if viendo.length > 0}
+    {#if viendo.length > 0 && !oculta('siguiendo')}
       <section aria-label="Siguiendo">
         <FilaDesplazable
           etiqueta="Siguiendo"
@@ -266,7 +270,7 @@
       </section>
     {/if}
 
-    {#if considerando.length > 0}
+    {#if considerando.length > 0 && !oculta('pendientes')}
       <section aria-label="Pendientes">
         <FilaDesplazable
           etiqueta="Pendientes"
@@ -282,7 +286,11 @@
       </section>
     {/if}
 
-    {#if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0 && considerando.length === 0}
+    {#if ajustes.inicioOcultas === 31}
+      <Vacio titulo="Inicio está vacío" texto="Ocultaste todas sus partes. Puedes volver a mostrarlas en Ajustes → Apariencia.">
+        <button onclick={() => irASeccion('ajustes')}>Ir a Ajustes</button>
+      </Vacio>
+    {:else if !cargando && !avisoDatos && !error && pendientes.length === 0 && viendo.length === 0 && considerando.length === 0}
       <Vacio titulo="Aquí aparecerá lo que veas" texto="Empieza por elegir una serie, o trae tu historial de Ukiku.">
         <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
         <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
@@ -343,7 +351,9 @@
     right: 6px;
     min-height: 0;
     padding: 0 6px;
-    background: rgb(0 0 0 / 0.7);
+    background: rgb(0 0 0 / 0.78);
+    /* Sobre la miniatura la ✕ es blanca en los dos temas. */
+    color: #fff;
     opacity: 0;
     transition: opacity 150ms;
   }

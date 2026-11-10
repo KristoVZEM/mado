@@ -23,6 +23,14 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("idioma_defecto", 0.0, 1.0),
     // Orden de la lista de episodios en la Ficha: 0 = ascendente, 1 = descendente.
     ("orden_episodios", 0.0, 1.0),
+    // Tema de la interfaz: 0 = como el sistema, 1 = claro, 2 = oscuro (ausente = oscuro).
+    ("tema", 0.0, 2.0),
+    // Color de acento: índice en la lista de la app (0 = el rosa de siempre).
+    ("acento", 0.0, 5.0),
+    // Tamaño de los pósters: 0 = pequeño, 1 = normal, 2 = grande.
+    ("tamano_posters", 0.0, 2.0),
+    // Partes de Inicio ocultas: máscara de bits (1 destacados, 2 continuar viendo, 4 nuevos episodios, 8 siguiendo, 16 pendientes).
+    ("inicio_ocultas", 0.0, 31.0),
 ];
 
 const PREFIJO_IDIOMA: &str = "idioma:";
@@ -124,6 +132,10 @@ mod pruebas {
             ("avisos_activos", "0", "1", "-1", "2"),
             ("idioma_defecto", "0", "1", "-1", "2"),
             ("orden_episodios", "0", "1", "-1", "2"),
+            ("tema", "0", "2", "-1", "3"),
+            ("acento", "0", "5", "-1", "6"),
+            ("tamano_posters", "0", "2", "-1", "3"),
+            ("inicio_ocultas", "0", "31", "-1", "32"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");

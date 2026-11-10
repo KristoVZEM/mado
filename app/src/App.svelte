@@ -17,6 +17,7 @@
   import { reintentarSiCambiaronLasReglas } from './lib/reglasEmparejado.ts';
   import { nav, irABusqueda } from './lib/navegacion.svelte.ts';
   import { iniciarAvisos } from './lib/avisosApp.ts';
+  import { iniciarApariencia } from './lib/aplicarApariencia.svelte.ts';
   import { repasarVinculosAlAbrir, sincronizarAlAbrir } from './lib/sync.svelte.ts';
 
   const dormir = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -24,6 +25,7 @@
   // Empareja las series con AniList en segundo plano, poco a poco y reanudándose en cada arranque.
   // Todo es opcional: cualquier fallo se queda en la consola y no afecta a la app.
   onMount(() => {
+    iniciarApariencia(); // dura lo que la app: no hace falta detenerla
     // Cerrar con la X: se retiene el cierre, se guarda lo pendiente (progreso, volumen) y se cierra.
     // `ejecutarAlCerrar` tiene tope de tiempo, así que la ventana nunca queda colgada.
     void getCurrentWindow()

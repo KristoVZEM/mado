@@ -160,7 +160,7 @@
 
 {#if actual}
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <section class="destacados" aria-roledescription="carrusel" aria-label="Destacados" onkeydown={tecla} onmouseenter={() => (encima = true)} onmouseleave={() => (encima = false)} onfocusin={() => (foco = true)} onfocusout={() => (foco = false)}>
+  <section class="destacados zona-oscura" aria-roledescription="carrusel" aria-label="Destacados" onkeydown={tecla} onmouseenter={() => (encima = true)} onmouseleave={() => (encima = false)} onfocusin={() => (foco = true)} onfocusout={() => (foco = false)}>
     <div class="fondos" aria-hidden="true">
       {#each items as it, i (it.destacado.aid)}
         {#if pintadas[it.destacado.aid]}
@@ -314,7 +314,7 @@
   }
   .velo-inferior {
     top: 33%;
-    background: linear-gradient(to top, #0a0a0a 8%, transparent);
+    background: linear-gradient(to top, rgb(var(--fondo-rgb)) 8%, transparent);
   }
   .velo-superior {
     bottom: 75%;

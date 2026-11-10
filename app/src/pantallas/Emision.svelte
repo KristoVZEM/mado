@@ -175,7 +175,7 @@
   {#if avisoRed}<p class="aviso">{avisoRed}</p>{/if}
 
   {#if proximo}
-    <section class="hoy" aria-label={proximo.estado === 1 ? 'Lo próximo de lo que sigues' : 'Lo próximo en salir'}>
+    <section class="hoy zona-oscura" aria-label={proximo.estado === 1 ? 'Lo próximo de lo que sigues' : 'Lo próximo en salir'}>
       {#if proximo.banner}<img class="fondo-hoy" src={proximo.banner} alt="" />{/if}
       <div class="velo-hoy"></div>
       <div class="contenido-hoy">
@@ -382,7 +382,7 @@
   }
   .tarjeta:hover:not(:disabled) .contorno,
   .tarjeta:focus-visible .contorno {
-    box-shadow: inset 0 0 0 1px rgb(250 250 250 / 0.15);
+    box-shadow: inset 0 0 0 1px var(--borde);
   }
   .inicial {
     color: var(--texto-suave);
@@ -395,9 +395,11 @@
     bottom: 8px;
     padding: 2px 8px;
     border-radius: 999px;
-    background: rgb(0 0 0 / 0.7);
+    background: rgb(0 0 0 / 0.78);
+    /* Sobre la imagen el texto es blanco en los dos temas. */
+    color: #fff;
     font-size: 0.8rem;
-    font-weight: 500;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
   /* «Sigues»: una etiqueta de estado, no un botón de acento. */
@@ -407,7 +409,8 @@
     right: 8px;
     padding: 2px 10px;
     border-radius: 999px;
-    background: rgb(0 0 0 / 0.7);
+    background: rgb(0 0 0 / 0.78);
+    color: #fff;
     font-size: 0.75rem;
     font-weight: 500;
   }

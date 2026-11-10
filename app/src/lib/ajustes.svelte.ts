@@ -1,4 +1,5 @@
 import { idiomaDefectoDe, LIMITES, numeroDeAjuste, ordenDescendenteDe, volumenInicial } from './ajustes.ts';
+import { acentoDe, inicioOcultasDe, tamanoPostersDe, temaDe, type TemaElegido } from './apariencia.ts';
 import { guardarAjuste, leerAjuste } from './datos.ts';
 import { SALTO_CORTO_S, SALTO_LARGO_S } from './saltos.ts';
 
@@ -10,6 +11,10 @@ export const ajustes = $state({
   saltoCorto: SALTO_CORTO_S,
   saltoLargo: SALTO_LARGO_S,
   velocidad: 1,
+  tema: 'oscuro' as TemaElegido,
+  acento: 0,
+  tamanoPosters: 1,
+  inicioOcultas: 0,
 });
 
 /** Guarda un ajuste sin esperar ni propagar fallos: los datos nunca bloquean la reproducción. */
@@ -49,13 +54,17 @@ async function leerSeguro(clave: string): Promise<string | null> {
 }
 
 async function cargar(): Promise<void> {
-  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios] = await Promise.all([
+  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas] = await Promise.all([
     leerSeguro('volumen'),
     leerSeguro('salto_corto'),
     leerSeguro('salto_largo'),
     leerSeguro('velocidad'),
     leerSeguro('idioma_defecto'),
     leerSeguro('orden_episodios'),
+    leerSeguro('tema'),
+    leerSeguro('acento'),
+    leerSeguro('tamano_posters'),
+    leerSeguro('inicio_ocultas'),
   ]);
   ajustes.idiomaDefecto = idiomaDefectoDe(idiomaDefecto);
   ajustes.ordenDescendente = ordenDescendenteDe(ordenEpisodios);
@@ -71,6 +80,10 @@ async function cargar(): Promise<void> {
   ajustes.saltoCorto = numeroDeAjuste(corto, SALTO_CORTO_S, ...LIMITES.saltoCorto);
   ajustes.saltoLargo = numeroDeAjuste(largo, SALTO_LARGO_S, ...LIMITES.saltoLargo);
   ajustes.velocidad = numeroDeAjuste(velocidad, 1, ...LIMITES.velocidad);
+  ajustes.tema = temaDe(tema);
+  ajustes.acento = acentoDe(acento);
+  ajustes.tamanoPosters = tamanoPostersDe(tamanoPosters);
+  ajustes.inicioOcultas = inicioOcultasDe(inicioOcultas);
 }
 
 let cargado: Promise<void> | null = null;

@@ -80,7 +80,7 @@
   }
   .menu :global(button:hover:not(:disabled)),
   .menu :global(button:focus-visible) {
-    background: rgb(255 255 255 / 0.08);
+    background: var(--relleno-hover);
   }
   .menu :global(.marca-menu) {
     width: 16px;

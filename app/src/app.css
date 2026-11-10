@@ -1,7 +1,33 @@
 :root {
+  --fuente: 'Zen Kaku Gothic New', system-ui, sans-serif;
+  /* El fondo de la página como «r g b», para degradados que se funden con él: rgb(var(--fondo-rgb) / 0.7). */
+  --fondo-rgb: 10 10 10;
+  /* El acento y el texto que va encima: el blanco da 3,2:1; este da 6:1. El acento lo cambia el ajuste. */
+  --acento: #ff4d6d;
+  --acento-hover: #ff6a85;
+  --sobre-acento: #0a0a0a;
+  /* Píldora flotante de la cabecera y el degradado que hay detrás. */
+  --cabecera-fondo: rgb(10 10 10 / 0.2);
+  --cabecera-fondo-desplazada: rgb(10 10 10 / 0.6);
+  --velo-cabecera: linear-gradient(to bottom, rgb(10 10 10 / 0.7), transparent);
+  --radio: 8px;
+  --radio-control: 8px;
+  --radio-grande: 14px;
+  /* Medidas de la interfaz: se retocan aquí. */
+  --margen: 48px;
+  --espacio: 16px;
+  --ancho-poster: 188px;
+  --ancho-captura: 360px;
+}
+
+/*
+ * Colores del tema oscuro. `.zona-oscura` los repite para las partes que van sobre una imagen (carrusel,
+ * cabeceras de la Ficha y de Emisión): ahí el texto es claro aunque la página esté en tema claro.
+ */
+:root,
+.zona-oscura {
   /* Los desplegables, las barras de desplazamiento y los controles nativos salen oscuros. */
   color-scheme: dark;
-  --fuente: 'Zen Kaku Gothic New', system-ui, sans-serif;
   /* Grises neutros y bordes translúcidos: el único color vivo es el acento. */
   --fondo: #0a0a0a;
   --superficie: #171717;
@@ -12,22 +38,47 @@
   --texto-suave: #a1a1a1;
   /* Anillo de foco gris (4,3:1 sobre el fondo), sin color. */
   --anillo: #8c8c8c;
-  --acento: #ff4d6d;
-  --acento-hover: #ff6a85;
-  /* Texto sobre el acento: el blanco da 3,2:1; este da 6:1. */
-  --sobre-acento: #0a0a0a;
   /* Botón principal: claro sobre el fondo oscuro, con texto oscuro. */
   --boton-claro: #e5e5e5;
   --boton-claro-texto: #171717;
   --boton-claro-hover: rgb(229 229 229 / 0.9);
-  --radio: 8px;
-  --radio-control: 8px;
-  --radio-grande: 14px;
-  /* Medidas de la interfaz: se retocan aquí. */
-  --margen: 48px;
-  --espacio: 16px;
-  --ancho-poster: 188px;
-  --ancho-captura: 360px;
+  /* Relleno translúcido de botones y casillas, y sus estados. */
+  --relleno: rgb(255 255 255 / 0.045);
+  --relleno-hover: rgb(255 255 255 / 0.075);
+  --relleno-activo: rgb(255 255 255 / 0.1);
+  /* Fondo de la opción con el cursor encima en la cabecera. */
+  --hover-cabecera: rgb(38 38 38 / 0.5);
+  --error: #ff8a8a;
+}
+
+.zona-oscura {
+  color: var(--texto);
+}
+
+/* Tema claro: solo cambian los valores; el acento lo pone el ajuste y es el mismo en los dos temas. */
+:root[data-tema='claro'] {
+  color-scheme: light;
+  --fondo: #fafafa;
+  --fondo-rgb: 250 250 250;
+  --superficie: #ffffff;
+  --superficie-2: #ebebeb;
+  --borde: rgb(0 0 0 / 0.1);
+  --borde-control: rgb(0 0 0 / 0.2);
+  --texto: #171717;
+  --texto-suave: #5c5c5c;
+  --anillo: #5c5c5c;
+  --boton-claro: #171717;
+  --boton-claro-texto: #fafafa;
+  --boton-claro-hover: rgb(23 23 23 / 0.88);
+  --relleno: rgb(0 0 0 / 0.04);
+  --relleno-hover: rgb(0 0 0 / 0.07);
+  --relleno-activo: rgb(0 0 0 / 0.1);
+  --hover-cabecera: rgb(0 0 0 / 0.06);
+  --error: #c62828;
+  /* Sobre un banner oscuro la píldora tiene que ser clara para que se lea el texto oscuro. */
+  --cabecera-fondo: rgb(250 250 250 / 0.82);
+  --cabecera-fondo-desplazada: rgb(250 250 250 / 0.92);
+  --velo-cabecera: none;
 }
 
 /* El fondo del documento es transparente: solo la pantalla del Reproductor deja ver el vídeo de mpv. */
@@ -94,7 +145,7 @@ button {
   padding: 6px 14px;
   border: 1px solid var(--borde-control);
   border-radius: var(--radio-control);
-  background: rgb(255 255 255 / 0.045);
+  background: var(--relleno);
   color: inherit;
   font-weight: 500;
   cursor: pointer;
@@ -102,11 +153,11 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: rgb(255 255 255 / 0.075);
+  background: var(--relleno-hover);
 }
 
 button:active:not(:disabled) {
-  background: rgb(255 255 255 / 0.1);
+  background: var(--relleno-activo);
 }
 
 button:disabled {
@@ -165,7 +216,7 @@ input:not([type]) {
   padding: 4px 10px;
   border: 1px solid var(--borde-control);
   border-radius: var(--radio-control);
-  background: rgb(255 255 255 / 0.045);
+  background: var(--relleno);
   color: inherit;
 }
 
@@ -181,7 +232,7 @@ option {
 }
 
 .error {
-  color: #ff8a8a;
+  color: var(--error);
 }
 
 /* Texto solo para lectores de pantalla (títulos de pantalla que ya señala el carril). */
