@@ -287,6 +287,8 @@ export const fijarVinculo = (
 
 export const vinculoConMedia = (aid: number) => invoke<VinculoConMedia | null>('vinculo_con_media', { aid });
 export const pendientesEmparejar = (limite: number) => invoke<PendienteEmparejar[]>('pendientes_emparejar', { limite });
+/** Hace pendientes de inmediato todos los vínculos `ninguno`; devuelve cuántos son. */
+export const reintentarNingunos = () => invoke<number>('reintentar_ningunos');
 
 /** Sustituye la agenda de `[desde, hasta)` (segundos) y guarda las obras que la acompañan. */
 export const guardarEmision = (desde: number, hasta: number, medias: MediaAnilist[], items: ItemEmision[]) =>

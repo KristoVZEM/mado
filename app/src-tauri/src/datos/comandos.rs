@@ -147,6 +147,12 @@ pub fn pendientes_emparejar(datos: State<'_, Datos>, limite: u32) -> Result<Vec<
     con(&datos, |c| anilist::pendientes_emparejar(c, ahora_ms(), limite.clamp(1, 100)))
 }
 
+/// Devuelve cuántos vínculos `ninguno` quedaron pendientes de reintento.
+#[tauri::command(async)]
+pub fn reintentar_ningunos(datos: State<'_, Datos>) -> Result<usize, String> {
+    con(&datos, anilist::reintentar_ningunos)
+}
+
 #[tauri::command(async)]
 pub fn guardar_emision(
     datos: State<'_, Datos>,

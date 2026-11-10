@@ -15,6 +15,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("anilist_client_id", 1.0, 2.0e9),
     // Versión de las reglas con que se repasaron los vínculos automáticos (0 = nunca).
     ("anilist_repaso_version", 0.0, 1000.0),
+    // Versión de las reglas de emparejado con que se reintentaron los vínculos `ninguno` (0 = nunca).
+    ("anilist_reglas_emparejado", 0.0, 1000.0),
     // Avisos de episodios nuevos: 1 o ausente = activos; 0 = desactivados.
     ("avisos_activos", 0.0, 1.0),
     // Idioma con el que arranca una serie sin idioma guardado: 0 = SUB, 1 = DUB.

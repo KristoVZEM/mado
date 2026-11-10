@@ -124,6 +124,7 @@ pub fn run() {
             datos::comandos::fijar_vinculo,
             datos::comandos::vinculo_con_media,
             datos::comandos::pendientes_emparejar,
+            datos::comandos::reintentar_ningunos,
             datos::comandos::vinculos_auto,
             datos::comandos::guardar_emision,
             datos::comandos::emision_entre,

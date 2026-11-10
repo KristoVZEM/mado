@@ -329,6 +329,13 @@ pub fn pendientes_emparejar(conn: &Connection, ahora: i64, limite: u32) -> Resul
     Ok(filas.collect::<Result<Vec<_>, _>>()?)
 }
 
+/// Hace pendientes de inmediato todos los vínculos `ninguno`, sin esperar a los 30 días: se usa cuando cambian
+/// las reglas de emparejado y lo que no se encontró antes podría encontrarse ahora. Los `auto` y `manual` no se
+/// tocan. Devuelve cuántos son.
+pub fn reintentar_ningunos(conn: &Connection) -> Resultado<usize> {
+    Ok(conn.execute("UPDATE anilist_vinculo SET actualizado = 0 WHERE origen = 'ninguno'", [])?)
+}
+
 const MAX_ITEMS_EMISION: usize = 2000;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -624,6 +631,32 @@ mod pruebas {
         let orden: Vec<(i64, u8)> = p.iter().map(|x| (x.aid, x.prioridad)).collect();
         assert_eq!(orden, vec![(3, 0), (2, 1), (1, 2), (5, 2)]);
         assert_eq!(pendientes_emparejar(&conn, ahora, 2).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn reintentar_ningunos_hace_pendientes_ya_los_ninguno_y_no_toca_el_resto() {
+        let conn = abrir_en_memoria().unwrap();
+        for aid in 1..=4 {
+            conn.execute("INSERT INTO anime VALUES (?1, ?2, ?2)", params![aid, format!("s{aid}")]).unwrap();
+        }
+        con_obra(&conn, 10);
+        let ahora = 100 * MES_MS;
+        let s = |aid: i64, slug: &'static str| Serie { aid, slug, titulo: slug };
+        fijar_vinculo(&conn, ahora - 1000, &s(1, "s1"), None, 0.1, "ninguno").unwrap(); // reciente: aún no tocaba
+        fijar_vinculo(&conn, ahora - 2000, &s(2, "s2"), None, 0.1, "ninguno").unwrap();
+        fijar_vinculo(&conn, ahora - 3000, &s(3, "s3"), Some(10), 0.9, "auto").unwrap();
+        fijar_vinculo(&conn, ahora - 4000, &s(4, "s4"), Some(10), 1.0, "manual").unwrap();
+        let antes: Vec<i64> = pendientes_emparejar(&conn, ahora, 10).unwrap().iter().map(|p| p.aid).collect();
+        assert!(antes.is_empty(), "con ninguno recientes no hay pendientes: {antes:?}");
+
+        assert_eq!(reintentar_ningunos(&conn).unwrap(), 2);
+        let despues: Vec<i64> = pendientes_emparejar(&conn, ahora, 10).unwrap().iter().map(|p| p.aid).collect();
+        assert_eq!(despues, vec![1, 2]);
+        for (aid, esperado) in [(3, ahora - 3000), (4, ahora - 4000)] {
+            let v = vinculo_con_media(&conn, aid).unwrap().unwrap().vinculo;
+            assert_eq!(v.actualizado, esperado, "el vínculo {aid} no se toca");
+        }
+        assert_eq!(reintentar_ningunos(&conn).unwrap(), 2, "repetirlo no rompe nada");
     }
 
     #[test]

@@ -12,8 +12,9 @@
   import { onMount } from 'svelte';
   import { ejecutarAlCerrar } from './lib/cierre.ts';
   import { asegurarVinculo } from './lib/anilistServicio.ts';
-  import { estadoDatos, pendientesEmparejar } from './lib/datos.ts';
+  import { estadoDatos, guardarAjuste, leerAjuste, pendientesEmparejar, reintentarNingunos } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
+  import { reintentarSiCambiaronLasReglas } from './lib/reglasEmparejado.ts';
   import { nav, irABusqueda } from './lib/navegacion.svelte.ts';
   import { iniciarAvisos } from './lib/avisosApp.ts';
   import { repasarVinculosAlAbrir, sincronizarAlAbrir } from './lib/sync.svelte.ts';
@@ -38,6 +39,12 @@
       try {
         await dormir(5000); // no competir con el arranque
         if (await estadoDatos()) return;
+        // Antes de pedir las pendientes: si las reglas cambiaron, los `ninguno` entran en esta misma pasada.
+        await reintentarSiCambiaronLasReglas({
+          version: async () => Number((await leerAjuste('anilist_reglas_emparejado')) ?? 0) || 0,
+          guardarVersion: (n) => guardarAjuste('anilist_reglas_emparejado', String(n)),
+          reintentarNingunos,
+        });
         await crearEmparejador({
           pendientes: pendientesEmparejar,
           emparejar: async (p) => {
