@@ -8,7 +8,6 @@
 <script lang="ts">
   import { onDestroy, onMount, untrack } from 'svelte';
   import { getCurrentWindow } from '@tauri-apps/api/window';
-  import { fuentes } from '../lib/fuentes.ts';
   import { mensajeDeError } from '../lib/errores.ts';
   import { abrir } from '../lib/navegacion.svelte.ts';
   import {
@@ -26,6 +25,7 @@
   import { cambiarIdioma } from '../lib/idioma.ts';
   import { VELOCIDADES, etiquetaVelocidad } from '../lib/velocidad.ts';
   import { estadoSiguiente } from '../lib/siguiente.ts';
+  import { resolverEpisodio } from '../lib/resolverEpisodio.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { completarSiTermino } from '../lib/completar.ts';
   import { fijarEstado, guardarProgreso, marcarVisto, progresoDe, seriesParaSync, type SerieRef } from '../lib/datos.ts';
@@ -103,7 +103,7 @@
   const irAlAnterior = () => irAEpisodio(anterior);
 
   $effect(() => {
-    if (proximo?.saltar) irAlSiguiente();
+    if (proximo?.saltar && ajustes.siguienteAuto) irAlSiguiente();
   });
 
   // Guarda mientras se reproduce (con límite) y marca visto al cruzar el umbral o al terminar.
@@ -137,7 +137,7 @@
   onMount(async () => {
     try {
       await asegurarAjustes();
-      const p = await fuentes.resolver(anime.slug, numero, idioma);
+      const p = await resolverEpisodio(anime.slug, numero, idioma);
       if (destruido) return;
       playable = p;
       // Retomar donde se dejó; si la base falla o no hay punto válido, se empieza en 0:00.
@@ -246,7 +246,7 @@
       const p = await cambiarIdioma({
         nuevo,
         posicion: reproductor.posicion,
-        resolver: (i) => fuentes.resolver(anime.slug, numero, i),
+        resolver: (i) => resolverEpisodio(anime.slug, numero, i),
         cargar,
       });
       if (destruido) return;
@@ -415,7 +415,7 @@
 
     {#if proximo?.visible && siguiente !== undefined}
       <button class="siguiente" class:alto={controlesVisibles} onclick={irAlSiguiente}>
-        <span class="relleno-siguiente" style:width="{proximo.progreso * 100}%"></span>
+        <span class="relleno-siguiente" style:width="{ajustes.siguienteAuto ? proximo.progreso * 100 : 0}%"></span>
         <span class="texto-siguiente">Siguiente episodio ({siguiente}) ▸</span>
       </button>
     {/if}

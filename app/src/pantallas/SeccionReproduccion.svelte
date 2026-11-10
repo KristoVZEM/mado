@@ -3,6 +3,8 @@
   import { ajustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { LIMITES } from '../lib/ajustes.ts';
   import { validarSalto } from '../lib/continuar.ts';
+  import { aplicarHwdec, aplicarRedimension } from '../lib/reproductor.svelte.ts';
+  import { HWDECS, REDIMENSIONES } from '../lib/reproduccion.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
 
   let corto = $state(String(ajustes.saltoCorto));
@@ -45,6 +47,28 @@
   function elegirIdiomaDefecto(v: string) {
     ajustes.idiomaDefecto = v === 'DUB' ? 'DUB' : 'SUB';
     guardarAjusteSilencioso('idioma_defecto', ajustes.idiomaDefecto === 'DUB' ? '1' : '0');
+  }
+
+  function elegirRedimension(v: string) {
+    ajustes.redimension = Number(v);
+    guardarAjusteSilencioso('redimension', v);
+    void aplicarRedimension();
+  }
+
+  function elegirHwdec(v: string) {
+    ajustes.hwdec = Number(v);
+    guardarAjusteSilencioso('hwdec', v);
+    void aplicarHwdec();
+  }
+
+  function cambiarSiguienteAuto(activo: boolean) {
+    ajustes.siguienteAuto = activo;
+    guardarAjusteSilencioso('siguiente_auto', activo ? '1' : '0');
+  }
+
+  function cambiarRecordarServidor(activo: boolean) {
+    ajustes.recordarServidor = activo;
+    guardarAjusteSilencioso('recordar_servidor', activo ? '1' : '0');
   }
 </script>
 
@@ -90,6 +114,30 @@
   <select id="idioma-defecto" value={ajustes.idiomaDefecto} onchange={(e) => elegirIdiomaDefecto(e.currentTarget.value)}>
     <option value="SUB">SUB</option>
     <option value="DUB">DUB</option>
+  </select>
+</FilaAjuste>
+
+<FilaAjuste id="siguiente-auto" titulo="Pasar al siguiente episodio solo" ayuda="Al acabar, salta al siguiente tras la cuenta atrás. Desactivado, solo con el botón.">
+  <input id="siguiente-auto" type="checkbox" checked={ajustes.siguienteAuto} onchange={(e) => cambiarSiguienteAuto(e.currentTarget.checked)} />
+</FilaAjuste>
+
+<FilaAjuste id="redimension" titulo="Tamaño del vídeo" ayuda="Cómo encaja el vídeo cuando la ventana no tiene su misma proporción.">
+  <select id="redimension" value={String(ajustes.redimension)} onchange={(e) => elegirRedimension(e.currentTarget.value)}>
+    {#each REDIMENSIONES as r, i (r.nombre)}<option value={String(i)}>{r.nombre}</option>{/each}
+  </select>
+</FilaAjuste>
+
+<FilaAjuste
+  id="recordar-servidor"
+  titulo="Recordar el último servidor"
+  ayuda="Prueba primero el servidor del último episodio que viste. Si falla, sigue con los demás como siempre."
+>
+  <input id="recordar-servidor" type="checkbox" checked={ajustes.recordarServidor} onchange={(e) => cambiarRecordarServidor(e.currentTarget.checked)} />
+</FilaAjuste>
+
+<FilaAjuste id="hwdec" titulo="Decodificación por hardware" ayuda="Usa la tarjeta gráfica para el vídeo. Si ves cortes o colores raros, prueba el modo compatible o usa el procesador. Vale desde el siguiente episodio.">
+  <select id="hwdec" value={String(ajustes.hwdec)} onchange={(e) => elegirHwdec(e.currentTarget.value)}>
+    {#each HWDECS as h, i (h.valor)}<option value={String(i)}>{h.nombre}</option>{/each}
   </select>
 </FilaAjuste>
 

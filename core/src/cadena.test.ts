@@ -77,3 +77,38 @@ test('el Playable devuelto dice qué servidor ganó', async () => {
   assert.equal(r.playable.servidor, 'B');
   assert.equal(r.playable.url, 'b');
 });
+
+test('con un servidor preferido, sus embeds se prueban antes que el resto', async () => {
+  const todo: ResolverServidor = (e) => playable(e.server);
+  const r = await resolverPrimero([e1, e2], [todo], 'UA', 'B');
+  assert.equal(r.playable.url, 'B');
+  assert.equal(r.embed, e2);
+});
+
+test('si el servidor preferido falla, la cadena sigue con el resto en su orden de siempre', async () => {
+  const noB: ResolverServidor = (e) => {
+    if (e.server === 'B') throw new SinRed('caído');
+    return playable(e.server);
+  };
+  const r = await resolverPrimero([e1, e2], [noB], 'UA', 'B');
+  assert.equal(r.playable.url, 'A');
+});
+
+test('un servidor preferido que no está entre los embeds no cambia nada', async () => {
+  const todo: ResolverServidor = (e) => playable(e.server);
+  assert.equal((await resolverPrimero([e1, e2], [todo], 'UA', 'Z')).playable.url, 'A');
+  assert.equal((await resolverPrimero([e1, e2], [todo], 'UA', undefined)).playable.url, 'A');
+});
+
+test('el preferido no se prueba dos veces', async () => {
+  let llamadas = 0;
+  const roto: ResolverServidor = (e) => {
+    if (e.server === 'B') {
+      llamadas++;
+      throw new SinRed('caído');
+    }
+    return null;
+  };
+  await assert.rejects(resolverPrimero([e1, e2], [roto], 'UA', 'B'), SinServidor);
+  assert.equal(llamadas, 1);
+});

@@ -31,7 +31,24 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("tamano_posters", 0.0, 2.0),
     // Partes de Inicio ocultas: máscara de bits (1 destacados, 2 continuar viendo, 4 nuevos episodios, 8 siguiendo, 16 pendientes).
     ("inicio_ocultas", 0.0, 31.0),
+    // Ajuste del vídeo a la ventana: 0 = ajustar (barras), 1 = llenar (recorta), 2 = estirar.
+    ("redimension", 0.0, 2.0),
+    // Pasar solo al siguiente episodio al acabar: 1 o ausente = sí; 0 = solo con el botón.
+    ("siguiente_auto", 0.0, 1.0),
+    // Probar primero el servidor del último episodio que se vio: 0 o ausente = no.
+    ("recordar_servidor", 0.0, 1.0),
+    // Decodificación por hardware: 0 = automática, 1 = automática con copia (más compatible), 2 = desactivada.
+    ("hwdec", 0.0, 2.0),
 ];
+
+/// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`, `Voe`…); texto corto sin símbolos raros.
+const CLAVE_SERVIDOR: &str = "servidor_ultimo";
+
+fn servidor_valido(valor: &str) -> bool {
+    !valor.is_empty()
+        && valor.len() <= 32
+        && valor.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '_' | '.' | '-'))
+}
 
 const PREFIJO_IDIOMA: &str = "idioma:";
 
@@ -58,6 +75,13 @@ pub fn validar(clave: &str, valor: &str) -> Resultado<()> {
         }
         return Ok(());
     }
+    if clave == CLAVE_SERVIDOR {
+        return if servidor_valido(valor) {
+            Ok(())
+        } else {
+            invalido("servidor_ultimo: de 1 a 32 letras, cifras, espacios, guiones o puntos")
+        };
+    }
     if aid_de_idioma(clave).is_some() {
         return if valor == "SUB" || valor == "DUB" {
             Ok(())
@@ -70,7 +94,7 @@ pub fn validar(clave: &str, valor: &str) -> Resultado<()> {
 
 /// Valida solo la clave (para leer): acepta lo mismo que `validar` con un valor correcto.
 fn validar_clave(clave: &str) -> Resultado<()> {
-    if NUMERICOS.iter().any(|(c, _, _)| *c == clave) || aid_de_idioma(clave).is_some() {
+    if NUMERICOS.iter().any(|(c, _, _)| *c == clave) || clave == CLAVE_SERVIDOR || aid_de_idioma(clave).is_some() {
         Ok(())
     } else {
         invalido(format!("ajuste desconocido: {clave}"))
@@ -136,6 +160,10 @@ mod pruebas {
             ("acento", "0", "5", "-1", "6"),
             ("tamano_posters", "0", "2", "-1", "3"),
             ("inicio_ocultas", "0", "31", "-1", "32"),
+            ("redimension", "0", "2", "-1", "3"),
+            ("siguiente_auto", "0", "1", "-1", "2"),
+            ("recordar_servidor", "0", "1", "-1", "2"),
+            ("hwdec", "0", "2", "-1", "3"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");
@@ -143,6 +171,22 @@ mod pruebas {
             assert!(validar(clave, bajo).is_err(), "{clave} rechaza {bajo}");
             assert!(validar(clave, alto).is_err(), "{clave} rechaza {alto}");
         }
+    }
+
+    #[test]
+    fn el_ultimo_servidor_es_texto_corto_y_sin_simbolos() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE ajustes (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);").unwrap();
+        for bueno in ["HLS", "MP4Upload", "Voe", "Mi servidor 2", "a.b-c_d"] {
+            assert!(guardar(&conn, "servidor_ultimo", bueno).is_ok(), "acepta {bueno:?}");
+        }
+        assert_eq!(leer(&conn, "servidor_ultimo").unwrap(), Some("a.b-c_d".to_string()));
+        let largo = "x".repeat(33);
+        for malo in ["", "   x
+", "a/b", "<b>", "'; DROP TABLE ajustes;--", largo.as_str()] {
+            assert!(guardar(&conn, "servidor_ultimo", malo).is_err(), "rechaza {malo:?}");
+        }
+        assert_eq!(leer(&conn, "servidor_ultimo").unwrap(), Some("a.b-c_d".to_string()), "lo rechazado no se guarda");
     }
 
     #[test]

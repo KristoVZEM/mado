@@ -1,6 +1,7 @@
 import { idiomaDefectoDe, LIMITES, numeroDeAjuste, ordenDescendenteDe, volumenInicial } from './ajustes.ts';
 import { acentoDe, inicioOcultasDe, tamanoPostersDe, temaDe, type TemaElegido } from './apariencia.ts';
 import { guardarAjuste, leerAjuste } from './datos.ts';
+import { hwdecDe, recordarServidorDe, redimensionDe, siguienteAutoDe } from './reproduccion.ts';
 import { SALTO_CORTO_S, SALTO_LARGO_S } from './saltos.ts';
 
 /** Ajustes en memoria, con los valores por defecto hasta que `asegurarAjustes` los lee de la base. */
@@ -15,6 +16,12 @@ export const ajustes = $state({
   acento: 0,
   tamanoPosters: 1,
   inicioOcultas: 0,
+  redimension: 0,
+  hwdec: 0,
+  siguienteAuto: true,
+  recordarServidor: false,
+  /** Servidor con el que sonó el último episodio; solo se usa con `recordarServidor`. */
+  servidorUltimo: '',
 });
 
 /** Guarda un ajuste sin esperar ni propagar fallos: los datos nunca bloquean la reproducción. */
@@ -54,7 +61,7 @@ async function leerSeguro(clave: string): Promise<string | null> {
 }
 
 async function cargar(): Promise<void> {
-  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas] = await Promise.all([
+  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo] = await Promise.all([
     leerSeguro('volumen'),
     leerSeguro('salto_corto'),
     leerSeguro('salto_largo'),
@@ -65,6 +72,11 @@ async function cargar(): Promise<void> {
     leerSeguro('acento'),
     leerSeguro('tamano_posters'),
     leerSeguro('inicio_ocultas'),
+    leerSeguro('redimension'),
+    leerSeguro('hwdec'),
+    leerSeguro('siguiente_auto'),
+    leerSeguro('recordar_servidor'),
+    leerSeguro('servidor_ultimo'),
   ]);
   ajustes.idiomaDefecto = idiomaDefectoDe(idiomaDefecto);
   ajustes.ordenDescendente = ordenDescendenteDe(ordenEpisodios);
@@ -84,6 +96,11 @@ async function cargar(): Promise<void> {
   ajustes.acento = acentoDe(acento);
   ajustes.tamanoPosters = tamanoPostersDe(tamanoPosters);
   ajustes.inicioOcultas = inicioOcultasDe(inicioOcultas);
+  ajustes.redimension = redimensionDe(redimension);
+  ajustes.hwdec = hwdecDe(hwdec);
+  ajustes.siguienteAuto = siguienteAutoDe(siguienteAuto);
+  ajustes.recordarServidor = recordarServidorDe(recordarServidor);
+  ajustes.servidorUltimo = servidorUltimo?.trim() ?? '';
 }
 
 let cargado: Promise<void> | null = null;

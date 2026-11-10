@@ -46,9 +46,10 @@ export function crearFuentes(opts: OpcionesFuentes = {}) {
     buscar: (query: string) => buscar(http, query),
     catalogo: (opciones?: OpcionesCatalogo) => catalogo(http, opciones),
     episodios: (slug: string) => episodios(http, slug),
-    async resolver(slug: string, n: number, idioma: Idioma = 'SUB'): Promise<Playable> {
+    /** `preferido`: el `servidor` de un Playable anterior, para probarlo primero. */
+    async resolver(slug: string, n: number, idioma: Idioma = 'SUB', preferido?: string): Promise<Playable> {
       const detalle = await episodio(http, slug, n);
-      const { playable } = await resolverPrimero(detalle.embeds[idioma] ?? [], resolvers, http.userAgent);
+      const { playable } = await resolverPrimero(detalle.embeds[idioma] ?? [], resolvers, http.userAgent, preferido);
       return playable;
     },
   };

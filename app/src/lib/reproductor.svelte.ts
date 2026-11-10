@@ -15,6 +15,7 @@ import { argumentosLoadfile } from './idioma.ts';
 import { validarUrlDeStream } from './url.ts';
 import { VOLUMEN_PASO, limitarVolumen } from './volumen.ts';
 import { esFalloDeReproduccion } from './finArchivo.ts';
+import { HWDECS, REDIMENSIONES } from './reproduccion.ts';
 import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from './ajustes.svelte.ts';
 
 const OBSERVADAS = [
@@ -51,10 +52,11 @@ let mpvCreado = false;
 function iniciarMpv(): Promise<void> {
   iniciado ??= (async () => {
     if (!mpvCreado) {
+      await asegurarAjustes(); // el hwdec elegido hay que saberlo antes de crear mpv
       await init({
         initialOptions: {
           vo: 'gpu-next',
-          hwdec: 'auto-safe',
+          hwdec: (HWDECS[ajustes.hwdec] ?? HWDECS[0]).valor,
           'keep-open': 'yes',
           'force-window': 'yes',
           ytdl: 'no',
@@ -62,10 +64,10 @@ function iniciarMpv(): Promise<void> {
         observedProperties: OBSERVADAS,
       });
       mpvCreado = true;
-      await asegurarAjustes();
       reproductor.volumen = ajustes.volumen;
       await setProperty('volume', reproductor.volumen);
       await setProperty('speed', ajustes.velocidad);
+      await aplicarRedimension();
     }
     await observeProperties(OBSERVADAS, ({ name, data }) => {
       if (name === 'pause') reproductor.pausa = Boolean(data);
@@ -84,6 +86,31 @@ function iniciarMpv(): Promise<void> {
     throw e;
   });
   return iniciado;
+}
+
+/**
+ * Pone en mpv la redimensión elegida en Ajustes. Si mpv todavía no se creó no hace nada: se aplicará al crearlo.
+ * Nunca lanza: un fallo aquí no debe romper el ajuste ni la reproducción.
+ */
+export async function aplicarRedimension(): Promise<void> {
+  if (!mpvCreado) return;
+  const r = REDIMENSIONES[ajustes.redimension] ?? REDIMENSIONES[0];
+  try {
+    await setProperty('keepaspect', r.mantenerProporcion);
+    await setProperty('panscan', r.panscan);
+  } catch (e) {
+    console.error('no se pudo aplicar la redimensión', e);
+  }
+}
+
+/** Cambia la decodificación por hardware de mpv; vale desde el siguiente episodio. Nunca lanza. */
+export async function aplicarHwdec(): Promise<void> {
+  if (!mpvCreado) return;
+  try {
+    await setProperty('hwdec', (HWDECS[ajustes.hwdec] ?? HWDECS[0]).valor);
+  } catch (e) {
+    console.error('no se pudo cambiar la decodificación', e);
+  }
 }
 
 /**
