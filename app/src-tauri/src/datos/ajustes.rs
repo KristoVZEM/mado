@@ -43,10 +43,25 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("recordar_servidor", 0.0, 1.0),
     // Decodificación por hardware: 0 = automática, 1 = automática con copia (más compatible), 2 = desactivada.
     ("hwdec", 0.0, 2.0),
+    // Respaldo automático de la base: 0 = nunca, 1 = cada día, 2 = cada 7 días, 3 = cada 30 días.
+    ("auto_respaldo", 0.0, 3.0),
+    // Cuándo se hizo el último respaldo automático (milisegundos desde 1970; 0 = nunca).
+    ("respaldo_ultimo", 0.0, 9.0e15),
+    // Espera máxima de una petición a la fuente: posición en la lista de la app (10, 15, 30 o 60 s); ausente = 15 s.
+    ("espera_conexion", 0.0, 3.0),
 ];
 
 /// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`, `Voe`…); texto corto sin símbolos raros.
 const CLAVE_SERVIDOR: &str = "servidor_ultimo";
+
+/// Carpeta elegida para las copias automáticas; vacía = la de por defecto.
+const CLAVE_CARPETA_RESPALDOS: &str = "carpeta_respaldos";
+
+/// Vacía, o una ruta absoluta de hasta 1024 caracteres sin caracteres de control.
+fn carpeta_valida(valor: &str) -> bool {
+    valor.is_empty()
+        || (valor.chars().count() <= 1024 && !valor.chars().any(char::is_control) && std::path::Path::new(valor).is_absolute())
+}
 
 fn servidor_valido(valor: &str) -> bool {
     !valor.is_empty()
@@ -86,6 +101,13 @@ pub fn validar(clave: &str, valor: &str) -> Resultado<()> {
             invalido("servidor_ultimo: de 1 a 32 letras, cifras, espacios, guiones o puntos")
         };
     }
+    if clave == CLAVE_CARPETA_RESPALDOS {
+        return if carpeta_valida(valor) {
+            Ok(())
+        } else {
+            invalido("carpeta_respaldos: debe ser una ruta absoluta")
+        };
+    }
     if aid_de_idioma(clave).is_some() {
         return if valor == "SUB" || valor == "DUB" {
             Ok(())
@@ -98,7 +120,10 @@ pub fn validar(clave: &str, valor: &str) -> Resultado<()> {
 
 /// Valida solo la clave (para leer): acepta lo mismo que `validar` con un valor correcto.
 fn validar_clave(clave: &str) -> Resultado<()> {
-    if NUMERICOS.iter().any(|(c, _, _)| *c == clave) || clave == CLAVE_SERVIDOR || aid_de_idioma(clave).is_some() {
+    if NUMERICOS.iter().any(|(c, _, _)| *c == clave) || clave == CLAVE_SERVIDOR
+        || clave == CLAVE_CARPETA_RESPALDOS
+        || aid_de_idioma(clave).is_some()
+    {
         Ok(())
     } else {
         invalido(format!("ajuste desconocido: {clave}"))
@@ -170,6 +195,9 @@ mod pruebas {
             ("siguiente_auto", "0", "1", "-1", "2"),
             ("recordar_servidor", "0", "1", "-1", "2"),
             ("hwdec", "0", "2", "-1", "3"),
+            ("auto_respaldo", "0", "3", "-1", "4"),
+            ("respaldo_ultimo", "0", "9000000000000000", "-1", "9000000000000001"),
+            ("espera_conexion", "0", "3", "-1", "4"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");
@@ -177,6 +205,22 @@ mod pruebas {
             assert!(validar(clave, bajo).is_err(), "{clave} rechaza {bajo}");
             assert!(validar(clave, alto).is_err(), "{clave} rechaza {alto}");
         }
+    }
+
+    #[test]
+    fn la_carpeta_de_respaldos_es_una_ruta_absoluta_o_vacia() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("CREATE TABLE ajustes (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);").unwrap();
+        for buena in ["", r"C:\Copias", "D:/Mis copias/ukiku", r"\\servidor\recurso\copias"] {
+            assert!(guardar(&conn, "carpeta_respaldos", buena).is_ok(), "acepta {buena:?}");
+        }
+        let larga = format!(r"C:\{}", "a".repeat(1100));
+        let con_salto = "C:\\a\nb";
+        let con_nul = "C:\\a\0b";
+        for mala in ["copias", r"..\copias", con_salto, con_nul, larga.as_str()] {
+            assert!(guardar(&conn, "carpeta_respaldos", mala).is_err(), "rechaza {mala:?}");
+        }
+        assert_eq!(leer(&conn, "carpeta_respaldos").unwrap(), Some(r"\\servidor\recurso\copias".to_string()));
     }
 
     #[test]

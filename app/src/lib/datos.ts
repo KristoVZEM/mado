@@ -339,6 +339,17 @@ export interface CandidataAviso {
 }
 export const avisosCandidatas = (incluirFavoritas: boolean) =>
   invoke<CandidataAviso[]>('avisos_candidatas', { incluirFavoritas });
+/** Exporta la base a `ruta` (absoluta, terminada en `.db`). */
+export const exportarCopia = (ruta: string) => invoke<void>('exportar_copia', { ruta });
+/** Crea el respaldo automático del día `etiqueta` (`AAAA-MM-DD`) y devuelve su ruta. */
+export const crearRespaldo = (etiqueta: string) => invoke<string>('crear_respaldo', { etiqueta });
+/** Carpeta de las copias automáticas: la elegida por el usuario o la de por defecto. */
+export const carpetaRespaldos = () => invoke<string>('carpeta_respaldos');
+/** Sustituye todos los datos por los de la copia `ruta`; antes guarda los actuales. Devuelve la ruta de esa copia previa. */
+export const restaurarCopia = (ruta: string) => invoke<string>('restaurar_copia', { ruta });
+/** Borra la caché de logos y fondos de TMDB; devuelve cuántas obras había. */
+export const limpiarCacheTmdb = () => invoke<number>('limpiar_cache_tmdb');
+
 export const avisosGuardar = (items: { aid: number; ultimo: number }[]) => invoke<void>('avisos_guardar', { items });
 
 /** Lo guardado de TMDB para una obra: rutas de fondo y logo. `tmdbId` es `null` si se buscó y no se encontró. */

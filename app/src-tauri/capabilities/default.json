@@ -10,6 +10,7 @@
     "core:window:allow-destroy",
     "libmpv:default",
     "dialog:allow-open",
+    "dialog:allow-save",
     "notification:default",
     {
       "identifier": "http:default",

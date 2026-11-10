@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import FilaAjuste from '../lib/componentes/FilaAjuste.svelte';
   import { guardarAjuste, leerAjuste } from '../lib/datos.ts';
   import {
     cancelarVistaPrevia,
@@ -44,15 +45,21 @@
   const fecha = (ms: number) => new Date(ms).toLocaleString('es');
 </script>
 
-<h3>Cuenta de AniList</h3>
+<h3 class="grupo">AniList</h3>
 
 {#if sync.cuenta}
-  <p>
-    Conectada como <strong>{sync.cuenta.nombre}</strong>.
-    {#if sync.cuenta.ultimaSync !== null}Última sincronización: {fecha(sync.cuenta.ultimaSync)}.{:else}Aún no sincronizaste.{/if}
-  </p>
+  <FilaAjuste
+    id="anilist-sync"
+    titulo="Conectada como {sync.cuenta.nombre}"
+    ayuda={sync.cuenta.ultimaSync !== null ? `Última sincronización: ${fecha(sync.cuenta.ultimaSync)}.` : 'Aún no sincronizaste.'}
+  >
+    {#if sync.fase !== 'vista-previa'}
+      <button id="anilist-sync" onclick={sincronizarAhora} disabled={ocupado}>Sincronizar ahora</button>
+      <button onclick={desconectar} disabled={ocupado}>Desconectar</button>
+    {/if}
+  </FilaAjuste>
   {#if sync.fase === 'vista-previa' && sync.plan}
-    <div class="vista-previa" role="group" aria-label="Vista previa de la primera sincronización">
+    <div class="confirmar" role="group" aria-label="Vista previa de la primera sincronización">
       <p>Esto es lo que va a pasar. Lo que se suba a AniList no se puede deshacer.</p>
       <ul>
         <li>Se subirán <strong>{sync.plan.subir.length}</strong> series a AniList.</li>
@@ -62,43 +69,73 @@
           hay fecha local, gana AniList).
         </li>
       </ul>
-      <div class="acciones">
-        <button onclick={confirmarVistaPrevia} disabled={ocupado}>Sincronizar</button>
+      <div class="acciones-confirmar">
+        <button class="principal" onclick={confirmarVistaPrevia} disabled={ocupado}>Sincronizar</button>
         <button onclick={cancelarVistaPrevia} disabled={ocupado}>Cancelar</button>
       </div>
     </div>
-  {:else}
-    <div class="acciones">
-      <button onclick={sincronizarAhora} disabled={ocupado}>Sincronizar ahora</button>
-      <button onclick={desconectar} disabled={ocupado}>Desconectar</button>
-    </div>
   {/if}
 {:else}
-  <ol>
-    <li>
-      Registra una app en AniList (Settings → Developer) con la URL de redirección
-      <code>https://anilist.co/api/v2/oauth/pin</code> y escribe aquí su Client ID.
-    </li>
-    <li>Copia el enlace, ábrelo en tu navegador y autoriza. AniList te mostrará un token.</li>
-    <li>Pega el token y pulsa Conectar. Se guarda en el almacén de credenciales de Windows.</li>
-  </ol>
-  <label>
-    Client ID
-    <input bind:value={clientId} inputmode="numeric" aria-invalid={clientId !== '' && !clientIdOk} />
-  </label>
-  <div class="acciones">
-    <button onclick={copiarEnlace} disabled={!clientIdOk}>Copiar enlace de autorización</button>
-    {#if copiado}<span role="status">Enlace copiado.</span>{/if}
-  </div>
-  <label>
-    Token
-    <input bind:value={token} type="password" autocomplete="off" spellcheck="false" />
-  </label>
-  <div class="acciones">
-    <button onclick={pulsarConectar} disabled={ocupado || token.trim() === ''}>Conectar</button>
-  </div>
+  <FilaAjuste id="anilist-estado" titulo="Cuenta sin conectar" ayuda="Conecta tu cuenta para sincronizar tu lista con la de AniList.">
+    <details class="como">
+      <summary>Cómo conectarla</summary>
+      <ol>
+        <li>
+          Registra una app en AniList (Settings → Developer) con la URL de redirección
+          <code>https://anilist.co/api/v2/oauth/pin</code> y escribe aquí su Client ID.
+        </li>
+        <li>Copia el enlace, ábrelo en tu navegador y autoriza. AniList te mostrará un token.</li>
+        <li>Pega el token y pulsa Conectar. Se guarda en el almacén de credenciales de Windows.</li>
+      </ol>
+    </details>
+  </FilaAjuste>
+  <FilaAjuste id="anilist-client" titulo="Client ID" ayuda="El número de tu app registrada en AniList.">
+    <input id="anilist-client" class="campo" bind:value={clientId} inputmode="numeric" aria-invalid={clientId !== '' && !clientIdOk} />
+  </FilaAjuste>
+  <FilaAjuste id="anilist-enlace" titulo="Enlace de autorización" ayuda="Ábrelo en el navegador y autoriza la app.">
+    {#if copiado}<span role="status" class="copiado">Enlace copiado.</span>{/if}
+    <button id="anilist-enlace" onclick={copiarEnlace} disabled={!clientIdOk}>Copiar enlace</button>
+  </FilaAjuste>
+  <FilaAjuste id="anilist-token" titulo="Token" ayuda="El que te muestra AniList tras autorizar.">
+    <input id="anilist-token" class="campo" bind:value={token} type="password" autocomplete="off" spellcheck="false" />
+    <button class="principal" onclick={pulsarConectar} disabled={ocupado || token.trim() === ''}>Conectar</button>
+  </FilaAjuste>
 {/if}
 
 {#if sync.mensaje}
-  <p role={sync.fase === 'error' ? 'alert' : 'status'} class:error={sync.fase === 'error'}>{sync.mensaje}</p>
+  <p class="mensaje" role={sync.fase === 'error' ? 'alert' : 'status'} class:error={sync.fase === 'error'}>{sync.mensaje}</p>
 {/if}
+
+<style>
+  .campo {
+    width: 200px;
+  }
+  .copiado {
+    color: var(--texto-suave);
+    font-size: 0.875rem;
+  }
+  .como {
+    color: var(--texto-suave);
+    font-size: 0.875rem;
+  }
+  .como summary {
+    cursor: pointer;
+  }
+  .como ol {
+    max-width: 52ch;
+    margin: 8px 0 0;
+    padding-left: 20px;
+  }
+  .confirmar ul {
+    margin: 0 0 12px;
+    padding-left: 20px;
+  }
+  .acciones-confirmar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mensaje {
+    margin: 12px 0 0;
+  }
+</style>

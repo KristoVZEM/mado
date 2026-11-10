@@ -8,12 +8,13 @@ use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
 use super::{ajustes, Error, Resultado};
 use super::biblioteca::{self, Biblioteca};
+use super::respaldo;
 use super::sync;
 use rusqlite::Connection;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 /// Estado de Tauri: la conexión, o el motivo por el que no se pudo abrir (p. ej. base más nueva).
 pub struct Datos(pub Mutex<Result<Connection, String>>);
@@ -342,4 +343,65 @@ mod pruebas {
         assert!(!texto.contains("alguien") && !texto.contains("ukiku.db"), "{texto}");
         assert!(texto.contains("disco"), "{texto}");
     }
+}
+
+/// Carpeta de datos locales de la app, donde viven la base y los respaldos.
+fn carpeta_de_datos(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path().app_local_data_dir().map_err(|e| {
+        eprintln!("[datos] {e}");
+        "No se encontró la carpeta de datos de la app.".to_string()
+    })
+}
+
+/// Exporta la base al archivo elegido por el usuario (ruta absoluta terminada en `.db`).
+#[tauri::command(async)]
+pub fn exportar_copia(app: AppHandle, datos: State<'_, Datos>, ruta: String) -> Result<(), String> {
+    let base = carpeta_de_datos(&app)?.join("ukiku.db");
+    con(&datos, |c| respaldo::exportar(c, Path::new(&ruta), &base))
+}
+
+/// Carpeta de los respaldos automáticos: la que eligió el usuario o, si no hay, `copias` junto a la base.
+fn carpeta_de_respaldos(conn: &Connection, por_defecto: &Path) -> Resultado<PathBuf> {
+    Ok(match ajustes::leer(conn, "carpeta_respaldos")? {
+        Some(ruta) if !ruta.is_empty() => PathBuf::from(ruta),
+        _ => por_defecto.to_path_buf(),
+    })
+}
+
+/// Crea el respaldo automático del día `etiqueta` (`AAAA-MM-DD`) y poda los antiguos. Devuelve la ruta del archivo.
+#[tauri::command(async)]
+pub fn crear_respaldo(app: AppHandle, datos: State<'_, Datos>, etiqueta: String) -> Result<String, String> {
+    let por_defecto = carpeta_de_datos(&app)?.join("copias");
+    con(&datos, |c| {
+        let carpeta = carpeta_de_respaldos(c, &por_defecto)?;
+        respaldo::crear_respaldo(c, &carpeta, &etiqueta)
+    })
+    .map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Carpeta donde se guardan los respaldos automáticos (la elegida o la de por defecto).
+#[tauri::command(async)]
+pub fn carpeta_respaldos(app: AppHandle, datos: State<'_, Datos>) -> Result<String, String> {
+    let por_defecto = carpeta_de_datos(&app)?.join("copias");
+    con(&datos, |c| carpeta_de_respaldos(c, &por_defecto)).map(|p| p.to_string_lossy().into_owned())
+}
+
+/// Sustituye todos los datos por los de la copia `ruta`. Antes guarda los actuales en `antes-de-restaurar.db`
+/// (carpeta `copias` junto a la base). Devuelve la ruta de esa copia previa.
+#[tauri::command(async)]
+pub fn restaurar_copia(app: AppHandle, datos: State<'_, Datos>, ruta: String) -> Result<String, String> {
+    let dir = carpeta_de_datos(&app)?;
+    let mut guardia = datos.0.lock().map_err(|_| "la base de datos quedó en un estado inconsistente".to_string())?;
+    match guardia.as_mut() {
+        Ok(conn) => respaldo::restaurar(conn, Path::new(&ruta), &dir.join("ukiku.db"), &dir.join("copias"))
+            .map(|p| p.to_string_lossy().into_owned())
+            .map_err(|e| para_interfaz(&e)),
+        Err(motivo) => Err(motivo.clone()),
+    }
+}
+
+/// Borra la caché de logos y fondos de TMDB. Devuelve cuántas obras había guardadas.
+#[tauri::command(async)]
+pub fn limpiar_cache_tmdb(datos: State<'_, Datos>) -> Result<usize, String> {
+    con(&datos, tmdb::limpiar)
 }

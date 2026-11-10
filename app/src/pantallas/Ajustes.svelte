@@ -5,6 +5,7 @@
   import SeccionAnilist from './SeccionAnilist.svelte';
   import SeccionApariencia from './SeccionApariencia.svelte';
   import SeccionAvisos from './SeccionAvisos.svelte';
+  import SeccionDatos from './SeccionDatos.svelte';
   import SeccionImportar from './SeccionImportar.svelte';
   import SeccionReproduccion from './SeccionReproduccion.svelte';
   import SeccionTmdb from './SeccionTmdb.svelte';
@@ -40,12 +41,12 @@
       {:else if categoria === 'avisos'}
         <SeccionAvisos />
       {:else if categoria === 'datos'}
-        <h2>Datos</h2>
-        <div class="formulario"><SeccionImportar /></div>
+        <SeccionDatos />
+        <div class="formulario aparte"><SeccionImportar /></div>
       {:else}
         <h2>Cuentas</h2>
-        <section class="bloque formulario" aria-label="Cuenta de AniList"><SeccionAnilist /></section>
-        <section class="bloque formulario" aria-label="Imágenes de TMDB"><SeccionTmdb /></section>
+        <SeccionAnilist />
+        <SeccionTmdb />
       {/if}
     </div>
   </div>
@@ -136,12 +137,31 @@
   .formulario :global(input[aria-invalid='true']) {
     outline: 2px solid #e53935;
   }
-  .bloque {
-    margin-bottom: 24px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--borde);
+  .aparte {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--borde);
   }
-  .bloque:last-child {
-    border-bottom: 0;
+  /* Encabezado de un grupo de filas dentro de una pestaña (las cuentas: AniList, TMDB). */
+  .panel :global(.grupo) {
+    margin: 32px 0 4px;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .panel :global(.grupo:first-of-type) {
+    margin-top: 8px;
+  }
+  /* Recuadro de confirmación o vista previa dentro de una pestaña. */
+  .panel :global(.confirmar) {
+    margin: 4px 0 8px;
+    padding: 14px 16px;
+    border: 1px solid var(--borde-control);
+    border-left: 3px solid var(--acento);
+    border-radius: var(--radio);
+    background: var(--superficie);
+  }
+  .panel :global(.confirmar p) {
+    margin: 0 0 12px;
+    overflow-wrap: anywhere;
   }
 </style>

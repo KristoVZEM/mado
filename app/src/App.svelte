@@ -17,6 +17,7 @@
   import { reintentarSiCambiaronLasReglas } from './lib/reglasEmparejado.ts';
   import { nav, irABusqueda } from './lib/navegacion.svelte.ts';
   import { iniciarAvisos } from './lib/avisosApp.ts';
+  import { iniciarRespaldoAutomatico } from './lib/respaldoApp.ts';
   import { iniciarApariencia } from './lib/aplicarApariencia.svelte.ts';
   import { repasarVinculosAlAbrir, sincronizarAlAbrir } from './lib/sync.svelte.ts';
 
@@ -26,6 +27,7 @@
   // Todo es opcional: cualquier fallo se queda en la consola y no afecta a la app.
   onMount(() => {
     iniciarApariencia(); // dura lo que la app: no hace falta detenerla
+    void dormir(15_000).then(iniciarRespaldoAutomatico);
     // Cerrar con la X: se retiene el cierre, se guarda lo pendiente (progreso, volumen) y se cierra.
     // `ejecutarAlCerrar` tiene tope de tiempo, así que la ventana nunca queda colgada.
     void getCurrentWindow()

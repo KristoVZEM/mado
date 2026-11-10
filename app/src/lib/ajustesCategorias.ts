@@ -10,7 +10,7 @@ export const CATEGORIAS: readonly Categoria[] = [
   { id: 'reproduccion', nombre: 'Reproducción' },
   { id: 'apariencia', nombre: 'Apariencia' },
   { id: 'avisos', nombre: 'Avisos' },
-  { id: 'datos', nombre: 'Datos' },
+  { id: 'datos', nombre: 'Datos y red' },
   { id: 'cuentas', nombre: 'Cuentas' },
 ];
 

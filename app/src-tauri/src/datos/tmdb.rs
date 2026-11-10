@@ -5,6 +5,11 @@ use super::{Error, Resultado};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 
+/// Borra todo lo guardado de TMDB (logos y fondos). Se vuelve a pedir al abrir cada serie. Devuelve cuántas filas había.
+pub fn limpiar(conn: &Connection) -> Resultado<usize> {
+    Ok(conn.execute("DELETE FROM tmdb_media", [])?)
+}
+
 /// Lo guardado de una obra. `tmdb_id` es `None` cuando se buscó y no se encontró nada.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,6 +74,17 @@ pub fn guardar(conn: &Connection, fila: &FilaTmdb) -> Resultado<()> {
 mod pruebas {
     use super::*;
     use crate::datos::abrir_en_memoria;
+
+    #[test]
+    fn limpiar_borra_la_cache_y_dice_cuantas_filas_habia() {
+        let conn = abrir_en_memoria().unwrap();
+        assert_eq!(limpiar(&conn).unwrap(), 0);
+        guardar(&conn, &fila(1)).unwrap();
+        guardar(&conn, &fila(2)).unwrap();
+        assert_eq!(limpiar(&conn).unwrap(), 2);
+        assert_eq!(leer(&conn, 1).unwrap(), None);
+        assert_eq!(limpiar(&conn).unwrap(), 0);
+    }
 
     fn fila(id: i64) -> FilaTmdb {
         FilaTmdb {

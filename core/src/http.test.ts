@@ -167,6 +167,30 @@ test('el timeout aborta una petición que no responde y lanza SinRed', async () 
   await assert.rejects(http.get('https://x.test/'), SinRed);
 });
 
+test('el timeout puede ser una función que se consulta en cada petición', async () => {
+  const reloj = relojFalso();
+  const pedidos: number[] = [];
+  let espera = 20;
+  const http = createHttp({
+    ...reloj,
+    gapMs: 0,
+    retries: 0,
+    timeoutMs: () => {
+      pedidos.push(espera);
+      return espera;
+    },
+    fetch: (_url, init) =>
+      new Promise((resolver, rechazar) => {
+        if (espera === 20) init!.signal!.addEventListener('abort', () => rechazar(init!.signal!.reason));
+        else resolver(new Response('ok'));
+      }),
+  });
+  await assert.rejects(http.get('https://x.test/'), SinRed);
+  espera = 5000; // un cambio en marcha vale para la petición siguiente, que ya no se aborta
+  assert.equal((await http.get('https://x.test/')).status, 200);
+  assert.deepEqual(pedidos, [20, 5000]);
+});
+
 test('un 404 se devuelve tal cual, sin reintentos', async () => {
   const reloj = relojFalso();
   let llamadas = 0;

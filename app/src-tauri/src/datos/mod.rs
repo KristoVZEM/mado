@@ -8,6 +8,7 @@ pub mod biblioteca;
 pub mod comandos;
 pub mod copia;
 pub mod progreso;
+pub mod respaldo;
 pub mod sync;
 pub mod tmdb;
 

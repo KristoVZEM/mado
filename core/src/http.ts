@@ -16,7 +16,8 @@ export interface HttpOptions {
   now?: () => number;
   /** Pausa mínima entre el inicio de dos peticiones. */
   gapMs?: number;
-  timeoutMs?: number;
+  /** Espera máxima de una petición. Con una función se consulta en cada petición (para poder cambiarla en marcha). */
+  timeoutMs?: number | (() => number);
   retries?: number;
   /** Espera antes del reintento n: backoffMs * 2^n. */
   backoffMs?: number;
@@ -64,7 +65,7 @@ export function createHttp(opts: HttpOptions = {}): Http {
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = opts.now ?? Date.now;
   const gapMs = opts.gapMs ?? 1500;
-  const timeoutMs = opts.timeoutMs ?? 15_000;
+  const timeoutMs = () => (typeof opts.timeoutMs === 'function' ? opts.timeoutMs() : (opts.timeoutMs ?? 15_000));
   const retries = opts.retries ?? 2;
   const backoffMs = opts.backoffMs ?? 500;
 
@@ -89,7 +90,7 @@ export function createHttp(opts: HttpOptions = {}): Http {
         const res = await doFetch(url, {
           ...init,
           headers: { 'user-agent': UA, ...(init.headers as Record<string, string> | undefined) },
-          signal: AbortSignal.timeout(timeoutMs),
+          signal: AbortSignal.timeout(timeoutMs()),
         });
         assertNoChallenge(res);
         if (res.status >= 500) {

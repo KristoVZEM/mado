@@ -270,20 +270,6 @@ option {
   font-weight: 600;
 }
 
-/* Bloque de Ajustes: una tarjeta por tema. */
-.bloque {
-  padding: 20px 24px;
-  border: 1px solid var(--borde);
-  border-radius: var(--radio-grande);
-  background: var(--superficie);
-}
-
-.bloque :is(h2, h3) {
-  margin: 0 0 12px;
-  font-size: 1.15rem;
-  font-weight: 700;
-}
-
 @media (prefers-reduced-motion: reduce) {
   button {
     transition: none;
