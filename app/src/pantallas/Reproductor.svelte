@@ -113,7 +113,8 @@
     const terminado = reproductor.terminado;
     if (estado !== 'listo') return;
     if (terminado || esVisto(posicion, duracion)) {
-      marcarComoVisto();
+      // untrack: marcarComoVisto lee estado reactivo (visto, numeros...) que no debe volver a disparar este efecto.
+      untrack(marcarComoVisto);
       return;
     }
     untrack(() => guardarAhora());
@@ -492,7 +493,7 @@
                   class:activo={v === reproductor.velocidad}
                   onclick={() => {
                     menuVelocidad = false;
-                    void fijarVelocidad(v);
+                    fijarVelocidad(v).catch((e) => console.error('no se pudo cambiar la velocidad', e));
                   }}>{v === reproductor.velocidad ? '✓ ' : ''}{etiquetaVelocidad(v)}</button
                 >
               {/each}

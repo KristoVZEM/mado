@@ -23,6 +23,11 @@ test('rechaza nombres con coma o dos puntos y valores con saltos de línea', () 
   assert.throws(() => cabecerasMpv({ a: 'x\r\nb: y' }));
 });
 
+test('rechaza barras invertidas: mpv las usa para escapar y podrían tragarse la coma separadora', () => {
+  assert.throws(() => cabecerasMpv({ a: 'x\\' }), /a/);
+  assert.throws(() => cabecerasMpv({ 'a\\b': 'x' }));
+});
+
 test('el error no incluye el valor de la cabecera (puede llevar un token)', () => {
   try {
     cabecerasMpv({ authorization: 'token,SECRETO' });

@@ -199,7 +199,7 @@
 
   {#if modoBusqueda}
     {#if cargando || nav.catalogo.pendiente}<p class="estado" role="status">Buscando…</p>{/if}
-    {#if error}<p class="error">{error}</p>{/if}
+    {#if error}<p class="error" role="alert">{error}</p>{/if}
     {#if propias.length > 0}
       <h2>En tu biblioteca</h2>
       <ul class="cuadricula">

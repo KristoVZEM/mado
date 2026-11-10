@@ -5,6 +5,7 @@ import {
   MIN_RETOMAR_S,
   SALTO_GRANDE_S,
   UMBRAL_VISTO,
+  MAX_ANTERIORES,
   anterioresDe,
   debeGuardar,
   esVisto,
@@ -89,6 +90,14 @@ test('anterioresDe: los episodios con número menor, ordenados y sin repetidos',
 test('anterioresDe: sin anteriores da una lista vacía', () => {
   assert.deepEqual(anterioresDe([1, 2, 3], 1), []);
   assert.deepEqual(anterioresDe([], 5), []);
+});
+
+test('anterioresDe: con series enormes se queda con los últimos MAX_ANTERIORES', () => {
+  const numeros = Array.from({ length: MAX_ANTERIORES + 500 }, (_, i) => i + 1);
+  const r = anterioresDe(numeros, numeros.length + 1);
+  assert.equal(r.length, MAX_ANTERIORES);
+  assert.equal(r[0], 501);
+  assert.equal(r[r.length - 1], numeros.length);
 });
 
 test('anterioresDe: ignora valores no finitos y negativos', () => {

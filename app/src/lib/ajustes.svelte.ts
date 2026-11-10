@@ -13,8 +13,13 @@ export const ajustes = $state({
 });
 
 /** Guarda un ajuste sin esperar ni propagar fallos: los datos nunca bloquean la reproducción. */
+/** Nombre para mostrar de un ajuste: las claves por serie (`idioma:<aid>`) se quedan en `idioma`, sin su identificador interno. */
+function nombreAjuste(clave: string): string {
+  return clave.split(':')[0];
+}
+
 export function guardarAjusteSilencioso(clave: string, valor: string): void {
-  guardarAjuste(clave, valor).catch((e) => console.error(`no se pudo guardar el ajuste ${clave}`, e));
+  guardarAjuste(clave, valor).catch((e) => console.error(`no se pudo guardar el ajuste «${nombreAjuste(clave)}»`, e));
 }
 
 /** localStorage puede faltar o lanzar (ventana privada, datos bloqueados): se trata como ausente. */

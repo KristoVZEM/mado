@@ -4,11 +4,10 @@
   import { validarSalto } from '../lib/continuar.ts';
   import { SALTO_CORTO_S, SALTO_LARGO_S } from '../lib/saltos.ts';
 
-  import { open } from '@tauri-apps/plugin-dialog';
   import { onMount } from 'svelte';
-  import { estadoDatos, importarCopia, previsualizarCopia, type ModoImportacion, type ResumenCopia } from '../lib/datos.ts';
-  import { textoDeError } from '../lib/errores.ts';
-  import { lineasResumen, textoAviso, textoResultado } from '../lib/importar.ts';
+  import { estadoDatos } from '../lib/datos.ts';
+  import { cancelar, confirmar, elegirCarpeta, importacion, importar } from '../lib/importacion.svelte.ts';
+  import { lineasResumen, textoAviso } from '../lib/importar.ts';
   import SeccionAnilist from './SeccionAnilist.svelte';
   import SeccionAvisos from './SeccionAvisos.svelte';
   import SeccionTmdb from './SeccionTmdb.svelte';
@@ -30,40 +29,8 @@
     datosOk = (await estadoDatos().catch(() => 'error')) === null;
   });
 
-  type Fase =
-    | { tipo: 'inicio' }
-    | { tipo: 'vista'; carpeta: string; resumen: ResumenCopia; confirmando: boolean }
-    | { tipo: 'aplicando' }
-    | { tipo: 'listo'; texto: string }
-    | { tipo: 'error'; texto: string };
-  let fase = $state<Fase>({ tipo: 'inicio' });
-
-  async function elegirCarpeta() {
-    try {
-      const carpeta = await open({ directory: true, multiple: false, title: 'Elegir la carpeta de la copia de Ukiku' });
-      if (!carpeta) return;
-      fase = { tipo: 'vista', carpeta, resumen: await previsualizarCopia(carpeta), confirmando: false };
-    } catch (e) {
-      console.error(e);
-      fase = { tipo: 'error', texto: textoDeError(e) };
-    }
-  }
-
-  function confirmar(confirmando: boolean) {
-    if (fase.tipo === 'vista') fase = { ...fase, confirmando };
-  }
-
-  async function importar(modo: ModoImportacion) {
-    if (fase.tipo !== 'vista') return;
-    const { carpeta } = fase;
-    fase = { tipo: 'aplicando' };
-    try {
-      fase = { tipo: 'listo', texto: textoResultado(await importarCopia(carpeta, modo)) };
-    } catch (e) {
-      console.error(e);
-      fase = { tipo: 'error', texto: textoDeError(e) };
-    }
-  }
+  // El estado de la importación vive en su propio módulo: sobrevive a cerrar y reabrir Ajustes.
+  const fase = $derived(importacion.fase);
 
   let guardado = $state(false);
   let corto = $state(String(ajustes.saltoCorto));
@@ -165,7 +132,7 @@
         <div class="acciones">
           <button onclick={() => importar('mezclar')}>Mezclar</button>
           <button onclick={() => confirmar(true)}>Reemplazar…</button>
-          <button onclick={() => (fase = { tipo: 'inicio' })}>Cancelar</button>
+          <button onclick={cancelar}>Cancelar</button>
         </div>
       {/if}
     {:else}

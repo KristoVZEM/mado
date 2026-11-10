@@ -361,7 +361,7 @@
               disabled={guardando}
               aria-pressed={favorito}
               title={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}
-              aria-label={favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}
+              aria-label="Favorito"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" class:relleno={favorito}>
                 <path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z" />
@@ -457,7 +457,7 @@
 
     {#if cargando}<Esqueleto variante="fila" cantidad={6} />{/if}
     {#if error}
-      <p class="error">{error}</p>
+      <p class="error" role="alert">{error}</p>
       {#if !ficha}<button onclick={cargarEpisodios} disabled={cargando}>Reintentar</button>{/if}
     {/if}
 
@@ -470,7 +470,8 @@
         </div>
       </div>
       <ul class="lista-episodios" aria-label="Episodios">
-        {#each mostrados as n (n)}
+        <!-- La fuente puede traer números repetidos: la clave lleva la posición para no chocar (each_key_duplicate). -->
+        {#each mostrados as n, i (`${n}:${i}`)}
           {@const p = progresoPorNumero.get(n)}
           {@const fr = p ? fraccionVista(p.posicionS, p.duracionS) : null}
           {@const quedan = p ? textoQuedan(p.posicionS, p.duracionS) : null}
@@ -672,6 +673,8 @@
     align-items: center;
     gap: 10px;
     margin-top: 8px;
+    /* Los botones de biblioteca llegan después de leer la base: se reserva la altura de la fila para que nada salte. */
+    min-height: 36px;
   }
   .acciones .principal {
     padding: 8px 16px;

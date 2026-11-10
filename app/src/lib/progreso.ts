@@ -47,8 +47,12 @@ export function debeGuardar(e: EstadoGuardado): boolean {
 /**
  * Episodios de la lista con número menor que `numero`, sin repetidos y de menor a mayor: son los
  * que se marcan también como vistos al marcar `numero`. Salen siempre de la lista de episodios.
+ * En series enormes solo se devuelven los últimos `MAX_ANTERIORES` (los más cercanos a `numero`).
  */
 export function anterioresDe(numeros: number[], numero: number): number[] {
   const unicos = new Set(numeros.filter((n) => Number.isFinite(n) && n >= 0 && n < numero));
-  return [...unicos].sort((a, b) => a - b);
+  return [...unicos].sort((a, b) => a - b).slice(-MAX_ANTERIORES);
 }
+
+/** Tope de episodios anteriores que se marcan de una vez como vistos. */
+export const MAX_ANTERIORES = 5000;
