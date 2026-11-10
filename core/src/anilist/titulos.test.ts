@@ -46,3 +46,22 @@ test('temporadaDe lee numerales romanos, pero no los de una letra ni uno solo', 
     assert.equal(temporadaDe(t), null, t);
   }
 });
+
+test('normalizar iguala los ordinales con el número («2nd Season» y «Season 2» son lo mismo)', () => {
+  assert.equal(normalizar('Aoashi 2nd Season'), 'aoashi 2');
+  assert.equal(normalizar('Ao Ashi Season 2'), 'ao ashi 2');
+  assert.equal(normalizar('Kusuriya no Hitorigoto 3rd Season'), 'kusuriya no hitorigoto 3');
+  assert.equal(normalizar('Kizu darake Seijo Season2'), 'kizu darake seijo 2');
+  assert.equal(normalizar('Mob Psycho 100'), 'mob psycho 100', 'una cifra suelta no se toca');
+});
+
+test('parecido ignora dónde caen los espacios («Aoashi» frente a «Ao Ashi»)', () => {
+  assert.ok(parecido('aoashi 2', 'ao ashi 2') >= 0.95);
+  assert.ok(parecido('aoashi', 'ao ashi') >= 0.95);
+  assert.ok(parecido('ab', 'a b') < 0.85, 'los textos cortos no se comparan sin espacios');
+});
+
+test('normalizar escribe la fracción ½ como «1 2» («Ranma ½» y «Ranma 1/2» son el mismo título)', () => {
+  assert.equal(normalizar('Ranma ½ (2024) 3rd Season'), normalizar('Ranma 1/2 (2024) Season 3'));
+  assert.equal(normalizar('Ranma ½'), 'ranma 1 2');
+});

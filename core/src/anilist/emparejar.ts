@@ -22,6 +22,20 @@ export const UMBRAL_MINIMO = 0.6;
 /** Lo que se resta cuando dos títulos casi iguales son de temporadas distintas (la 1.ª cuenta como sin número). */
 const PENALIZA_TEMPORADA = 0.3;
 
+/** Parecido cuando el título buscado es el nombre de AniList seguido de un subtítulo largo. */
+export const PARECIDO_SUBTITULO = 0.88;
+
+/**
+ * El título buscado (el de la fuente) empieza por el nombre de AniList y le sigue un subtítulo de 3 o más
+ * palabras: animeav1 a veces nombra una serie con su título completo, p. ej. «Nia Liston: Byoujaku Reijou ni
+ * Tensei shita…». Solo en ese sentido: que el nombre de AniList sea el más largo suele ser un spin-off
+ * («Hotaru no Yomeiri: Choitashi» frente a «Hotaru no Yomeiri»). Los textos ya van normalizados.
+ */
+function conSubtituloLargo(buscado: string, nombre: string): boolean {
+  if (nombre.split(' ').length < 3 || !buscado.startsWith(`${nombre} `)) return false;
+  return buscado.slice(nombre.length + 1).split(' ').length >= 3;
+}
+
 /**
  * Mejor parecido entre el título buscado y cualquiera de los nombres del candidato. Si el número de
  * temporada difiere («Kusuriya no Hitorigoto» frente a «… 3rd Season») se penaliza: son obras distintas.
@@ -32,7 +46,7 @@ export function mejorParecido(titulo: string, c: CandidatoAnilist): number {
   const temporadaBuscada = temporadaDe(t) ?? 1;
   return nombres.reduce((m, n) => {
     const nombre = normalizar(n);
-    const p = parecido(t, nombre);
+    const p = conSubtituloLargo(t, nombre) ? Math.max(PARECIDO_SUBTITULO, parecido(t, nombre)) : parecido(t, nombre);
     const distinta = (temporadaDe(nombre) ?? 1) !== temporadaBuscada;
     return Math.max(m, distinta ? Math.max(0, p - PENALIZA_TEMPORADA) : p);
   }, 0);

@@ -3,14 +3,19 @@ const SOBRAN = new Set(['temporada', 'season', 'tv', 'the']);
 /** Parecido mínimo cuando todas las palabras del texto más corto aparecen en el más largo. */
 export const PISO_CONTENIDO = 0.7;
 
-/** Minúsculas, sin tildes ni signos, sin palabras de relleno («temporada», «season»). Conserva los números. */
+/**
+ * Minúsculas, sin tildes ni signos, sin palabras de relleno («temporada», «season»). Conserva los números y
+ * deja los ordinales como cifra: «2nd Season», «Season 2» y «Season2» acaban igual.
+ */
 export function normalizar(titulo: string): string {
   return titulo
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
+    .replace(/½/g, ' 1 2 ') // «Ranma ½» y «Ranma 1/2» son el mismo título
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
+    .map((t) => /^(\d{1,2})(?:st|nd|rd|th)$/.exec(t)?.[1] ?? /^season(\d{1,2})$/.exec(t)?.[1] ?? t)
     .filter((t) => t !== '' && !SOBRAN.has(t))
     .join(' ');
 }
@@ -32,10 +37,15 @@ function contenido(a: string, b: string): boolean {
   return corto.split(' ').every((p) => palabras.has(p));
 }
 
+/** Parecido cuando los textos solo difieren en dónde caen los espacios («aoashi 2» y «ao ashi 2»). */
+export const PARECIDO_SIN_ESPACIOS = 0.98;
+
 /** Coeficiente de Dice sobre bigramas de caracteres, de 0 a 1. Los textos ya van normalizados. */
 export function parecido(a: string, b: string): number {
   if (a === '' || b === '') return 0;
   if (a === b) return 1;
+  const sa = a.replace(/ /g, '');
+  if (sa.length >= 5 && sa === b.replace(/ /g, '')) return PARECIDO_SIN_ESPACIOS;
   const piso = contenido(a, b) ? PISO_CONTENIDO : 0;
   const A = bigramas(a);
   const B = bigramas(b);

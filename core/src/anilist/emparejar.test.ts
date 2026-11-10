@@ -109,3 +109,39 @@ test('entre varias temporadas gana la que coincide', () => {
   assert.equal(id('The Apothecary Diaries Season 3'), 195516);
   assert.equal(decidir({ titulo: 'Steins;Gate 0' }, [STEINS, STEINS0]).tipo === 'auto' && 30484, 30484);
 });
+
+const KYOURAN = c(
+  200001,
+  'Kyouran Reijou Nia Liston',
+  'Nia Liston: The Merciless Maiden',
+  [],
+  2026,
+  null,
+);
+const AOASHI2 = c(200002, 'Aoashi 2nd Season', 'Aoashi Season 2', [], 2025, null);
+const AOASHI1 = c(200003, 'Aoashi', null, [], 2022, 24);
+const HOTARU_MINI = c(200004, 'Hotaru no Yomeiri: Choitashi', null, ['Hotaru no Yomeiri Mini Anime'], 2026, null);
+
+test('el título del sitio con un subtítulo largo detrás se empareja con el título corto de AniList', () => {
+  const sitio =
+    'Kyouran Reijou Nia Liston: Byoujaku Reijou ni Tensei shita Kamigoroshi no Bujin no Karei Naru Musouroku';
+  assert.ok(confianza({ titulo: sitio }, KYOURAN) >= UMBRAL_AUTO);
+});
+
+test('«Ao Ashi Season 2» del sitio es «Aoashi 2nd Season» de AniList, y no la primera temporada', () => {
+  assert.ok(confianza({ titulo: 'Ao Ashi Season 2' }, AOASHI2) >= UMBRAL_AUTO);
+  assert.ok(confianza({ titulo: 'Ao Ashi Season 2' }, AOASHI1) < UMBRAL_AUTO);
+  assert.ok(confianza({ titulo: 'Ao Ashi' }, AOASHI1) >= UMBRAL_AUTO);
+  assert.ok(confianza({ titulo: 'Ao Ashi' }, AOASHI2) < UMBRAL_AUTO);
+});
+
+test('la serie madre del sitio no se toma por el spin-off de AniList, ni la temporada nueva por la anterior', () => {
+  assert.ok(confianza({ titulo: 'Hotaru no Yomeiri' }, HOTARU_MINI) < UMBRAL_AUTO);
+  // El subtítulo largo no debe absorber una temporada numerada: «… 2» sigue siendo otra obra que «…».
+  assert.ok(confianza({ titulo: 'Kyouran Reijou Nia Liston 2' }, KYOURAN) < UMBRAL_AUTO);
+});
+
+test('«Ranma ½ (2024) 3rd Season» del sitio es «Ranma 1/2 (2024) 3rd Season» de AniList', () => {
+  const ranma = c(200005, 'Ranma 1/2 (2024) 3rd Season', 'Ranma1/2 (2024) Season 3', [], 2026, null);
+  assert.ok(confianza({ titulo: 'Ranma ½ (2024) 3rd Season' }, ranma) >= UMBRAL_AUTO);
+});
