@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
+  import { crearConfirmacion } from '../lib/confirmar.ts';
   import Destacados from '../lib/componentes/Destacados.svelte';
   import Miniatura from '../lib/componentes/Miniatura.svelte';
   import Esqueleto from '../lib/componentes/Esqueleto.svelte';
@@ -142,7 +143,14 @@
     }
   }
 
+  /** aid de la tarjeta que espera confirmación para quitarse de «Continuar viendo». */
+  let quitando = $state<number | null>(null);
+  const confirmarQuitar = crearConfirmacion<number>((aid) => (quitando = aid));
+  onDestroy(() => confirmarQuitar.cancelar());
+
   async function descartar(p: EntradaContinuar) {
+    // El primer clic solo pide confirmar: el ✕ está pegado a la esquina y es fácil pulsarlo sin querer.
+    if (!confirmarQuitar.pedir(p.aid)) return;
     try {
       await descartarProgreso(p.aid);
       pendientes = pendientes.filter((x) => x.aid !== p.aid);
@@ -206,7 +214,12 @@
                 <strong>{p.titulo}</strong>
                 <span class="detalle">{abriendo === p.aid ? 'Abriendo…' : textoRestante(p.numero, p.posicionS, p.duracionS)}</span>
               </button>
-              <button class="x" aria-label={`Descartar ${p.titulo}`} onclick={() => descartar(p)}>✕</button>
+              <button
+                class="x"
+                class:confirmando={quitando === p.aid}
+                aria-label={quitando === p.aid ? `Confirmar: quitar ${p.titulo} de Continuar viendo` : `Quitar ${p.titulo} de Continuar viendo`}
+                onclick={() => descartar(p)}
+                onblur={() => confirmarQuitar.cancelar()}>{quitando === p.aid ? '¿Quitar?' : '✕'}</button>
             </li>
           {/each}
         </FilaDesplazable>
@@ -335,8 +348,14 @@
     transition: opacity 150ms;
   }
   .continuar:hover .x,
-  .continuar:focus-within .x {
+  .continuar:focus-within .x,
+  .x.confirmando {
     opacity: 1;
+  }
+  .x.confirmando {
+    padding: 0 8px;
+    background: var(--acento);
+    color: var(--sobre-acento);
   }
   @media (prefers-reduced-motion: reduce) {
     .x {
