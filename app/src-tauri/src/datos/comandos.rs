@@ -270,10 +270,10 @@ pub fn aplicar_bajadas(datos: State<'_, Datos>, bajadas: Vec<sync::Bajada>) -> R
     con(&datos, |c| sync::aplicar_bajadas(c, ahora_ms(), &bajadas))
 }
 
-/// Series en Viendo con vínculo firme y obra en emisión, para mirar si salió un episodio nuevo.
+/// Series en Viendo (y, si se pide, favoritas) con vínculo firme y obra en emisión, para mirar si salió un episodio nuevo.
 #[tauri::command(async)]
-pub fn avisos_candidatas(datos: State<'_, Datos>) -> Result<Vec<avisos::Candidata>, String> {
-    con(&datos, avisos::candidatas)
+pub fn avisos_candidatas(datos: State<'_, Datos>, incluir_favoritas: bool) -> Result<Vec<avisos::Candidata>, String> {
+    con(&datos, |c| avisos::candidatas(c, incluir_favoritas))
 }
 
 /// Anota hasta qué episodio se avisó de cada serie; todo o nada.

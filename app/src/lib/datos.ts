@@ -337,7 +337,8 @@ export interface CandidataAviso {
   ultimoAvisado: number | null;
   ultimoVisto: number;
 }
-export const avisosCandidatas = () => invoke<CandidataAviso[]>('avisos_candidatas');
+export const avisosCandidatas = (incluirFavoritas: boolean) =>
+  invoke<CandidataAviso[]>('avisos_candidatas', { incluirFavoritas });
 export const avisosGuardar = (items: { aid: number; ultimo: number }[]) => invoke<void>('avisos_guardar', { items });
 
 /** Lo guardado de TMDB para una obra: rutas de fondo y logo. `tmdbId` es `null` si se buscó y no se encontró. */

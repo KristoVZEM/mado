@@ -2,7 +2,6 @@ import { planearAvisos, textoAviso } from '../../../core/src/index.ts';
 import type { SerieVigilada } from '../../../core/src/index.ts';
 import type { CandidataAviso } from './datos.ts';
 
-export const INTERVALO_AVISOS_MS = 30 * 60_000;
 const PAUSA_ENTRE_SERIES_MS = 1000;
 
 export interface DepsAvisos {

@@ -25,20 +25,22 @@ pub struct Avisado {
 }
 
 /// Series en Viendo con vínculo firme (`manual`, o `auto` con confianza >= 0,85) cuya obra sigue en
-/// emisión en AniList.
-pub fn candidatas(conn: &Connection) -> Resultado<Vec<Candidata>> {
+/// emisión en AniList. Con `incluir_favoritas` entran también las favoritas que no están en Dropeado.
+pub fn candidatas(conn: &Connection, incluir_favoritas: bool) -> Resultado<Vec<Candidata>> {
     let mut st = conn.prepare(
         "SELECT a.aid, a.slug, a.titulo, av.ultimo_episodio,
                 COALESCE((SELECT MAX(h.numero) FROM historial h WHERE h.aid = a.aid), 0)
          FROM anime a
-         JOIN siguiendo s ON s.aid = a.aid AND s.estado = 1
+         LEFT JOIN siguiendo s ON s.aid = a.aid
+         LEFT JOIN favoritos f ON f.aid = a.aid
          JOIN anilist_vinculo v ON v.aid = a.aid AND v.anilist_id IS NOT NULL
               AND (v.origen = 'manual' OR (v.origen = 'auto' AND v.confianza >= 0.85))
          JOIN anilist_media m ON m.anilist_id = v.anilist_id AND m.estado = 'RELEASING'
          LEFT JOIN avisos av ON av.aid = a.aid
+         WHERE s.estado = 1 OR (?1 AND f.aid IS NOT NULL AND COALESCE(s.estado, 0) <> 4)
          ORDER BY a.aid",
     )?;
-    let filas = st.query_map([], |f| {
+    let filas = st.query_map(params![incluir_favoritas], |f| {
         Ok(Candidata {
             aid: f.get(0)?,
             slug: f.get(1)?,
@@ -100,8 +102,24 @@ mod pruebas {
         serie(&conn, 3, 4, "auto", 0.9, "RELEASING"); // Dropeado
         serie(&conn, 4, 1, "auto", 0.9, "FINISHED"); // ya terminó
         serie(&conn, 5, 1, "manual", 0.0, "RELEASING"); // entra
-        let aids: Vec<i64> = candidatas(&conn).unwrap().iter().map(|c| c.aid).collect();
+        let aids: Vec<i64> = candidatas(&conn, false).unwrap().iter().map(|c| c.aid).collect();
         assert_eq!(aids, vec![1, 5]);
+    }
+
+    #[test]
+    fn con_favoritas_entran_las_favoritas_que_no_estan_dropeadas() {
+        let conn = abrir_en_memoria().unwrap();
+        serie(&conn, 1, 1, "auto", 0.9, "RELEASING"); // viendo: entra siempre
+        serie(&conn, 2, 2, "auto", 0.9, "RELEASING"); // considerando, favorita: entra con favoritas
+        serie(&conn, 3, 4, "auto", 0.9, "RELEASING"); // dropeada, favorita: no entra
+        serie(&conn, 4, 2, "auto", 0.9, "RELEASING"); // considerando, sin favorita: no entra
+        serie(&conn, 5, 1, "auto", 0.7, "RELEASING"); // viendo pero vínculo dudoso: no entra
+        for aid in [2, 3, 5] {
+            conn.execute("INSERT INTO favoritos (aid, categoria) VALUES (?1, NULL)", params![aid]).unwrap();
+        }
+        let aids = |incluir| candidatas(&conn, incluir).unwrap().iter().map(|c| c.aid).collect::<Vec<_>>();
+        assert_eq!(aids(false), vec![1]);
+        assert_eq!(aids(true), vec![1, 2]);
     }
 
     #[test]
@@ -111,10 +129,10 @@ mod pruebas {
         for n in [1.0, 2.0, 3.0] {
             conn.execute("INSERT INTO historial (aid, numero, visto_en) VALUES (1, ?1, 0)", params![n]).unwrap();
         }
-        let c = &candidatas(&conn).unwrap()[0];
+        let c = &candidatas(&conn, false).unwrap()[0];
         assert_eq!((c.ultimo_visto, c.ultimo_avisado, c.slug.as_str()), (3.0, None, "s1"));
         guardar_avisados(&conn, 5, &[Avisado { aid: 1, ultimo: 4.0 }]).unwrap();
-        assert_eq!(candidatas(&conn).unwrap()[0].ultimo_avisado, Some(4.0));
+        assert_eq!(candidatas(&conn, false).unwrap()[0].ultimo_avisado, Some(4.0));
     }
 
     #[test]

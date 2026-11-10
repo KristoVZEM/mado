@@ -38,8 +38,7 @@
       {:else if categoria === 'apariencia'}
         <SeccionApariencia />
       {:else if categoria === 'avisos'}
-        <h2>Avisos</h2>
-        <div class="formulario"><SeccionAvisos /></div>
+        <SeccionAvisos />
       {:else if categoria === 'datos'}
         <h2>Datos</h2>
         <div class="formulario"><SeccionImportar /></div>
@@ -94,7 +93,7 @@
     margin: 0 0 12px;
     font-size: 1.15rem;
   }
-  /* Las secciones con texto y botones (Avisos, Datos, Cuentas): espacios parejos entre párrafos, casillas y botones. */
+  /* Las secciones con texto y botones (Datos, Cuentas): espacios parejos entre párrafos, casillas y botones. */
   .formulario :global(p),
   .formulario :global(ol),
   .formulario :global(ul) {

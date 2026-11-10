@@ -19,6 +19,10 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("anilist_reglas_emparejado", 0.0, 1000.0),
     // Avisos de episodios nuevos: 1 o ausente = activos; 0 = desactivados.
     ("avisos_activos", 0.0, 1.0),
+    // Cada cuánto se miran los avisos: posición en la lista de la app (15 min, 30 min, 1 h, 2 h, 6 h); ausente = 30 min.
+    ("avisos_intervalo", 0.0, 4.0),
+    // Qué series vigilan los avisos: 0 = las que estoy viendo, 1 = también mis favoritas.
+    ("avisos_alcance", 0.0, 1.0),
     // Idioma con el que arranca una serie sin idioma guardado: 0 = SUB, 1 = DUB.
     ("idioma_defecto", 0.0, 1.0),
     // Orden de la lista de episodios en la Ficha: 0 = ascendente, 1 = descendente.
@@ -154,6 +158,8 @@ mod pruebas {
             ("velocidad", "0.5", "3", "0.4", "3.1"),
             ("anilist_agenda_cargada", "0", "9000000000000000", "-1", "9000000000000001"),
             ("avisos_activos", "0", "1", "-1", "2"),
+            ("avisos_intervalo", "0", "4", "-1", "5"),
+            ("avisos_alcance", "0", "1", "-1", "2"),
             ("idioma_defecto", "0", "1", "-1", "2"),
             ("orden_episodios", "0", "1", "-1", "2"),
             ("tema", "0", "2", "-1", "3"),
