@@ -123,3 +123,14 @@ export function textoSale(emiteEnS: number, ahoraS: number): string {
 export function sinVer(e: EntradaEmision, ahoraS: number, ultimoVisto: number | null | undefined): boolean {
   return e.estado === 1 && e.emiteEn <= ahoraS && (ultimoVisto ?? 0) < e.episodio;
 }
+
+/** Anota en las entradas de una obra la serie de animeav1 con la que acaba de emparejarse. No modifica la lista. */
+export function conVinculo(
+  entradas: readonly EntradaEmision[],
+  anilistId: number,
+  serie: { aid: number; slug: string; title: string },
+): EntradaEmision[] {
+  return entradas.map((e) =>
+    e.anilistId === anilistId ? { ...e, aid: serie.aid, slug: serie.slug, tituloSerie: serie.title } : e,
+  );
+}

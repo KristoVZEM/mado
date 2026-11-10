@@ -5,6 +5,7 @@
   import {
     emisionEntre,
     estadoDatos,
+    fijarVinculo,
     guardarAjuste,
     guardarEmision,
     leerAjuste,
@@ -18,6 +19,7 @@
     proximoEnSalir,
     proximoQueSigues,
     diasDeSemana,
+    conVinculo,
     filtrarSigues,
     horaLocal,
     inicioDeSemana,
@@ -143,6 +145,12 @@
         if (mejor && mejor.c >= 0.99) break; // coincidencia exacta: no hace falta seguir
       }
       if (mejor && mejor.c >= UMBRAL_AUTO) {
+        // Se guarda el emparejado para que el próximo clic abra directo sin repetir la búsqueda. Si falla,
+        // la ficha se abre igual: guardarlo es una comodidad, no una condición.
+        const serie = { aid: mejor.res.aid, slug: mejor.res.slug, titulo: mejor.res.title };
+        void fijarVinculo(serie, e.anilistId, mejor.c, 'auto')
+          .then(() => (entradas = conVinculo(entradas, e.anilistId, mejor.res)))
+          .catch((err) => console.error(err));
         abrir({ tipo: 'ficha', anime: mejor.res });
         return;
       }

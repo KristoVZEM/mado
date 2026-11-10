@@ -14,6 +14,7 @@ import {
   horaLocal,
   inicioDeSemana,
   titulosParaBuscar,
+  conVinculo,
 } from './emision.ts';
 
 // Fechas locales: no dependen de la zona horaria de la máquina. El 9 de noviembre de 2026 es lunes.
@@ -168,4 +169,20 @@ test('sinVer: solo series que sigues, ya emitidas y con el episodio sin ver', ()
   assert.equal(sinVer(ent(1, 100, 1, 5), 200, 5), false, 'ya lo viste');
   assert.equal(sinVer(ent(1, 300, 1, 5), 200, 4), false, 'aún no ha salido');
   assert.equal(sinVer(ent(1, 100, 2, 5), 200, 4), false, 'no la sigues');
+});
+
+test('conVinculo anota la serie encontrada solo en la entrada de esa obra, sin tocar el resto', () => {
+  const lista = [entrada(1, 100), entrada(2, 200), entrada(2, 300)];
+  const nueva = conVinculo(lista, 2, { aid: 55, slug: 'obra-2', title: 'Obra 2 (sitio)' });
+  assert.deepEqual(
+    nueva.map((e) => [e.anilistId, e.aid, e.slug, e.tituloSerie]),
+    [
+      [1, null, null, null],
+      [2, 55, 'obra-2', 'Obra 2 (sitio)'],
+      [2, 55, 'obra-2', 'Obra 2 (sitio)'],
+    ],
+    'las dos emisiones de la misma obra quedan vinculadas',
+  );
+  assert.equal(lista[1]!.aid, null, 'no modifica la lista original');
+  assert.deepEqual(conVinculo([], 2, { aid: 1, slug: 's', title: 't' }), []);
 });
