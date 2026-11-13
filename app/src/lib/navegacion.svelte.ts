@@ -2,6 +2,7 @@ import type { Idioma, ResultadoBusqueda } from '../../../core/src/index.ts';
 import type { Pestana } from './biblioteca.ts';
 import { SECCION_INICIAL, type Seccion } from './carril.ts';
 import type { ListadoId } from './listados.ts';
+import { pilaAlAbrir, pilaAlVolver } from './pila.ts';
 
 /** Lo que se abre encima de una sección. El Reproductor sale del armazón y ocupa toda la ventana. */
 export type Superior =
@@ -41,17 +42,25 @@ export const nav = $state<Estado>({
   pestana: 'todos',
 });
 
+/** Fichas por las que se pasó hasta la actual; «Volver» las recorre hacia atrás. Detalle en `pila.ts`. */
+let pila: Superior[] = [];
+
 export function irASeccion(seccion: Seccion): void {
+  pila = [];
   nav.superior = null;
   nav.seccion = seccion;
 }
 
 export function abrir(superior: Superior): void {
+  pila = pilaAlAbrir(pila, nav.superior, superior);
   nav.superior = superior;
 }
 
+/** «Volver» desde una ficha: a la ficha anterior si se llegó desde otra, o a la sección de origen. */
 export function cerrarSuperior(): void {
-  nav.superior = null;
+  const r = pilaAlVolver(pila);
+  pila = r.pila;
+  nav.superior = r.destino;
 }
 
 /** Ctrl+K: va al Catálogo con el cursor en el campo de búsqueda. */

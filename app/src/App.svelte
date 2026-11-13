@@ -17,7 +17,7 @@
   import { estadoDatos, guardarAjuste, leerAjuste, pendientesEmparejar, reintentarNingunos } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
   import { reintentarSiCambiaronLasReglas } from './lib/reglasEmparejado.ts';
-  import { abrir, nav, irABusqueda } from './lib/navegacion.svelte.ts';
+  import { abrir, cerrarSuperior, nav, irABusqueda } from './lib/navegacion.svelte.ts';
   import { iniciarAvisos } from './lib/avisosApp.ts';
   import { iniciarRespaldoAutomatico } from './lib/respaldoApp.ts';
   import { iniciarApariencia } from './lib/aplicarApariencia.svelte.ts';
@@ -93,6 +93,18 @@
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k' && nav.superior?.tipo !== 'reproducir') {
       e.preventDefault();
       irABusqueda();
+    }
+    // Alt+←: volver, como en un navegador. En el Reproductor ya está Esc.
+    if (e.altKey && !e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft' && nav.superior?.tipo === 'ficha') {
+      e.preventDefault();
+      cerrarSuperior();
+    }
+  }}
+  onmouseup={(e) => {
+    // Botón «atrás» del ratón.
+    if (e.button === 3 && nav.superior?.tipo === 'ficha') {
+      e.preventDefault();
+      cerrarSuperior();
     }
   }}
 />
