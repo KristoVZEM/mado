@@ -24,13 +24,15 @@
   } from '../lib/datos.ts';
   import { asegurarVinculo, elegirVinculo, refrescarSiHaceFalta } from '../lib/anilistServicio.ts';
   import { esDudoso, textoProximo } from '../lib/anilist.ts';
+  import EpisodiosFicha from '../lib/componentes/EpisodiosFicha.svelte';
   import EscogerObra from '../lib/componentes/EscogerObra.svelte';
+  import RelacionadasFicha from '../lib/componentes/RelacionadasFicha.svelte';
   import Menu from '../lib/componentes/Menu.svelte';
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
   import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { ordenarEpisodios } from '../lib/ajustes.ts';
-  import { fraccionVista, idiomaGuardado } from '../lib/continuar.ts';
-  import { episodioPrincipal, minutosDe, textoPrincipal, textoQuedan, type ProgresoEp } from '../lib/episodiosFicha.ts';
+  import { idiomaGuardado } from '../lib/continuar.ts';
+  import { episodioPrincipal, textoPrincipal, type ProgresoEp } from '../lib/episodiosFicha.ts';
   import { avisarCambio, cargarCuenta, sync } from '../lib/sync.svelte.ts';
   import { ESTADOS, nombreEstado } from '../lib/biblioteca.ts';
   import {
@@ -100,19 +102,6 @@
   }
 
   /** Abre una serie relacionada: la busca en animeav1 y, si hay una coincidencia firme, abre su Ficha. */
-  const TIPOS_RELACION: Record<string, string> = {
-    PREQUEL: 'Precuela',
-    SEQUEL: 'Secuela',
-    PARENT: 'Historia principal',
-    SIDE_STORY: 'Historia paralela',
-    SPIN_OFF: 'Spin-off',
-    ALTERNATIVE: 'Versión alternativa',
-    SUMMARY: 'Resumen',
-    CHARACTER: 'Mismos personajes',
-    ADAPTATION: 'Adaptación',
-    OTHER: 'Relacionada',
-  };
-  const nombreRelacion = (t: string) => TIPOS_RELACION[t] ?? 'Relacionada';
 
   async function abrirRelacionada(r: RelacionAnilist) {
     try {
@@ -462,76 +451,25 @@
     {/if}
 
     {#if ficha}
-      <div class="barra-episodios">
-        <h2>Episodios <span class="cuenta">{numeros.length}</span></h2>
-        <div class="idioma" role="group" aria-label="Idioma">
-          <button disabled={idioma === 'SUB'} onclick={() => (idioma = 'SUB')}>SUB</button>
-          <button disabled={idioma === 'DUB'} onclick={() => (idioma = 'DUB')}>DUB</button>
-        </div>
-      </div>
-      <ul class="lista-episodios" aria-label="Episodios">
-        <!-- La fuente puede traer números repetidos: la clave lleva la posición para no chocar (each_key_duplicate). -->
-        {#each mostrados as n, i (`${n}:${i}`)}
-          {@const p = progresoPorNumero.get(n)}
-          {@const fr = p ? fraccionVista(p.posicionS, p.duracionS) : null}
-          {@const quedan = p ? textoQuedan(p.posicionS, p.duracionS) : null}
-          <li class="episodio" class:visto={vistos.has(n)} class:actual={principal?.numero === n}>
-            <button class="fila" onclick={() => reproducir(n)}>
-              <span class="miniatura">
-                <Portada aid={anime.aid} titulo={serie.titulo} numero={n} />
-                <span class="reproducir" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
-                </span>
-                {#if minutosDe(p, media?.duracion)}<span class="duracion">{minutosDe(p, media?.duracion)} min</span>{/if}
-                {#if vistos.has(n)}
-                  <svg class="marca" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
-                {/if}
-                {#if fr !== null}
-                  <progress value={fr} max="1" aria-hidden="true"></progress>
-                {:else if vistos.has(n)}
-                  <progress value="1" max="1" aria-hidden="true"></progress>
-                {/if}
-                <span class="contorno"></span>
-              </span>
-              <span class="info">
-                <strong>Episodio {n}</strong>
-                {#if vistos.has(n)}<span>Visto</span>{:else if quedan}<span>{quedan}</span>{:else if principal?.numero === n}<span>Siguiente</span>{/if}
-              </span>
-            </button>
-            {#if vistos.has(n)}
-              <button
-                class="quitar"
-                onclick={() => desmarcar(n)}
-                aria-label={`Marcar el episodio ${n} como no visto`}
-                title={sync.cuenta ? 'Marcar como no visto. AniList puede volver a marcarlo.' : 'Marcar como no visto'}>×</button>
-            {/if}
-          </li>
-        {/each}
-      </ul>
-      {#if avisoDesmarcar}<p class="error" role="alert">{avisoDesmarcar}</p>{/if}
+      <EpisodiosFicha
+        aid={anime.aid}
+        titulo={serie.titulo}
+        total={numeros.length}
+        {mostrados}
+        {vistos}
+        {progresoPorNumero}
+        principalNumero={principal?.numero}
+        duracionMedia={media?.duracion}
+        bind:idioma
+        conCuenta={Boolean(sync.cuenta)}
+        aviso={avisoDesmarcar}
+        alReproducir={reproducir}
+        alDesmarcar={desmarcar}
+      />
     {/if}
 
     {#if media && media.relaciones.length > 0}
-      <section class="relacionadas" aria-label="Relacionadas">
-        <h2>Relacionadas</h2>
-        <ul class="tarjetas-rel">
-          {#each media.relaciones as r (r.anilistId)}
-            <li>
-              <button class="rel" onclick={() => abrirRelacionada(r)}>
-                <span class="rel-marco">
-                  <span class="rel-inicial" aria-hidden="true">{r.titulo.trim().charAt(0).toUpperCase()}</span>
-                  {#if r.portada}
-                    <img src={r.portada} alt="" loading="lazy" onerror={(ev) => ((ev.currentTarget as HTMLImageElement).style.display = 'none')} />
-                  {/if}
-                  <span class="rel-contorno"></span>
-                </span>
-                <strong>{r.titulo}</strong>
-                <span class="rel-tipo">{nombreRelacion(r.tipo)}</span>
-              </button>
-            </li>
-          {/each}
-        </ul>
-      </section>
+      <RelacionadasFicha relaciones={media.relaciones} alAbrir={abrirRelacionada} />
     {/if}
   </div>
 </main>
@@ -709,16 +647,14 @@
   /* Sobre el banner, el fondo translúcido de los controles se pierde: aquí llevan un fondo oscuro con desenfoque. */
   .acciones > .icono,
   .ancla > .icono,
-  .volver,
-  .idioma button:not(:disabled) {
+  .volver {
     background: rgb(10 10 10 / 0.6);
     backdrop-filter: blur(8px);
     border-color: rgb(255 255 255 / 0.25);
   }
   .acciones > .icono:hover:not(:disabled),
   .ancla > .icono:hover:not(:disabled),
-  .volver:hover,
-  .idioma button:not(:disabled):hover {
+  .volver:hover {
     background: rgb(38 38 38 / 0.75);
   }
   .ancla {
@@ -790,279 +726,13 @@
     border: 0;
     background: none;
   }
-  .barra-episodios {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 16px;
-  }
-  .capa h2 {
-    margin: 0;
-    font-size: 1.875rem;
-    line-height: 1.2;
-    font-weight: 700;
-    letter-spacing: normal;
-  }
-  .cuenta {
-    margin-left: 6px;
-    color: var(--texto-suave);
-    font-weight: 400;
-  }
-  .idioma {
-    display: flex;
-    gap: 4px;
-  }
-  .idioma button:disabled {
-    background: var(--boton-claro);
-    border-color: var(--boton-claro);
-    color: var(--boton-claro-texto);
-    opacity: 1;
-  }
-  .tarjetas-rel {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px 16px;
-    margin: 12px 0 0;
-    padding: 0;
-    list-style: none;
-  }
-  .rel {
-    display: grid;
-    gap: 6px;
-    width: 150px;
-    padding: 0;
-    border: 0;
-    background: none;
-    text-align: left;
-    align-content: start;
-  }
-  .rel:hover:not(:disabled) {
-    background: none;
-  }
-  .rel-marco {
-    position: relative;
-    display: grid;
-    place-items: center;
-    aspect-ratio: 2 / 3;
-    overflow: hidden;
-    border-radius: var(--radio);
-    background: var(--superficie-2);
-  }
-  .rel-marco img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: opacity 300ms ease-out, transform 300ms ease-out;
-  }
-  .rel:hover .rel-marco img,
-  .rel:focus-visible .rel-marco img {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
-  .rel-inicial {
-    color: var(--texto-suave);
-    font-size: 2rem;
-  }
-  .rel-contorno {
-    position: absolute;
-    inset: 0;
-    border: 1px solid var(--borde);
-    border-radius: var(--radio);
-    pointer-events: none;
-  }
-  .rel strong {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-  .rel-tipo {
-    color: var(--texto-suave);
-    font-size: 0.8rem;
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .rel-marco img {
-      transition: none;
-    }
-    .rel:hover .rel-marco img,
-    .rel:focus-visible .rel-marco img {
-      transform: none;
-    }
-  }
-  .lista-episodios {
-    list-style: none;
-    margin: 12px 0 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 20px 16px;
-  }
-  /* Con series de cientos de episodios, el navegador solo pinta las filas que se ven. */
-  .episodio {
-    position: relative;
-    content-visibility: auto;
-    contain-intrinsic-size: auto 190px;
-  }
-  .fila {
-    display: grid;
-    gap: 8px;
-    width: 100%;
-    padding: 0;
-    border: 0;
-    background: none;
-    text-align: left;
-  }
-  .fila:hover:not(:disabled) {
-    background: none;
-  }
-  .miniatura {
-    position: relative;
-    display: block;
-    overflow: hidden;
-    border-radius: var(--radio);
-  }
-  .miniatura :global(img) {
-    transition:
-      opacity 300ms ease-out,
-      transform 300ms ease-out;
-  }
-  .fila:hover .miniatura :global(img) {
-    opacity: 0.75;
-    transform: scale(1.05);
-  }
-  /* Borde fino siempre y, al pasar el ratón o con el foco, un anillo interior. */
-  .contorno {
-    position: absolute;
-    inset: 0;
-    border: 1px solid var(--borde);
-    border-radius: var(--radio);
-    pointer-events: none;
-    transition: box-shadow 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .fila:hover .contorno,
-  .fila:focus-visible .contorno,
-  .episodio.actual .contorno {
-    box-shadow: inset 0 0 0 1px var(--borde);
-  }
-  .fila:focus-visible {
-    outline: 2px solid var(--anillo);
-    outline-offset: 2px;
-    border-radius: var(--radio);
-  }
-  .reproducir {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    display: grid;
-    place-items: center;
-    padding: 16px;
-    border-radius: 50%;
-    background: rgb(0 0 0 / 0.6);
-    opacity: 0;
-    transform: translate(-50%, -50%);
-    transition: opacity 150ms;
-    pointer-events: none;
-  }
-  .reproducir svg {
-    width: 24px;
-    height: 24px;
-    fill: #fff;
-  }
-  .fila:hover .reproducir,
-  .fila:focus-visible .reproducir {
-    opacity: 1;
-    background: rgb(0 0 0 / 0.75);
-  }
-  /* Duración: abajo a la derecha, por encima de la barra de progreso. */
-  .duracion {
-    position: absolute;
-    right: 8px;
-    bottom: 12px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgb(0 0 0 / 0.7);
-    font-size: 0.75rem;
-    font-weight: 500;
-    pointer-events: none;
-  }
-  .marca {
-    position: absolute;
-    left: 8px;
-    top: 8px;
-    width: 24px;
-    height: 24px;
-    padding: 5px;
-    box-sizing: border-box;
-    border-radius: 50%;
-    background: #00a63e;
-    fill: none;
-    stroke: #fff;
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-  .miniatura progress {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 4px;
-    appearance: none;
-    border: 0;
-    background: #364153;
-  }
-  .miniatura progress::-webkit-progress-bar {
-    background: #364153;
-  }
-  .miniatura progress::-webkit-progress-value {
-    background: var(--acento);
-  }
-  .info {
-    display: grid;
-    gap: 2px;
-  }
-  .info strong {
-    font-size: 1rem;
-    font-weight: 500;
-  }
-  .info span {
-    color: var(--texto-suave);
-    font-size: 0.875rem;
-  }
-  .quitar {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    min-height: 0;
-    padding: 0 8px;
-    background: rgb(0 0 0 / 0.7);
-    opacity: 0;
-    transition: opacity 150ms;
-  }
-  .episodio:hover .quitar,
-  .episodio:focus-within .quitar {
-    opacity: 1;
-  }
   @media (prefers-reduced-motion: reduce) {
     .fondo img,
-    .miniatura :global(img),
-    .contorno,
-    .reproducir,
-    .quitar,
     .acciones .principal {
       transition: none;
     }
     .fondo img {
       filter: brightness(0.7) saturate(0.8);
-    }
-    .fila:hover .miniatura :global(img) {
-      transform: none;
     }
     .acciones .principal:hover:not(:disabled),
     .acciones .principal:active:not(:disabled) {
