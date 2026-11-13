@@ -13,7 +13,9 @@ import '@fontsource/zen-kaku-gothic-new/japanese-500.css';
 import '@fontsource/zen-kaku-gothic-new/japanese-700.css';
 import './app.css';
 import { aplicarTemaGuardado } from './lib/aplicarApariencia.svelte.ts';
+import { iniciarRegistro } from './lib/registroApp.ts';
 
+iniciarRegistro();
 aplicarTemaGuardado();
 
 // Sin el menú del navegador (Recargar, Inspeccionar…): no es una página web. En los campos de texto se queda,

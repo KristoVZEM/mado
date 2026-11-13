@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { invoke } from '@tauri-apps/api/core';
   import { open, save } from '@tauri-apps/plugin-dialog';
   import { onMount } from 'svelte';
   import FilaAjuste from '../lib/componentes/FilaAjuste.svelte';
@@ -128,6 +129,16 @@
     }
   }
 
+  async function abrirRegistros() {
+    avisar('');
+    try {
+      await invoke('abrir_registros');
+    } catch (e) {
+      console.error(e);
+      avisar(`No se pudo abrir la carpeta. ${textoDeError(e)}`, true);
+    }
+  }
+
   function cambiarEspera(v: string) {
     ajustes.espera = Number(v);
     guardarAjusteSilencioso('espera_conexion', v);
@@ -185,6 +196,10 @@
   <select id="espera" value={String(ajustes.espera)} onchange={(e) => cambiarEspera(e.currentTarget.value)}>
     {#each ESPERAS_CONEXION as e, i (e.segundos)}<option value={String(i)}>{e.nombre}</option>{/each}
   </select>
+</FilaAjuste>
+
+<FilaAjuste id="registros" titulo="Registro de errores" ayuda="Si algo falla, el detalle queda anotado en un archivo de texto en esta carpeta. No guarda tokens ni claves.">
+  <button id="registros" onclick={abrirRegistros}>Abrir carpeta</button>
 </FilaAjuste>
 
 {#if mensaje}

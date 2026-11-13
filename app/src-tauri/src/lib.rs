@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 const CAPTURE_SCRIPT: &str = include_str!("capture.js");
 const MAX_TIMEOUT_MS: u64 = 60_000;
@@ -50,7 +51,7 @@ async fn resolve_webview(
             if let Some(raw) = title.strip_prefix("__CAPTURE__") {
                 match resolver::validate_stream(rule, raw) {
                     Ok(u) => *sink.lock().unwrap() = Some(u.to_string()),
-                    Err(e) => eprintln!("[resolver] URL descartada: {e}"),
+                    Err(e) => log::warn!("[resolver] URL descartada: {e}"),
                 }
             }
         })
@@ -75,9 +76,36 @@ async fn resolve_webview(
     result.ok_or_else(|| "sin captura válida (timeout)".to_string())
 }
 
+/// Abre en el Explorador la carpeta donde se escriben los registros (la crea si aún no existe).
+#[tauri::command]
+fn abrir_registros(app: AppHandle) -> Result<(), String> {
+    let carpeta = app.path().app_log_dir().map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(&carpeta).map_err(|e| format!("no se pudo crear la carpeta de registros: {}", e.kind()))?;
+    std::process::Command::new("explorer")
+        .arg(&carpeta)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("no se pudo abrir la carpeta de registros: {}", e.kind()))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Registro a archivo: la app instalada no tiene consola, así que sin esto el detalle de cualquier
+        // fallo se pierde. Va a la carpeta de registros de la app, con un archivo anterior de reserva.
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .clear_targets()
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir { file_name: Some("ukiku-pc".into()) }),
+                ])
+                .level(log::LevelFilter::Info)
+                .max_file_size(1024 * 1024)
+                .rotation_strategy(RotationStrategy::KeepSome(2))
+                .timezone_strategy(TimezoneStrategy::UseLocal)
+                .build(),
+        )
         .plugin(tauri_plugin_libmpv::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
@@ -95,13 +123,14 @@ pub fn run() {
                     datos::abrir(&dir.join("ukiku.db")).map_err(|e| e.to_string())
                 });
             if let Err(motivo) = &conexion {
-                eprintln!("[datos] no disponible: {motivo}");
+                log::error!("[datos] no disponible: {motivo}");
             }
             app.manage(datos::comandos::Datos(Mutex::new(conexion)));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             resolve_webview,
+            abrir_registros,
             datos::comandos::estado_datos,
             datos::comandos::guardar_progreso,
             datos::comandos::marcar_visto,

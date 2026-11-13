@@ -2,7 +2,7 @@ import { Desafio, FuenteCambio, SinRed, SinServidor } from '../../../core/src/er
 
 /**
  * Mensaje legible para el usuario. No incluye el texto interno del error: puede llevar rutas o
- * tokens. El detalle va a la consola (donde se registra el error original).
+ * tokens. El detalle va al registro de la app (donde se anota el error original).
  */
 export function mensajeDeError(e: unknown): string {
   if (e instanceof SinRed) {
@@ -20,7 +20,7 @@ export function mensajeDeError(e: unknown): string {
     }
     return `Ningún servidor pudo reproducir este episodio (${e.causas.length} intentos fallidos).`;
   }
-  return 'Error inesperado. Mira la consola para ver el detalle.';
+  return 'Error inesperado. El detalle está en el registro (Ajustes > Datos y red).';
 }
 
 /** Los rechazos de `invoke` llegan como texto; el resto de errores pasan por `mensajeDeError`. */

@@ -12,6 +12,7 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "notification:default",
+    "log:default",
     {
       "identifier": "http:default",
       "allow": [

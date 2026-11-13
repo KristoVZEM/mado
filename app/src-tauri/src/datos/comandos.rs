@@ -25,17 +25,17 @@ fn ahora_ms() -> i64 {
 
 /// Mensaje para la pantalla. Los errores de validación y de base más nueva ya son legibles y se muestran
 /// tal cual; los de SQLite y de disco llevan SQL, nombres de tablas o rutas, así que la pantalla recibe un
-/// texto genérico y el detalle va a la consola de la aplicación.
+/// texto genérico y el detalle va al registro de la aplicación.
 fn para_interfaz(e: &Error) -> String {
     match e {
         Error::Invalido(_) | Error::BaseMasNueva { .. } => e.to_string(),
         Error::Sqlite(_) => {
-            eprintln!("[datos] {e}");
-            "No se pudo acceder a los datos locales. El detalle está en la consola de la aplicación.".to_string()
+            log::error!("[datos] {e}");
+            "No se pudo acceder a los datos locales. El detalle está en el registro (Ajustes > Datos y red).".to_string()
         }
         Error::Io(causa) => {
-            eprintln!("[datos] {e}");
-            format!("Error de disco ({}). El detalle está en la consola de la aplicación.", causa.kind())
+            log::error!("[datos] {e}");
+            format!("Error de disco ({}). El detalle está en el registro (Ajustes > Datos y red).", causa.kind())
         }
     }
 }
@@ -348,7 +348,7 @@ mod pruebas {
 /// Carpeta de datos locales de la app, donde viven la base y los respaldos.
 fn carpeta_de_datos(app: &AppHandle) -> Result<PathBuf, String> {
     app.path().app_local_data_dir().map_err(|e| {
-        eprintln!("[datos] {e}");
+        log::error!("[datos] {e}");
         "No se encontró la carpeta de datos de la app.".to_string()
     })
 }

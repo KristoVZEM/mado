@@ -95,7 +95,7 @@ pub fn podar(carpeta: &Path, conservar: usize) -> Resultado<usize> {
     for nombre in nombres.iter().take(sobran) {
         match std::fs::remove_file(carpeta.join(nombre)) {
             Ok(()) => borrados += 1,
-            Err(e) => eprintln!("[datos] no se pudo borrar el respaldo antiguo {nombre}: {e}"),
+            Err(e) => log::warn!("[datos] no se pudo borrar el respaldo antiguo {nombre}: {e}"),
         }
     }
     Ok(borrados)
@@ -177,7 +177,7 @@ pub fn restaurar(conn: &mut Connection, origen: &Path, base: &Path, carpeta_prev
             .and_then(|p| volcar_sobre(&p, conn))
             .and_then(|_| configurar(conn));
         if let Err(v) = vuelta {
-            eprintln!("[datos] no se pudo deshacer la restauración: {v}");
+            log::warn!("[datos] no se pudo deshacer la restauración: {v}");
         }
         return Err(e);
     }
