@@ -1,14 +1,18 @@
-// Réplica de Unpacker.listenResources de Ukiku: vigilar las peticiones de la página
-// y quedarse con la primera URL de stream. Se comunica con Rust por document.title.
+// Réplica de Unpacker.listenResources de Ukiku: vigilar las peticiones de la página y avisar a Rust de cada
+// URL que parezca un stream. Se comunica por document.title. Quien decide es Rust (`resolver.rs`): aquí no
+// se descarta nada por ser «la segunda», porque la primera coincidencia puede ser una que Rust rechace.
 (() => {
   if (window.__captureInstalled) return;
   window.__captureInstalled = true;
+  const PREFIJO = '__CAPTURE__';
+  const TOPE = 20;
   const re = /master\.m3u8|video\.mp4|^https:\/\/\d+\.\d+\.\d+\.\d+.*mp4/;
-  let found = null;
+  const candidatas = [];
+  let turno = 0;
   const hit = (u) => {
-    if (found || typeof u !== 'string' || !re.test(u)) return;
-    found = u;
-    document.title = '__CAPTURE__' + u;
+    if (typeof u !== 'string' || !re.test(u) || candidatas.includes(u) || candidatas.length >= TOPE) return;
+    candidatas.push(u);
+    document.title = PREFIJO + u;
   };
 
   const of = window.fetch;
@@ -30,11 +34,7 @@
 
   setInterval(() => {
     document.querySelectorAll('video,source').forEach((v) => hit(v.currentSrc || v.src));
-    // UPNShare: Ukiku pulsa el botón de descarga (con &dl=1) para provocar la petición.
-    if (location.hostname.endsWith('uns.bio')) {
-      const b = document.getElementsByClassName('downloader-button')[0];
-      if (b) b.click();
-    }
-    if (found) document.title = '__CAPTURE__' + found;
+    // La página puede pisar el título: se repiten las candidatas por turnos hasta que Rust acepte una.
+    if (candidatas.length > 0) document.title = PREFIJO + candidatas[turno++ % candidatas.length];
   }, 200);
 })();
