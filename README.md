@@ -5,17 +5,16 @@ los mismos datos que usa la app Android [Ukiku](https://github.com/jordyamc/UKIK
 
 ## Estado
 
-En desarrollo. El spike de resolución (`spike/`) y el de libmpv en Tauri
-validaron la técnica. Hoy hay:
+En desarrollo. Un spike de resolución y otro de libmpv en Tauri validaron la
+técnica (el código del primero está en el historial de git). Hoy hay:
 
 - `core/`: núcleo de fuentes en TypeScript (buscar, episodios y resolver
   Zilla, MP4Upload y Voe, con errores tipados).
 - `app/`: aplicación de escritorio (Tauri + Svelte + libmpv) con un carril de
   iconos (Inicio, Catálogo, Emisión, Biblioteca, Historial y Ajustes), ficha
   con sinopsis y reproductor con controles flotantes.
-- `lab/`: chequeo diario de que las fuentes siguen sirviendo (corre en un
-  servidor propio).
-- `spike/`: el spike original; lo usa `lab/` hasta migrar a `core/`.
+- `lab/`: chequeo diario de que los tres servidores siguen sirviendo, con el
+  mismo `core/` que usa la app (corre en un servidor propio).
 
 Hecho:
 
