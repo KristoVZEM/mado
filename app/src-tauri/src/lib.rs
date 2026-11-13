@@ -1,3 +1,4 @@
+mod bandeja;
 mod resolver;
 mod datos;
 mod token;
@@ -94,15 +95,9 @@ pub fn run() {
     tauri::Builder::default()
         // Una sola instancia (debe registrarse el primero): abrir la app otra vez trae al frente la que ya
         // está. Dos a la vez duplicarían la sincronización y los avisos, y escribirían la misma base.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(ventana) = app.get_webview_window("main") {
-                // Solo se restaura si está minimizada: restaurar una ventana visible le quitaría el maximizado.
-                if ventana.is_minimized().unwrap_or(false) {
-                    let _ = ventana.unminimize();
-                }
-                let _ = ventana.set_focus();
-            }
-        }))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| bandeja::mostrar_principal(app)))
+        // Inicio con Windows (lo activa el usuario en Ajustes): arranca escondida en la bandeja.
+        .plugin(tauri_plugin_autostart::Builder::new().arg(bandeja::ARG_OCULTA).build())
         // Recuerda tamaño, posición y maximizado de la ventana principal. La pantalla completa no se guarda
         // (es del Reproductor) y las ventanas ocultas del resolutor quedan fuera.
         .plugin(
@@ -146,11 +141,17 @@ pub fn run() {
                 log::error!("[datos] no disponible: {motivo}");
             }
             app.manage(datos::comandos::Datos(Mutex::new(conexion)));
+            // Sin icono la app sigue sirviendo (solo no podría esconderse en la bandeja): no impide arrancar.
+            let oculta = std::env::args().any(|a| a == bandeja::ARG_OCULTA);
+            if let Err(e) = bandeja::crear(app, oculta) {
+                log::error!("[bandeja] no se pudo crear el icono: {e}");
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             resolve_webview,
             abrir_registros,
+            bandeja::bandeja_visible,
             datos::comandos::estado_datos,
             datos::comandos::guardar_progreso,
             datos::comandos::marcar_visto,

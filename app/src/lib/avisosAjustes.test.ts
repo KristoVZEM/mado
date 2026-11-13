@@ -40,3 +40,9 @@ test('el alcance por defecto es solo lo que estoy viendo', () => {
   assert.equal(incluirFavoritasDe(99), false);
   assert.equal(ALCANCES_AVISOS.length, 2);
 });
+
+test('cerrarABandejaDe solo se activa con 1', async () => {
+  const { cerrarABandejaDe } = await import('./avisosAjustes.ts');
+  assert.equal(cerrarABandejaDe('1'), true);
+  for (const v of ['0', '', '2', 'si', null, undefined]) assert.equal(cerrarABandejaDe(v), false);
+});

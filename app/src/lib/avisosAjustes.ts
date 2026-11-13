@@ -37,3 +37,8 @@ export function alcanceAvisosDe(valor: string | null | undefined): number {
 export function incluirFavoritasDe(posicion: number): boolean {
   return (ALCANCES_AVISOS[posicion] ?? ALCANCES_AVISOS[0]).incluirFavoritas;
 }
+
+// `cerrar_a_bandeja`: ausente o inválido = no; solo `1` lo activa.
+export function cerrarABandejaDe(valor: string | null | undefined): boolean {
+  return numeroDeAjuste(valor, 0, 0, 1) === 1;
+}

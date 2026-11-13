@@ -8,14 +8,16 @@
   import Historial from './pantallas/Historial.svelte';
   import Ficha from './pantallas/Ficha.svelte';
   import Reproductor from './pantallas/Reproductor.svelte';
+  import { invoke } from '@tauri-apps/api/core';
   import { getCurrentWindow } from '@tauri-apps/api/window';
+  import { ajustes, asegurarAjustes } from './lib/ajustes.svelte.ts';
   import { onMount } from 'svelte';
   import { ejecutarAlCerrar } from './lib/cierre.ts';
   import { asegurarVinculo } from './lib/anilistServicio.ts';
   import { estadoDatos, guardarAjuste, leerAjuste, pendientesEmparejar, reintentarNingunos } from './lib/datos.ts';
   import { crearEmparejador } from './lib/emparejado.ts';
   import { reintentarSiCambiaronLasReglas } from './lib/reglasEmparejado.ts';
-  import { nav, irABusqueda } from './lib/navegacion.svelte.ts';
+  import { abrir, nav, irABusqueda } from './lib/navegacion.svelte.ts';
   import { iniciarAvisos } from './lib/avisosApp.ts';
   import { iniciarRespaldoAutomatico } from './lib/respaldoApp.ts';
   import { iniciarApariencia } from './lib/aplicarApariencia.svelte.ts';
@@ -27,6 +29,10 @@
   // Todo es opcional: cualquier fallo se queda en la consola y no afecta a la app.
   onMount(() => {
     iniciarApariencia(); // dura lo que la app: no hace falta detenerla
+    // El icono de la bandeja solo se ve si el usuario eligió seguir ahí al cerrar.
+    void asegurarAjustes()
+      .then(() => invoke('bandeja_visible', { visible: ajustes.cerrarABandeja }))
+      .catch((e) => console.error('icono de la bandeja:', e));
     void dormir(15_000).then(iniciarRespaldoAutomatico);
     // Cerrar con la X: se retiene el cierre, se guarda lo pendiente (progreso, volumen) y se cierra.
     // `ejecutarAlCerrar` tiene tope de tiempo, así que la ventana nunca queda colgada.
@@ -37,6 +43,19 @@
         // Cerrar desde el Reproductor a pantalla completa: se sale antes, para que el tamaño que se recuerda
         // sea el de la ventana y no el del monitor.
         await getCurrentWindow().setFullscreen(false).catch(() => {});
+        await asegurarAjustes();
+        if (ajustes.cerrarABandeja) {
+          // La app sigue viva en la bandeja (para los avisos). El Reproductor se cierra: al salir guarda y para el vídeo.
+          if (nav.superior?.tipo === 'reproducir') abrir({ tipo: 'ficha', anime: nav.superior.anime });
+          try {
+            await invoke('bandeja_visible', { visible: true });
+            await getCurrentWindow().hide();
+            return;
+          } catch (e) {
+            // Sin icono o sin poder esconderla, mejor cerrar de verdad que dejar una ventana inalcanzable.
+            console.error('no se pudo pasar a la bandeja:', e);
+          }
+        }
         await getCurrentWindow().destroy();
       })
       .catch((e) => console.error('cierre de la ventana:', e));

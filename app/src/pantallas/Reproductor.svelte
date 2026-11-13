@@ -183,8 +183,11 @@
   }
 
   async function alternarPantallaCompleta() {
-    pantallaCompleta = !pantallaCompleta;
-    await getCurrentWindow().setFullscreen(pantallaCompleta);
+    // Se pregunta a la ventana en vez de fiarse de lo recordado: al cerrar a la bandeja desde aquí se sale de
+    // la pantalla completa sin pasar por esta pantalla.
+    const ventana = getCurrentWindow();
+    pantallaCompleta = !(await ventana.isFullscreen().catch(() => pantallaCompleta));
+    await ventana.setFullscreen(pantallaCompleta);
   }
 
   function avisar(texto: string) {

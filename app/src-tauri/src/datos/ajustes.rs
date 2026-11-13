@@ -49,6 +49,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("respaldo_ultimo", 0.0, 9.0e15),
     // Espera máxima de una petición a la fuente: posición en la lista de la app (10, 15, 30 o 60 s); ausente = 15 s.
     ("espera_conexion", 0.0, 3.0),
+    // Al cerrar la ventana, seguir en la bandeja del sistema (para los avisos): 0 o ausente = no.
+    ("cerrar_a_bandeja", 0.0, 1.0),
 ];
 
 /// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`, `Voe`…); texto corto sin símbolos raros.
