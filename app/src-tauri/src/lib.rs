@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tauri::webview::NewWindowResponse;
 use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_window_state::StateFlags;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 const CAPTURE_SCRIPT: &str = include_str!("capture.js");
@@ -91,6 +92,25 @@ fn abrir_registros(app: AppHandle) -> Result<(), String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Una sola instancia (debe registrarse el primero): abrir la app otra vez trae al frente la que ya
+        // está. Dos a la vez duplicarían la sincronización y los avisos, y escribirían la misma base.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(ventana) = app.get_webview_window("main") {
+                // Solo se restaura si está minimizada: restaurar una ventana visible le quitaría el maximizado.
+                if ventana.is_minimized().unwrap_or(false) {
+                    let _ = ventana.unminimize();
+                }
+                let _ = ventana.set_focus();
+            }
+        }))
+        // Recuerda tamaño, posición y maximizado de la ventana principal. La pantalla completa no se guarda
+        // (es del Reproductor) y las ventanas ocultas del resolutor quedan fuera.
+        .plugin(
+            tauri_plugin_window_state::Builder::new()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .with_filter(|etiqueta| etiqueta == "main")
+                .build(),
+        )
         // Registro a archivo: la app instalada no tiene consola, así que sin esto el detalle de cualquier
         // fallo se pierde. Va a la carpeta de registros de la app, con un archivo anterior de reserva.
         .plugin(

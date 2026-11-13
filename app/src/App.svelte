@@ -34,6 +34,9 @@
       .onCloseRequested(async (evento) => {
         evento.preventDefault();
         await ejecutarAlCerrar();
+        // Cerrar desde el Reproductor a pantalla completa: se sale antes, para que el tamaño que se recuerda
+        // sea el de la ventana y no el del monitor.
+        await getCurrentWindow().setFullscreen(false).catch(() => {});
         await getCurrentWindow().destroy();
       })
       .catch((e) => console.error('cierre de la ventana:', e));
