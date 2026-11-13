@@ -17,15 +17,27 @@ validaron la técnica. Hoy hay:
   servidor propio).
 - `spike/`: el spike original; lo usa `lab/` hasta migrar a `core/`.
 
-Hecho: datos locales con SQLite (progreso, historial, ajustes y biblioteca
-con estado y favoritos), importación de la copia de Ukiku desde una carpeta
-(historial, siguiendo y favoritos, mezclando o reemplazando) y datos de
-[AniList](https://anilist.co) (banner, puntuación, próximo episodio, agenda
-semanal de emisión y aviso de episodio nuevo), con emparejado automático de
-las series. También sincroniza la lista (estado y episodios vistos) con una
-cuenta de AniList, en los dos sentidos: al abrir, al cambiar algo y a demanda
-desde Ajustes, con vista previa en la primera vez. Pendiente: notificaciones
-de episodios nuevos y las descargas.
+Hecho:
+
+- Datos locales con SQLite: progreso, historial, ajustes y biblioteca con
+  estado y favoritos.
+- Importación de la copia de Ukiku desde una carpeta (historial, siguiendo y
+  favoritos, mezclando o reemplazando).
+- Datos de [AniList](https://anilist.co): banner, puntuación, próximo
+  episodio, agenda semanal de emisión y emparejado automático de las series.
+  La lista (estado y episodios vistos) se sincroniza con una cuenta de
+  AniList en los dos sentidos, con vista previa la primera vez.
+- Avisos de episodios nuevos con notificación de Windows, mientras la app
+  está abierta.
+- Imágenes de [TMDB](https://www.themoviedb.org) (fondo y logo) con la clave
+  del usuario, guardada en el almacén de credenciales de Windows.
+- Ajustes de reproducción, apariencia (tema claro u oscuro y color de
+  acento), avisos, datos y cuentas.
+- Copia de seguridad: exportar, restaurar y copia automática.
+- Modo degradado si la fuente no responde: lo local sigue funcionando.
+- Instalador NSIS con `npm run tauri build` desde `app/`.
+
+Pendiente: las descargas.
 
 ## Plan general
 

@@ -13,9 +13,10 @@ relativa, sin build). La reproducción usa libmpv.
 ## Comandos
 
 - `npm install`, luego `npm run tauri dev` para ejecutar la aplicación.
-- `npm test`: pruebas de las utilidades puras (cabeceras de mpv, saltos y errores).
+- `npm test`: pruebas de la lógica pura de `src/lib` (sin ventana ni red).
 - `npm run check`: tipos de TypeScript y Svelte. `npm run build`: construye el frontend.
-- `cd src-tauri && cargo test`: pruebas de `resolver.rs` (reglas de confianza del WebView).
+- `cd src-tauri && cargo test`: pruebas de la capa de datos (SQLite, migraciones, importación y copias) y de `resolver.rs` (reglas de confianza del WebView). `cargo clippy` debe quedar limpio.
+- `npm run tauri build`: genera el instalador NSIS en `src-tauri/target/release/bundle/nsis/`.
 
 ## Controles del reproductor
 
@@ -25,4 +26,6 @@ Esc: volver a la ficha. Los controles se ocultan a los 3 s sin mover el ratón.
 ## Seguridad
 
 La URL de stream que captura el WebView oculto la escribe una página de terceros: se valida
-en Rust (`resolver.rs`) antes de dársela a mpv. `plugin-http` solo permite `https`.
+en Rust (`resolver.rs`) antes de dársela a mpv. `plugin-http` solo puede llamar a los hosts
+listados en `src-tauri/capabilities/default.json` (la fuente, Zilla, AniList y TMDB). El token
+de AniList y la clave de TMDB se guardan en el almacén de credenciales de Windows, no en la base.
