@@ -21,3 +21,11 @@ export function tiempoEnPosicion(x: number, izquierda: number, ancho: number, du
   const fraccion = Math.min(1, Math.max(0, (x - izquierda) / ancho));
   return fraccion * duracion;
 }
+
+// Segundo al que lleva una tecla numérica (fila de números o teclado numérico): 0 = principio, 5 = la mitad,
+// 9 = el 90 %. `null` si la tecla no es un dígito o aún no se conoce la duración.
+export function tiempoDeDigito(codigo: string, duracion: number): number | null {
+  const m = /^(?:Digit|Numpad)([0-9])$/.exec(codigo);
+  if (!m || !Number.isFinite(duracion) || duracion <= 0) return null;
+  return (Number(m[1]) / 10) * duracion;
+}

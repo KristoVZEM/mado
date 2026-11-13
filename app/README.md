@@ -20,7 +20,9 @@ relativa, sin build). La reproducción usa libmpv.
 
 ## Controles del reproductor
 
-Espacio: pausa. ← →: −10 s / +10 s. S: +85 s (saltar el opening). F: pantalla completa.
+Espacio o clic en la imagen: pausa. ← →: −10 s / +10 s. S: +85 s (saltar el opening).
+↑ ↓: volumen. M: silencio. 0-9: saltar a esa décima del episodio (5 = la mitad).
+N / P: episodio siguiente / anterior. F o doble clic: pantalla completa.
 Esc: volver a la ficha. Los controles se ocultan a los 3 s sin mover el ratón.
 
 ## Seguridad

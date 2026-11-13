@@ -34,7 +34,7 @@
   import { avisarCambio } from '../lib/sync.svelte.ts';
   import { alCerrar } from '../lib/cierre.ts';
   import { anterioresDe, debeGuardar, esVisto, posicionDeRetoma } from '../lib/progreso.ts';
-  import { formatearTiempo, tiempoEnPosicion } from '../lib/saltos.ts';
+  import { formatearTiempo, tiempoDeDigito, tiempoEnPosicion } from '../lib/saltos.ts';
   import type { Idioma, Playable, ResultadoBusqueda } from '../../../core/src/index.ts';
 
   let {
@@ -411,6 +411,8 @@
       return;
     }
     if (estado !== 'listo') return;
+    // Con Ctrl o Alt la tecla es de otro (Ctrl+K, Alt+F4): no es un atajo del reproductor.
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
     switch (e.code) {
       case 'Space':
         e.preventDefault();
@@ -441,8 +443,19 @@
       case 'KeyF':
         void alternarPantallaCompleta();
         break;
-      default:
-        return;
+      case 'KeyN':
+        irAlSiguiente();
+        break;
+      case 'KeyP':
+        irAlAnterior();
+        break;
+      default: {
+        // 0-9: salta a esa décima del episodio (5 = la mitad).
+        const destino = tiempoDeDigito(e.code, reproductor.duracion);
+        if (destino === null) return;
+        e.preventDefault();
+        void saltarAbsoluto(destino);
+      }
     }
     mostrarControles();
   }
@@ -469,7 +482,11 @@
 
   {#if estado === 'listo'}
     <!-- Superficie transparente sobre el vídeo: un clic en la imagen pausa o reanuda. -->
-    <button class="superficie" tabindex="-1" aria-label="Pausar o reanudar" onclick={pausarDesdeImagen}></button>
+    <button class="superficie" tabindex="-1" aria-label="Pausar o reanudar" onclick={pausarDesdeImagen} ondblclick={alternarPantallaCompleta}></button>
+
+    {#if esperando}
+      <div class="espera" role="status" aria-label="Cargando el vídeo"><span class="rueda"></span></div>
+    {/if}
 
     {#if esperando}
       <div class="espera" role="status" aria-label="Cargando el vídeo"><span class="rueda"></span></div>

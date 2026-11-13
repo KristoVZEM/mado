@@ -42,3 +42,18 @@ test('tiempoEnPosicion da 0 sin duración o sin ancho válidos', () => {
   assert.equal(tiempoEnPosicion(150, 100, 200, Number.NaN), 0);
   assert.equal(tiempoEnPosicion(150, 100, 0, 1000), 0);
 });
+
+test('tiempoDeDigito reparte la duración en décimas', async () => {
+  const { tiempoDeDigito } = await import('./saltos.ts');
+  assert.equal(tiempoDeDigito('Digit0', 1200), 0);
+  assert.equal(tiempoDeDigito('Digit5', 1200), 600);
+  assert.equal(tiempoDeDigito('Numpad9', 1200), 1080);
+});
+
+test('tiempoDeDigito ignora otras teclas y la duración desconocida', async () => {
+  const { tiempoDeDigito } = await import('./saltos.ts');
+  assert.equal(tiempoDeDigito('KeyA', 1200), null);
+  assert.equal(tiempoDeDigito('Digit10', 1200), null);
+  assert.equal(tiempoDeDigito('Digit5', 0), null);
+  assert.equal(tiempoDeDigito('Digit5', Number.NaN), null);
+});
