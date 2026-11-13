@@ -38,6 +38,11 @@ Hecho:
 
 Pendiente: las descargas.
 
+## Versiones
+
+La versión actual y lo que cambió en cada una están en [CHANGELOG.md](CHANGELOG.md), junto
+con la regla para numerarlas.
+
 ## Plan general
 
 - Stack objetivo: TypeScript y Tauri.
