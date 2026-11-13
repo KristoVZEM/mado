@@ -25,7 +25,9 @@
   import { cambiarIdioma } from '../lib/idioma.ts';
   import { VELOCIDADES, etiquetaVelocidad } from '../lib/velocidad.ts';
   import { estadoSiguiente } from '../lib/siguiente.ts';
-  import { resolverEpisodio } from '../lib/resolverEpisodio.ts';
+  import { recordarServidor, resolverEpisodio } from '../lib/resolverEpisodio.ts';
+  import { conExcluido, estaEsperandoDatos, fraccionAlmacenada } from '../lib/buffer.ts';
+  import { SinServidor } from '../../../core/src/index.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { completarSiTermino } from '../lib/completar.ts';
   import { fijarEstado, guardarProgreso, marcarVisto, progresoDe, seriesParaSync, type SerieRef } from '../lib/datos.ts';
@@ -55,6 +57,11 @@
   let ultimoGuardadoMs = Date.now();
   let ultimaPosicionGuardada = 0;
   let cambiandoIdioma = $state(false);
+  // Servidores que en esta pantalla ya resolvieron pero no entregaron el vídeo (o que el usuario descartó).
+  let excluidos: string[] = [];
+  let cambiandoServidor = $state(false);
+  // El servidor actual ya se anotó como «el de la última vez».
+  let servidorRecordado = false;
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
   let menuIdioma = $state(false);
@@ -128,11 +135,37 @@
   // mpv carga en segundo plano: un servidor que se cae o rechaza los segmentos avisa con end-file/error
   // cuando `cargar` ya devolvió. Sin esto la pantalla quedaría "lista" sin vídeo y sin mensaje.
   $effect(() => {
-    if (reproductor.falloCarga && (estado === 'listo' || estado === 'cargando') && !cambiandoIdioma) {
-      mensaje = 'El servidor no entregó el vídeo. Vuelve atrás e inténtalo de nuevo.';
-      estado = 'error';
+    // `cambiandoServidor` se lee aquí a propósito: si el servidor nuevo falla antes de que termine el cambio,
+    // el efecto vuelve a correr al acabar y prueba el siguiente.
+    if (reproductor.falloCarga && (estado === 'listo' || estado === 'cargando') && !cambiandoIdioma && !cambiandoServidor) {
+      untrack(() => void probarOtroServidor(true));
     }
   });
+
+  // El servidor se recuerda cuando mpv ya abrió el vídeo (conoce su duración), no al resolverlo.
+  $effect(() => {
+    if (estado !== 'listo' || !playable || !(reproductor.duracion > 0) || reproductor.falloCarga) return;
+    const actual = playable;
+    untrack(() => {
+      if (servidorRecordado) return;
+      servidorRecordado = true;
+      recordarServidor(actual);
+    });
+  });
+
+  const esperando = $derived(
+    estado === 'listo' &&
+      (cambiandoServidor ||
+        (reproductor.duracion <= 0 && !reproductor.falloCarga) ||
+        estaEsperandoDatos({
+          pausadoPorCache: reproductor.pausadoPorCache,
+          saltando: reproductor.saltando,
+          terminado: reproductor.terminado,
+        })),
+  );
+  const fraccionDescargada = $derived(
+    fraccionAlmacenada(reproductor.almacenadoHasta, reproductor.posicion, reproductor.duracion),
+  );
 
   onMount(async () => {
     try {
@@ -240,6 +273,44 @@
       .catch(falloDeDatos);
   }
 
+  // Pasa al siguiente servidor de la cadena conservando el segundo. `porFallo`: el actual no entregó el vídeo
+  // (si no queda ninguno, la pantalla pasa a error); sin él es el usuario quien lo pide y, si no hay otro, el
+  // vídeo actual sigue.
+  async function probarOtroServidor(porFallo: boolean) {
+    if (cambiandoServidor || cambiandoIdioma || destruido) return;
+    const actual = playable?.servidor;
+    cambiandoServidor = true;
+    const retoma = reproductor.posicion;
+    const candidatos = conExcluido(excluidos, actual);
+    try {
+      if (actual === undefined) throw new SinServidor('no se sabe qué servidor falló', []);
+      if (porFallo) avisar(`${actual} no entregó el vídeo. Probando otro servidor…`);
+      const p = await resolverEpisodio(anime.slug, numero, idioma, candidatos);
+      if (destruido) return;
+      excluidos = candidatos;
+      playable = p;
+      servidorRecordado = false;
+      await cargar(p, retoma > 0 ? retoma : undefined);
+      if (destruido) return;
+      estado = 'listo';
+      ultimoGuardadoMs = Date.now();
+      ultimaPosicionGuardada = retoma;
+      avisar(`Reproduciendo desde ${p.servidor ?? 'otro servidor'}.`);
+    } catch (e) {
+      console.error(e);
+      if (destruido) return;
+      const sinMas = e instanceof SinServidor;
+      if (porFallo) {
+        mensaje = sinMas ? 'El servidor no entregó el vídeo y no hay otro disponible para este episodio.' : mensajeDeError(e);
+        estado = 'error';
+      } else {
+        avisar(sinMas ? 'No hay otro servidor disponible para este episodio.' : `No se pudo cambiar de servidor: ${mensajeDeError(e)}`);
+      }
+    } finally {
+      cambiandoServidor = false;
+    }
+  }
+
   /** Cambia SUB/DUB conservando el segundo; si el idioma nuevo falla, el vídeo actual sigue. */
   async function elegirIdioma(nuevo: Idioma) {
     menuIdioma = false;
@@ -254,6 +325,9 @@
       });
       if (destruido) return;
       playable = p;
+      // Otro idioma son otros embeds: lo descartado antes ya no cuenta.
+      excluidos = [];
+      servidorRecordado = false;
       // La pantalla se identifica por el número de episodio, así que esto no la remonta.
       abrir({ tipo: 'reproducir', anime, numeros, numero, idioma: nuevo });
       guardarAjusteSilencioso(`idioma:${anime.aid}`, nuevo);
@@ -397,6 +471,10 @@
     <!-- Superficie transparente sobre el vídeo: un clic en la imagen pausa o reanuda. -->
     <button class="superficie" tabindex="-1" aria-label="Pausar o reanudar" onclick={pausarDesdeImagen}></button>
 
+    {#if esperando}
+      <div class="espera" role="status" aria-label="Cargando el vídeo"><span class="rueda"></span></div>
+    {/if}
+
     {#if reproductor.terminado}
       <div class="centro fondo">
         <p>Fin del episodio {numero}</p>
@@ -412,7 +490,14 @@
       <span>{anime.title} · Ep. {numero}</span>
       {#if cambiandoIdioma}<span>Cambiando de idioma…</span>{/if}
       {#if playable?.servidor}
-        <span class="etiqueta">{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor}</span>
+        <button
+          class="etiqueta"
+          title="Probar otro servidor"
+          aria-label="Servidor {playable.servidor}. Probar otro servidor"
+          disabled={cambiandoServidor || cambiandoIdioma}
+          onclick={() => probarOtroServidor(false)}
+          >{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor} ⇄</button
+        >
       {/if}
     </header>
 
@@ -444,7 +529,7 @@
         onpointercancel={() => (arrastre = null)}
         onpointerleave={() => (cursor = null)}
       >
-        <div class="pista"><div class="relleno" style:width="{fraccionMostrada * 100}%"></div></div>
+        <div class="pista"><div class="almacenado" style:width="{fraccionDescargada * 100}%"></div><div class="relleno"style:width="{fraccionMostrada * 100}%"></div></div>
         {#if cursor && reproductor.duracion > 0}
           <div class="burbuja" style:left="{cursor.x}px">{formatearTiempo(arrastre ?? cursor.t)}</div>
         {/if}
@@ -668,9 +753,57 @@
   .progreso:focus-visible .pista {
     height: 8px;
   }
+  .pista {
+    position: relative;
+  }
+  /* Lo ya descargado, por detrás del avance. */
+  .almacenado {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: rgba(255, 255, 255, 0.35);
+  }
   .relleno {
+    position: relative;
     height: 100%;
     background: #e5484d;
+  }
+  /* Rueda de espera: aparece con medio segundo de retraso para no parpadear en cada salto corto. */
+  .espera {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    opacity: 0;
+    animation: aparecer 0.2s 0.5s forwards;
+  }
+  .rueda {
+    width: 56px;
+    height: 56px;
+    border: 4px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #fff;
+    border-radius: 50%;
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.8));
+    animation: girar 0.9s linear infinite;
+  }
+  @keyframes aparecer {
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes girar {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rueda {
+      animation-duration: 4s;
+    }
+  }
+  button.etiqueta {
+    background: rgba(0, 0, 0, 0.35);
+    color: inherit;
   }
   .burbuja {
     position: absolute;

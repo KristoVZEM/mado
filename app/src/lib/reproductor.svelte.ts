@@ -26,6 +26,9 @@ const OBSERVADAS = [
   ['volume', 'double'],
   ['mute', 'flag'],
   ['speed', 'double'],
+  ['paused-for-cache', 'flag'],
+  ['seeking', 'flag'],
+  ['demuxer-cache-time', 'double', 'none'],
 ] as const satisfies MpvObservableProperty[];
 
 /** Estado reactivo del reproductor, alimentado por los eventos de mpv. */
@@ -39,6 +42,12 @@ export const reproductor = $state({
   volumen: 100,
   velocidad: 1,
   silencio: false,
+  /** mpv se quedó sin datos y espera a que lleguen más. */
+  pausadoPorCache: false,
+  /** mpv está saltando a otro punto y aún no tiene imagen. */
+  saltando: false,
+  /** Segundo hasta el que llega lo ya descargado, o `null` si mpv no lo informa. */
+  almacenadoHasta: null as number | null,
 });
 
 let iniciado: Promise<void> | null = null;
@@ -77,6 +86,9 @@ function iniciarMpv(): Promise<void> {
       else if (name === 'volume' && data != null) reproductor.volumen = Number(data);
       else if (name === 'mute') reproductor.silencio = Boolean(data);
       else if (name === 'speed' && data != null) reproductor.velocidad = Number(data);
+      else if (name === 'paused-for-cache') reproductor.pausadoPorCache = Boolean(data);
+      else if (name === 'seeking') reproductor.saltando = Boolean(data);
+      else if (name === 'demuxer-cache-time') reproductor.almacenadoHasta = data == null ? null : Number(data);
     });
     await listenEvents((evento) => {
       if (esFalloDeReproduccion(evento)) reproductor.falloCarga = true;
@@ -121,6 +133,12 @@ export function cargar(p: Playable, inicio?: number): Promise<void> {
   return enSerie(() => cargarAhora(p, inicio));
 }
 
+function reiniciarEspera(): void {
+  reproductor.pausadoPorCache = false;
+  reproductor.saltando = false;
+  reproductor.almacenadoHasta = null;
+}
+
 /** Cuerpo de `cargar` sin serializar; solo lo llama `cargar`. */
 async function cargarAhora(p: Playable, inicio?: number): Promise<void> {
   const url = validarUrlDeStream(p.url);
@@ -129,6 +147,7 @@ async function cargarAhora(p: Playable, inicio?: number): Promise<void> {
   reproductor.falloCarga = false;
   reproductor.posicion = inicio ?? 0;
   reproductor.duracion = 0;
+  reiniciarEspera();
   await setProperty('user-agent', p.userAgent);
   await setProperty('http-header-fields', cabecerasMpv(p.headers));
   await command('loadfile', argumentosLoadfile(url, inicio));
@@ -189,4 +208,5 @@ async function detenerAhora(): Promise<void> {
   reproductor.posicion = 0;
   reproductor.duracion = 0;
   reproductor.terminado = false;
+  reiniciarEspera();
 }

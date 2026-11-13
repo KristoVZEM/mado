@@ -112,3 +112,23 @@ test('el preferido no se prueba dos veces', async () => {
   await assert.rejects(resolverPrimero([e1, e2], [roto], 'UA', 'B'), SinServidor);
   assert.equal(llamadas, 1);
 });
+
+test('los servidores excluidos no se prueban, aunque sean el preferido', async () => {
+  const probados: string[] = [];
+  const todos: ResolverServidor = (e) => {
+    probados.push(e.server);
+    return playable(e.server.toLowerCase());
+  };
+  const r = await resolverPrimero([e1, e2], [todos], 'UA', 'A', ['A']);
+  assert.equal(r.playable.servidor, 'B');
+  assert.deepEqual(probados, ['B']);
+});
+
+test('con todos los servidores excluidos es SinServidor sin causas', async () => {
+  const todos: ResolverServidor = () => playable('x');
+  await assert.rejects(resolverPrimero([e1, e2], [todos], 'UA', undefined, ['A', 'B']), (e: unknown) => {
+    assert.ok(e instanceof SinServidor);
+    assert.equal(e.causas.length, 0);
+    return true;
+  });
+});

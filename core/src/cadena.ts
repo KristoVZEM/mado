@@ -8,15 +8,18 @@ import type { Embed, Playable, ResolverServidor } from './types.ts';
  * salta antes, en `episodio()`; dentro de la cadena un `Desafio` solo puede venir de un espejo,
  * y significa "ese servidor no sirve", no "la fuente cayó". Cualquier otro error (un bug) sube tal cual.
  * Con `preferido` (el `server` de un embed), esos embeds se prueban primero con toda la cadena y, si no sirven,
- * sigue el resto en su orden de siempre.
+ * sigue el resto en su orden de siempre. Los embeds cuyo `server` está en `excluidos` no se prueban: son los
+ * que ya resolvieron pero luego no entregaron el vídeo.
  */
 export async function resolverPrimero(
   embeds: Embed[],
   resolvers: ResolverServidor[],
   userAgent: string,
   preferido?: string,
+  excluidos: readonly string[] = [],
 ): Promise<{ embed: Embed; playable: Playable }> {
   const causas: Error[] = [];
+  if (excluidos.length > 0) embeds = embeds.filter((e) => !excluidos.includes(e.server));
   const primeros = preferido === undefined ? [] : embeds.filter((e) => e.server === preferido);
   const resto = preferido === undefined ? embeds : embeds.filter((e) => e.server !== preferido);
   for (const grupo of [primeros, resto]) {
