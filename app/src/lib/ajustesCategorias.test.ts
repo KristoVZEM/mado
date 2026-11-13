@@ -10,3 +10,10 @@ test('los ids y los nombres de categoría son únicos', () => {
 test('la categoría por defecto es la primera y existe', () => {
   assert.equal(categoriaPorDefecto(), CATEGORIAS[0].id);
 });
+
+test('textoDeVersion añade el commit solo si se conoce', async () => {
+  const { textoDeVersion } = await import('./ajustesCategorias.ts');
+  assert.equal(textoDeVersion('0.1.0', 'a1b2c3d'), '0.1.0 · a1b2c3d');
+  assert.equal(textoDeVersion('0.1.0', ''), '0.1.0');
+  assert.equal(textoDeVersion('0.1.0', '  '), '0.1.0');
+});

@@ -17,3 +17,9 @@ export const CATEGORIAS: readonly Categoria[] = [
 export function categoriaPorDefecto(): CategoriaAjuste {
   return CATEGORIAS[0].id;
 }
+
+// Texto de la compilación abierta: la versión y, si se conoce, el commit del que salió.
+export function textoDeVersion(version: string, commit: string): string {
+  const c = commit.trim();
+  return c ? `${version} · ${c}` : version;
+}

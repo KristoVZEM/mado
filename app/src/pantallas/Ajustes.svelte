@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { getVersion } from '@tauri-apps/api/app';
   import { onMount } from 'svelte';
   import { asegurarAjustes } from '../lib/ajustes.svelte.ts';
-  import { CATEGORIAS, categoriaPorDefecto, type CategoriaAjuste } from '../lib/ajustesCategorias.ts';
+  import { CATEGORIAS, categoriaPorDefecto, textoDeVersion, type CategoriaAjuste } from '../lib/ajustesCategorias.ts';
   import SeccionAnilist from './SeccionAnilist.svelte';
   import SeccionApariencia from './SeccionApariencia.svelte';
   import SeccionAvisos from './SeccionAvisos.svelte';
@@ -12,8 +13,14 @@
 
   let categoria = $state<CategoriaAjuste>(categoriaPorDefecto());
 
+  // «0.1.0 · a1b2c3d»: qué compilación es la que está abierta.
+  let version = $state('');
+
   onMount(() => {
     void asegurarAjustes();
+    getVersion()
+      .then((v) => (version = textoDeVersion(v, __COMMIT__)))
+      .catch((e) => console.error('versión de la app:', e));
   });
 </script>
 
@@ -31,6 +38,7 @@
           {c.nombre}
         </button>
       {/each}
+      {#if version}<p class="version">ukiku-pc {version}</p>{/if}
     </nav>
 
     <div class="panel">
@@ -83,6 +91,14 @@
   .categoria.activa:hover:not(:disabled) {
     background: var(--boton-claro-hover);
     color: var(--boton-claro-texto);
+  }
+  .version {
+    margin: 20px 0 0;
+    padding: 0 12px;
+    color: var(--texto-suave);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    user-select: text;
   }
   .panel {
     max-width: 720px;
