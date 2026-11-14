@@ -1,4 +1,4 @@
-# app — cliente de escritorio de ukiku-pc
+# app — cliente de escritorio de Mado
 
 Tauri 2 + Svelte 5 + TypeScript. El núcleo de fuentes es `../core` (se importa por ruta
 relativa, sin build). La reproducción usa libmpv.

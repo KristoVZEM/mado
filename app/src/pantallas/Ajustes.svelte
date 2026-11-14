@@ -38,7 +38,7 @@
           {c.nombre}
         </button>
       {/each}
-      {#if version}<p class="version">ukiku-pc {version}</p>{/if}
+      {#if version}<p class="version">Mado {version}</p>{/if}
     </nav>
 
     <div class="panel">

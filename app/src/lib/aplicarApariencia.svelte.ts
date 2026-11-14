@@ -2,11 +2,13 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { ACENTOS, TAMANOS_POSTER, temaAplicado, type TemaAplicado } from './apariencia.ts';
 import { ajustes, asegurarAjustes } from './ajustes.svelte.ts';
 
-const CLAVE_TEMA = 'ukiku.tema';
+const CLAVE_TEMA = 'mado.tema';
+/** Clave de antes del cambio de nombre: se sigue leyendo para no perder el tema elegido. */
+const CLAVE_TEMA_ANTIGUA = 'ukiku.tema';
 
 function leerTemaGuardado(): TemaAplicado | null {
   try {
-    const v = globalThis.localStorage?.getItem(CLAVE_TEMA);
+    const v = globalThis.localStorage?.getItem(CLAVE_TEMA) ?? globalThis.localStorage?.getItem(CLAVE_TEMA_ANTIGUA);
     return v === 'claro' || v === 'oscuro' ? v : null;
   } catch {
     return null;

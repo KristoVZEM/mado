@@ -2,6 +2,7 @@ mod bandeja;
 mod resolver;
 mod datos;
 mod token;
+mod migracion;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -90,8 +91,20 @@ fn abrir_registros(app: AppHandle) -> Result<(), String> {
         .map_err(|e| format!("no se pudo abrir la carpeta de registros: {}", e.kind()))
 }
 
+/// Antes de que Tauri abra la ventana (que bloquea su carpeta de datos): pasa los datos de la app desde su nombre
+/// anterior. Aún no hay registro, así que un fallo va a la salida de error y la app arranca igual.
+fn migrar_nombre_anterior() {
+    let Some(local) = std::env::var_os("LOCALAPPDATA") else { return };
+    match migracion::migrar_carpeta(std::path::Path::new(&local)) {
+        Ok(true) => eprintln!("[migracion] datos movidos a la carpeta nueva"),
+        Ok(false) => {}
+        Err(e) => eprintln!("[migracion] no se pudo mover la carpeta de datos (¿sigue abierta la app anterior?): {e}"),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    migrar_nombre_anterior();
     tauri::Builder::default()
         // Una sola instancia (debe registrarse el primero): abrir la app otra vez trae al frente la que ya
         // está. Dos a la vez duplicarían la sincronización y los avisos, y escribirían la misma base.
@@ -113,7 +126,7 @@ pub fn run() {
                 .clear_targets()
                 .targets([
                     Target::new(TargetKind::Stdout),
-                    Target::new(TargetKind::LogDir { file_name: Some("ukiku-pc".into()) }),
+                    Target::new(TargetKind::LogDir { file_name: Some("mado".into()) }),
                 ])
                 .level(log::LevelFilter::Info)
                 .max_file_size(1024 * 1024)
@@ -135,10 +148,13 @@ pub fn run() {
                 .map_err(|e| e.to_string())
                 .and_then(|dir| {
                     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-                    datos::abrir(&dir.join("ukiku.db")).map_err(|e| e.to_string())
+                    datos::abrir(&dir.join(datos::NOMBRE_BASE)).map_err(|e| e.to_string())
                 });
             if let Err(motivo) = &conexion {
                 log::error!("[datos] no disponible: {motivo}");
+            }
+            for aviso in migracion::migrar_credenciales(&migracion::AlmacenReal) {
+                log::warn!("[migracion] credenciales: {aviso}");
             }
             app.manage(datos::comandos::Datos(Mutex::new(conexion)));
             // Sin icono la app sigue sirviendo (solo no podría esconderse en la bandeja): no impide arrancar.

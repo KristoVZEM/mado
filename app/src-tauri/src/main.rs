@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    ukiku_pc_lib::run()
+    mado_lib::run()
 }

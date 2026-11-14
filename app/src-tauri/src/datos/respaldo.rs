@@ -15,7 +15,9 @@ pub const COPIA_PREVIA: &str = "antes-de-restaurar.db";
 /// Tablas que tiene que traer un archivo para considerarlo una copia de esta app.
 const TABLAS_ESPERADAS: &[&str] = &["anime", "progreso", "historial", "ajustes", "siguiendo", "favoritos"];
 
-const PREFIJO: &str = "ukiku-";
+const PREFIJO: &str = "mado-";
+/// Prefijo que usaban los respaldos automáticos antes del cambio de nombre: se siguen podando, no se vuelven a crear.
+const PREFIJO_ANTIGUO: &str = "ukiku-";
 const SUFIJO: &str = ".db";
 
 fn invalido<T>(mensaje: impl Into<String>) -> Resultado<T> {
@@ -79,17 +81,20 @@ pub fn exportar(conn: &Connection, destino: &Path, base: &Path) -> Resultado<()>
 }
 
 /// Borra los respaldos automáticos más antiguos hasta dejar `conservar`. Solo toca archivos con el nombre exacto
-/// `ukiku-AAAA-MM-DD.db`; lo demás que haya en la carpeta no se mira. Devuelve cuántos borró.
+/// `mado-AAAA-MM-DD.db` (o `ukiku-AAAA-MM-DD.db`, de antes del cambio de nombre); lo demás que haya en la carpeta no se mira. Devuelve cuántos borró.
 pub fn podar(carpeta: &Path, conservar: usize) -> Resultado<usize> {
     let mut nombres: Vec<String> = std::fs::read_dir(carpeta)?
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_ok_and(|t| t.is_file()))
         .filter_map(|e| e.file_name().into_string().ok())
         .filter(|n| {
-            n.strip_prefix(PREFIJO).and_then(|r| r.strip_suffix(SUFIJO)).is_some_and(etiqueta_valida)
+            [PREFIJO, PREFIJO_ANTIGUO]
+                .iter()
+                .any(|p| n.strip_prefix(p).and_then(|r| r.strip_suffix(SUFIJO)).is_some_and(etiqueta_valida))
         })
         .collect();
-    nombres.sort();
+    // Por fecha, no por nombre completo: con dos prefijos el nombre mezclaría los de antes y los de después.
+    nombres.sort_by_key(|n| n.split_once('-').map(|(_, r)| r.to_string()).unwrap_or_default());
     let sobran = nombres.len().saturating_sub(conservar);
     let mut borrados = 0;
     for nombre in nombres.iter().take(sobran) {
@@ -130,7 +135,7 @@ fn abrir_origen(origen: &Path, base: &Path) -> Resultado<Connection> {
     {
         return invalido("Ese es el archivo de datos en uso. Elige una copia.");
     }
-    let no_es_copia = || Error::Invalido("Ese archivo no parece una copia de ukiku-pc.".into());
+    let no_es_copia = || Error::Invalido("Ese archivo no parece una copia de Mado.".into());
     let src = Connection::open_with_flags(origen, OpenFlags::SQLITE_OPEN_READ_ONLY).map_err(|_| no_es_copia())?;
     let integra: String = src.query_row("PRAGMA quick_check", [], |f| f.get(0)).map_err(|_| no_es_copia())?;
     if integra != "ok" {
@@ -193,7 +198,7 @@ mod pruebas {
     /// Carpeta nueva y vacía dentro de la temporal del sistema.
     fn carpeta(nombre: &str) -> PathBuf {
         let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-        let p = std::env::temp_dir().join(format!("ukiku-prueba-{nombre}-{}-{nanos}", std::process::id()));
+        let p = std::env::temp_dir().join(format!("mado-prueba-{nombre}-{}-{nanos}", std::process::id()));
         std::fs::create_dir_all(&p).unwrap();
         p
     }
@@ -221,7 +226,7 @@ mod pruebas {
     fn exportar_deja_una_copia_con_los_datos() {
         let dir = carpeta("exportar");
         let destino = dir.join("mi copia.db");
-        exportar(&base_con_dato("42"), &destino, &dir.join("ukiku.db")).unwrap();
+        exportar(&base_con_dato("42"), &destino, &dir.join("mado.db")).unwrap();
         assert_eq!(leer_volumen(&destino), "42");
         assert!(!dir.join("mi copia.db.tmp").exists(), "no queda el temporal");
     }
@@ -230,7 +235,7 @@ mod pruebas {
     fn exportar_sustituye_una_copia_anterior() {
         let dir = carpeta("sustituir");
         let destino = dir.join("copia.db");
-        let base = dir.join("ukiku.db");
+        let base = dir.join("mado.db");
         exportar(&base_con_dato("1"), &destino, &base).unwrap();
         exportar(&base_con_dato("2"), &destino, &base).unwrap();
         assert_eq!(leer_volumen(&destino), "2");
@@ -239,7 +244,7 @@ mod pruebas {
     #[test]
     fn el_destino_se_valida_antes_de_escribir() {
         let dir = carpeta("validar");
-        let base = dir.join("ukiku.db");
+        let base = dir.join("mado.db");
         let conn = base_con_dato("1");
         let casos = [
             (PathBuf::from("copia.db"), "relativa"),
@@ -247,7 +252,7 @@ mod pruebas {
             (dir.join("copia"), "sin extensión"),
             (dir.join("no existe").join("copia.db"), "carpeta inexistente"),
             (base.clone(), "la base en uso"),
-            (dir.join("UKIKU.DB"), "la base en uso con otras mayúsculas"),
+            (dir.join("MADO.DB"), "la base en uso con otras mayúsculas"),
         ];
         for (destino, motivo) in casos {
             let r = exportar(&conn, &destino, &base);
@@ -260,16 +265,16 @@ mod pruebas {
     fn el_mismo_nombre_en_otra_carpeta_si_vale() {
         let dir = carpeta("otra");
         let otra = carpeta("otra-b");
-        let base = dir.join("ukiku.db");
-        exportar(&base_con_dato("7"), &otra.join("ukiku.db"), &base).unwrap();
-        assert_eq!(leer_volumen(&otra.join("ukiku.db")), "7");
+        let base = dir.join("mado.db");
+        exportar(&base_con_dato("7"), &otra.join("mado.db"), &base).unwrap();
+        assert_eq!(leer_volumen(&otra.join("mado.db")), "7");
     }
 
     #[test]
     fn el_respaldo_lleva_la_fecha_en_el_nombre() {
         let dir = carpeta("respaldo");
         let ruta = crear_respaldo(&base_con_dato("9"), &dir.join("copias"), "2026-11-10").unwrap();
-        assert_eq!(ruta.file_name().unwrap(), "ukiku-2026-11-10.db");
+        assert_eq!(ruta.file_name().unwrap(), "mado-2026-11-10.db");
         assert_eq!(leer_volumen(&ruta), "9");
     }
 
@@ -293,25 +298,25 @@ mod pruebas {
         let mut quedan: Vec<String> =
             std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().into_string().unwrap()).collect();
         quedan.sort();
-        let esperados: Vec<String> = (3..=7).map(|d| format!("ukiku-2026-11-0{d}.db")).collect();
+        let esperados: Vec<String> = (3..=7).map(|d| format!("mado-2026-11-0{d}.db")).collect();
         assert_eq!(quedan, esperados);
     }
 
     #[test]
     fn la_poda_no_toca_lo_que_no_es_un_respaldo() {
         let dir = carpeta("ajenos");
-        for nombre in ["notas.txt", "ukiku-abc.db", "ukiku-2026-11-10.db.tmp", "ukiku.db", "ukiku-2026-11-10.db.v1.bak"] {
+        for nombre in ["notas.txt", "mado-abc.db", "mado-2026-11-10.db.tmp", "mado.db", "mado-2026-11-10.db.v1.bak"] {
             std::fs::write(dir.join(nombre), "x").unwrap();
         }
-        std::fs::create_dir(dir.join("ukiku-2026-01-01.db")).unwrap(); // una carpeta con nombre de respaldo
+        std::fs::create_dir(dir.join("mado-2026-01-01.db")).unwrap(); // una carpeta con nombre de respaldo
         for dia in 1..=3 {
-            std::fs::write(dir.join(format!("ukiku-2026-10-0{dia}.db")), "x").unwrap();
+            std::fs::write(dir.join(format!("mado-2026-10-0{dia}.db")), "x").unwrap();
         }
         assert_eq!(podar(&dir, 1).unwrap(), 2);
-        for nombre in ["notas.txt", "ukiku-abc.db", "ukiku-2026-11-10.db.tmp", "ukiku.db", "ukiku-2026-11-10.db.v1.bak", "ukiku-2026-10-03.db"] {
+        for nombre in ["notas.txt", "mado-abc.db", "mado-2026-11-10.db.tmp", "mado.db", "mado-2026-11-10.db.v1.bak", "mado-2026-10-03.db"] {
             assert!(dir.join(nombre).exists(), "{nombre} debía quedarse");
         }
-        assert!(dir.join("ukiku-2026-01-01.db").is_dir());
+        assert!(dir.join("mado-2026-01-01.db").is_dir());
     }
 
     // --- restaurar ---
@@ -333,7 +338,7 @@ mod pruebas {
         let mut vivo = base_con_dato("1");
         vivo.execute("INSERT INTO anime (aid, slug, titulo) VALUES (7, 'x', 'Solo en la actual')", []).unwrap();
 
-        let previa = restaurar(&mut vivo, &copia, &dir.join("ukiku.db"), &dir.join("copias")).unwrap();
+        let previa = restaurar(&mut vivo, &copia, &dir.join("mado.db"), &dir.join("copias")).unwrap();
 
         assert_eq!(volumen_vivo(&vivo).as_deref(), Some("2"));
         let animes: i64 = vivo.query_row("SELECT COUNT(*) FROM anime", [], |f| f.get(0)).unwrap();
@@ -348,7 +353,7 @@ mod pruebas {
     #[test]
     fn restaurar_rechaza_lo_que_no_es_una_copia_y_no_toca_nada() {
         let dir = carpeta("rechazar");
-        let base = dir.join("ukiku.db");
+        let base = dir.join("mado.db");
         let mut vivo = base_con_dato("1");
 
         // Un archivo que no es SQLite.
@@ -381,7 +386,7 @@ mod pruebas {
     #[test]
     fn restaurar_no_acepta_el_archivo_en_uso() {
         let dir = carpeta("en-uso");
-        let base = dir.join("ukiku.db");
+        let base = dir.join("mado.db");
         copia_con_volumen(&base, "5");
         let mut vivo = base_con_dato("1");
         let r = restaurar(&mut vivo, &base, &base, &dir.join("copias"));
@@ -402,7 +407,7 @@ mod pruebas {
             c.execute("INSERT INTO ajustes (clave, valor) VALUES ('volumen', '8')", []).unwrap();
         }
         let mut vivo = base_con_dato("1");
-        restaurar(&mut vivo, &vieja, &dir.join("ukiku.db"), &dir.join("copias")).unwrap();
+        restaurar(&mut vivo, &vieja, &dir.join("mado.db"), &dir.join("copias")).unwrap();
         assert_eq!(volumen_vivo(&vivo).as_deref(), Some("8"));
         let version: u32 = vivo.query_row("PRAGMA user_version", [], |f| f.get(0)).unwrap();
         assert_eq!(version, VERSION, "se migró hasta la versión actual");
@@ -419,10 +424,25 @@ mod pruebas {
         copia_con_volumen(&rota, "7");
         Connection::open(&rota).unwrap().execute_batch(&format!("PRAGMA user_version = {};", VERSION - 1)).unwrap();
         let mut vivo = base_con_dato("1");
-        let r = restaurar(&mut vivo, &rota, &dir.join("ukiku.db"), &dir.join("copias"));
+        let r = restaurar(&mut vivo, &rota, &dir.join("mado.db"), &dir.join("copias"));
         assert!(r.is_err(), "la migración debía fallar");
         assert_eq!(volumen_vivo(&vivo).as_deref(), Some("1"), "los datos de antes volvieron");
         let version: u32 = vivo.query_row("PRAGMA user_version", [], |f| f.get(0)).unwrap();
         assert_eq!(version, VERSION);
+    }
+
+    #[test]
+    fn la_poda_tambien_cuenta_los_respaldos_con_el_prefijo_antiguo() {
+        let dir = carpeta("poda-antigua");
+        for dia in 1..=4 {
+            std::fs::write(dir.join(format!("ukiku-2026-10-0{dia}.db")), "x").unwrap();
+        }
+        for dia in 5..=7 {
+            std::fs::write(dir.join(format!("mado-2026-10-0{dia}.db")), "x").unwrap();
+        }
+        assert_eq!(podar(&dir, 5).unwrap(), 2);
+        assert!(!dir.join("ukiku-2026-10-01.db").exists() && !dir.join("ukiku-2026-10-02.db").exists());
+        assert!(dir.join("ukiku-2026-10-03.db").exists() && dir.join("mado-2026-10-07.db").exists());
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

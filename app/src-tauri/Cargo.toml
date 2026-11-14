@@ -1,13 +1,13 @@
 [package]
-name = "ukiku-pc"
+name = "mado"
 version = "0.10.0"
-description = "Cliente de escritorio no oficial inspirado en Ukiku"
+description = "Cliente de escritorio no oficial para ver anime, con libmpv"
 authors = ["KristoVZEM"]
 edition = "2024"
 
 [lib]
 # El sufijo `_lib` evita un conflicto de nombres entre la biblioteca y el binario en Windows.
-name = "ukiku_pc_lib"
+name = "mado_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

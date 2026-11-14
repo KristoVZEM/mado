@@ -39,7 +39,7 @@
     try {
       const ruta = await save({
         defaultPath: nombreCopia(Date.now()),
-        filters: [{ name: 'Base de datos de ukiku-pc', extensions: ['db'] }],
+        filters: [{ name: 'Base de datos de Mado', extensions: ['db'] }],
       });
       if (ruta === null) return; // canceló
       await exportarCopia(ruta);
@@ -82,7 +82,7 @@
       const ruta = await open({
         defaultPath: carpeta || undefined,
         title: 'Elige la copia que quieres restaurar',
-        filters: [{ name: 'Base de datos de ukiku-pc', extensions: ['db'] }],
+        filters: [{ name: 'Base de datos de Mado', extensions: ['db'] }],
       });
       if (typeof ruta === 'string') porRestaurar = ruta;
     } catch (e) {

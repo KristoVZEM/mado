@@ -88,13 +88,13 @@
 
   async function probar() {
     try {
-      await enviarAviso({ titulo: 'Ukiku', cuerpo: 'Así se verán los avisos.' });
+      await enviarAviso({ titulo: 'Mado', cuerpo: 'Así se verán los avisos.' });
       falloAviso = false;
       mensaje = 'Aviso enviado.';
     } catch (e) {
       console.error(e instanceof Error ? e.message : e);
       falloAviso = true;
-      mensaje = 'No se pudo enviar el aviso. Revisa que las notificaciones de Windows estén activadas para Ukiku.';
+      mensaje = 'No se pudo enviar el aviso. Revisa que las notificaciones de Windows estén activadas para Mado.';
     }
   }
 </script>

@@ -1,4 +1,4 @@
-# core — núcleo de fuentes de ukiku-pc
+# core — núcleo de fuentes de Mado
 
 Paquete TypeScript sin dependencias que habla con animeav1: busca anime, lista episodios y
 resuelve un episodio a un `Playable` (URL + cabeceras + user-agent) listo para mpv.

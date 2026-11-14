@@ -3,7 +3,7 @@
 
 use keyring::Entry;
 
-const SERVICIO: &str = "dev.kristovzem.ukikupc";
+const SERVICIO: &str = crate::migracion::IDENTIFICADOR;
 const USUARIO: &str = "anilist-token";
 const USUARIO_TMDB: &str = "tmdb-clave";
 /// El Administrador de credenciales admite hasta 2560 bytes por entrada; un JWT de AniList ronda 1000-1400.
@@ -121,7 +121,7 @@ mod pruebas {
     #[test]
     #[ignore]
     fn guardar_leer_y_borrar_en_el_almacen_real() {
-        let e = keyring::Entry::new("dev.kristovzem.ukikupc.prueba", "anilist-token").unwrap();
+        let e = keyring::Entry::new("dev.kristovzem.mado.prueba", "anilist-token").unwrap();
         assert_eq!(leer_de(&e).unwrap(), None);
         guardar_en(&e, "abc.def-ghi_jkl").unwrap();
         assert_eq!(leer_de(&e).unwrap().as_deref(), Some("abc.def-ghi_jkl"));

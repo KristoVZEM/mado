@@ -17,6 +17,19 @@ Para sacar una versión: subir el número en `app/src-tauri/tauri.conf.json`, `a
 y `app/package.json`, anotar aquí los cambios, mergear, crear la etiqueta `vX.Y.Z` sobre `main` y
 construir el instalador desde esa etiqueta. Ajustes muestra la versión y el commit instalados.
 
+## Sin publicar
+
+### Cambia
+
+- **La app pasa a llamarse Mado** (antes ukiku-pc). Es un cambio de nombre, no de funciones: el proyecto no
+  es un fork de Ukiku y solo conserva el crédito y la importación de su copia de seguridad.
+- Al primer arranque, la app mueve sola los datos de la versión anterior (base, copias, ajustes de la ventana y
+  tema) y pasa el token de AniList y la clave de TMDB al nombre nuevo. Hay que cerrar antes la app antigua. El
+  instalador nuevo se instala aparte: la anterior se desinstala a mano, y «Iniciar con Windows» se vuelve a
+  activar en Ajustes.
+- La base se llama `mado.db` y los respaldos automáticos `mado-AAAA-MM-DD.db`; los `ukiku-*` que ya había se
+  siguen podando.
+
 ## 0.10.0 — 2026-11-15
 
 Dos mejoras de uso diario y una base de pruebas que antes no existía.

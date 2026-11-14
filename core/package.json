@@ -1,5 +1,5 @@
 {
-  "name": "@ukiku-pc/core",
+  "name": "@mado/core",
   "private": true,
   "type": "module",
   "scripts": {

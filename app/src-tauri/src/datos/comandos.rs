@@ -338,9 +338,9 @@ mod pruebas {
 
     #[test]
     fn un_error_de_disco_dice_el_tipo_pero_no_la_ruta() {
-        let crudo = std::io::Error::new(std::io::ErrorKind::PermissionDenied, r"C:\Users\alguien\privado\ukiku.db");
+        let crudo = std::io::Error::new(std::io::ErrorKind::PermissionDenied, r"C:\Users\alguien\privado\mado.db");
         let texto = para_interfaz(&Error::Io(crudo));
-        assert!(!texto.contains("alguien") && !texto.contains("ukiku.db"), "{texto}");
+        assert!(!texto.contains("alguien") && !texto.contains("mado.db"), "{texto}");
         assert!(texto.contains("disco"), "{texto}");
     }
 }
@@ -356,7 +356,7 @@ fn carpeta_de_datos(app: &AppHandle) -> Result<PathBuf, String> {
 /// Exporta la base al archivo elegido por el usuario (ruta absoluta terminada en `.db`).
 #[tauri::command(async)]
 pub fn exportar_copia(app: AppHandle, datos: State<'_, Datos>, ruta: String) -> Result<(), String> {
-    let base = carpeta_de_datos(&app)?.join("ukiku.db");
+    let base = carpeta_de_datos(&app)?.join(super::NOMBRE_BASE);
     con(&datos, |c| respaldo::exportar(c, Path::new(&ruta), &base))
 }
 
@@ -393,7 +393,7 @@ pub fn restaurar_copia(app: AppHandle, datos: State<'_, Datos>, ruta: String) ->
     let dir = carpeta_de_datos(&app)?;
     let mut guardia = datos.0.lock().map_err(|_| "la base de datos quedó en un estado inconsistente".to_string())?;
     match guardia.as_mut() {
-        Ok(conn) => respaldo::restaurar(conn, Path::new(&ruta), &dir.join("ukiku.db"), &dir.join("copias"))
+        Ok(conn) => respaldo::restaurar(conn, Path::new(&ruta), &dir.join(super::NOMBRE_BASE), &dir.join("copias"))
             .map(|p| p.to_string_lossy().into_owned())
             .map_err(|e| para_interfaz(&e)),
         Err(motivo) => Err(motivo.clone()),

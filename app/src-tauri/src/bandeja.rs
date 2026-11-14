@@ -24,11 +24,11 @@ pub fn mostrar_principal(app: &AppHandle) {
 
 /// Crea el icono (escondido salvo que la app arranque oculta) con su menú: Abrir y Salir.
 pub fn crear(app: &App, oculta: bool) -> tauri::Result<()> {
-    let abrir = MenuItem::with_id(app, "abrir", "Abrir ukiku-pc", true, None::<&str>)?;
+    let abrir = MenuItem::with_id(app, "abrir", "Abrir Mado", true, None::<&str>)?;
     let salir = MenuItem::with_id(app, "salir", "Salir", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&abrir, &salir])?;
     let mut constructor = TrayIconBuilder::with_id(ID)
-        .tooltip("ukiku-pc")
+        .tooltip("Mado")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, evento| match evento.id.as_ref() {

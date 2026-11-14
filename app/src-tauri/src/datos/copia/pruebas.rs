@@ -22,7 +22,7 @@ fn visto(aid: i64, numero: &str, fecha: i64) -> String {
 
 /// Carpeta temporal nueva con los archivos dados.
 fn carpeta(archivos: &[(&str, &[u8])]) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("ukiku-copia-{}", unico()));
+    let dir = std::env::temp_dir().join(format!("mado-copia-{}", unico()));
     std::fs::create_dir(&dir).unwrap();
     for &(nombre, contenido) in archivos {
         std::fs::write(dir.join(nombre), contenido).unwrap();
@@ -70,7 +70,7 @@ impl Drop for BaseTemporal {
 }
 
 fn base_en_disco() -> (BaseTemporal, Connection) {
-    let ruta = std::env::temp_dir().join(format!("ukiku-reemplazo-{}.db", unico()));
+    let ruta = std::env::temp_dir().join(format!("mado-reemplazo-{}.db", unico()));
     let guardian = BaseTemporal(ruta.clone());
     (guardian, abrir(&ruta).unwrap())
 }
@@ -184,7 +184,7 @@ fn un_archivo_demasiado_grande_es_error() {
 #[test]
 fn rechaza_rutas_relativas_inexistentes_y_que_no_son_carpeta() {
     assert!(leer_carpeta(Path::new("copia")).unwrap_err().to_string().contains("absoluta"));
-    assert!(leer_carpeta(&std::env::temp_dir().join("ukiku-copia-no-existe-jamas")).is_err());
+    assert!(leer_carpeta(&std::env::temp_dir().join("mado-copia-no-existe-jamas")).is_err());
     let dir = carpeta(&[(HISTORY, json(&visto(1, "1.0", 10)).as_bytes())]);
     let err = leer_carpeta(&dir.join(HISTORY)).unwrap_err().to_string();
     borrar(&dir);
@@ -515,8 +515,8 @@ fn un_fallo_en_los_favs_deshace_los_otros_dos_archivos() {
 fn si_vacuum_into_falla_no_toca_la_base_ni_deja_temporales() {
     let (ruta, conn) = base_en_disco();
     sembrar(&conn);
-    let inexistente = std::env::temp_dir().join(format!("ukiku-no-existe-{}", unico())).join("x.tmp");
-    let destino = std::env::temp_dir().join(format!("ukiku-no-existe-{}", unico())).join("x.bak");
+    let inexistente = std::env::temp_dir().join(format!("mado-no-existe-{}", unico())).join("x.tmp");
+    let destino = std::env::temp_dir().join(format!("mado-no-existe-{}", unico())).join("x.bak");
     assert!(escribir_copia(&conn, &inexistente, &destino).is_err());
     assert!(!inexistente.exists() && !destino.exists());
     assert_eq!(visto_en(&conn, 1, 1.0), Some(5000));
@@ -531,7 +531,7 @@ fn si_el_rename_falla_se_borra_el_temporal_y_no_hay_copia() {
     let mut temporal = std::ffi::OsString::from(&*ruta);
     temporal.push(".reemplazo-1.tmp");
     let temporal = PathBuf::from(temporal);
-    let destino = std::env::temp_dir().join(format!("ukiku-no-existe-{}", unico())).join("x.bak");
+    let destino = std::env::temp_dir().join(format!("mado-no-existe-{}", unico())).join("x.bak");
     let err = escribir_copia(&conn, &temporal, &destino).unwrap_err();
     assert!(err.to_string().contains("disco"), "{err}");
     assert!(!temporal.exists(), "el temporal se limpia");

@@ -1,6 +1,9 @@
 //! Capa de datos locales: SQLite con migraciones por `PRAGMA user_version`.
 //! Toda la lógica son funciones sobre `&Connection`; los comandos de Tauri viven en `comandos`.
 
+/// Nombre del archivo de la base dentro de la carpeta de datos locales de la app.
+pub const NOMBRE_BASE: &str = "mado.db";
+
 pub mod ajustes;
 pub mod anilist;
 pub mod avisos;
@@ -227,7 +230,7 @@ fn configurar(conn: &Connection) -> Resultado<()> {
     Ok(())
 }
 
-/// Ruta de la copia previa a migrar desde `version`: `ukiku.db` -> `ukiku.db.v1.bak`.
+/// Ruta de la copia previa a migrar desde `version`: `mado.db` -> `mado.db.v1.bak`.
 fn ruta_copia(ruta: &Path, version: u32) -> PathBuf {
     let mut nombre = ruta.as_os_str().to_owned();
     nombre.push(format!(".v{version}.bak"));
@@ -291,7 +294,7 @@ mod pruebas {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("ukiku-pruebas-{}-{unico}-{nombre}", std::process::id()))
+        std::env::temp_dir().join(format!("mado-pruebas-{}-{unico}-{nombre}", std::process::id()))
     }
 
     #[test]
@@ -360,14 +363,14 @@ mod pruebas {
 
     #[test]
     fn la_ruta_de_la_copia_lleva_la_version_de_origen() {
-        let r = ruta_copia(Path::new("C:/datos/ukiku.db"), 1);
-        assert_eq!(r, PathBuf::from("C:/datos/ukiku.db.v1.bak"));
+        let r = ruta_copia(Path::new("C:/datos/mado.db"), 1);
+        assert_eq!(r, PathBuf::from("C:/datos/mado.db.v1.bak"));
     }
 
     #[test]
     fn la_ruta_temporal_de_la_copia_termina_en_tmp() {
-        let r = ruta_copia_temporal(Path::new("C:/datos/ukiku.db"), 1);
-        assert_eq!(r, PathBuf::from("C:/datos/ukiku.db.v1.bak.tmp"));
+        let r = ruta_copia_temporal(Path::new("C:/datos/mado.db"), 1);
+        assert_eq!(r, PathBuf::from("C:/datos/mado.db.v1.bak.tmp"));
     }
 
     #[test]

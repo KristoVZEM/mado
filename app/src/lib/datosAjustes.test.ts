@@ -46,6 +46,6 @@ test('si el reloj retrocedió no se hace un respaldo', () => {
 test('la etiqueta es la fecha local con ceros', () => {
   const ms = new Date(2026, 0, 5, 23, 59).getTime();
   assert.equal(etiquetaDia(ms), '2026-01-05');
-  assert.equal(nombreCopia(ms), 'ukiku-2026-01-05.db');
+  assert.equal(nombreCopia(ms), 'mado-2026-01-05.db');
   assert.match(etiquetaDia(Date.now()), /^\d{4}-\d{2}-\d{2}$/);
 });

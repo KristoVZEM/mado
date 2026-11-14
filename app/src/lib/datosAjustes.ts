@@ -57,5 +57,5 @@ export function etiquetaDia(ms: number): string {
 
 /** Nombre sugerido al exportar a mano. */
 export function nombreCopia(ms: number): string {
-  return `ukiku-${etiquetaDia(ms)}.db`;
+  return `mado-${etiquetaDia(ms)}.db`;
 }
