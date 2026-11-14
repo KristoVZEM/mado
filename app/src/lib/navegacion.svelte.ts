@@ -3,6 +3,8 @@ import type { Pestana } from './biblioteca.ts';
 import { SECCION_INICIAL, type Seccion } from './carril.ts';
 import type { ListadoId } from './listados.ts';
 import { pilaAlAbrir, pilaAlVolver } from './pila.ts';
+import { claveDeVista } from './desplazamiento.ts';
+import { irArriba, recordarDesplazamiento, restaurarDesplazamiento } from './desplazamientoApp.ts';
 
 /** Lo que se abre encima de una sección. El Reproductor sale del armazón y ocupa toda la ventana. */
 export type Superior =
@@ -52,8 +54,16 @@ export function irASeccion(seccion: Seccion): void {
 }
 
 export function abrir(superior: Superior): void {
+  // Se anota hasta dónde se había bajado en lo que se deja: al volver se recupera. Se hace antes de cambiar nada,
+  // porque al desmontarse la pantalla la página se encoge y la posición se perdería.
+  recordarDesplazamiento(claveDeVista(nav.superior, nav.seccion));
+  const vieneDelReproductor = nav.superior?.tipo === 'reproducir';
   pila = pilaAlAbrir(pila, nav.superior, superior);
   nav.superior = superior;
+  // Cerrar el Reproductor devuelve a la Ficha donde estaba; abrir una ficha desde cualquier otro sitio empieza arriba.
+  if (superior.tipo !== 'ficha') return;
+  if (vieneDelReproductor) restaurarDesplazamiento(claveDeVista(superior, nav.seccion));
+  else irArriba();
 }
 
 /** «Volver» desde una ficha: a la ficha anterior si se llegó desde otra, o a la sección de origen. */
@@ -61,6 +71,7 @@ export function cerrarSuperior(): void {
   const r = pilaAlVolver(pila);
   pila = r.pila;
   nav.superior = r.destino;
+  restaurarDesplazamiento(claveDeVista(nav.superior, nav.seccion));
 }
 
 /** Ctrl+K: va al Catálogo con el cursor en el campo de búsqueda. */
