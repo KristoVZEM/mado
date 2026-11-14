@@ -62,14 +62,15 @@ export function nuevoDe(resumen: ResumenSerie | undefined, ultimoVisto: number |
 }
 
 /**
- * Series que sigues y se están emitiendo con un episodio emitido que aún no has visto, en el orden de `viendo`.
+ * Series de la lista (las que sigues o tienes pendientes) que se están emitiendo con un episodio emitido que aún
+ * no has visto, en el orden de la lista.
  * Una serie ya terminada con episodios sin ver no cuenta: no es «nuevo».
  */
 export function conNuevoEpisodio(
-  viendo: readonly EntradaBiblioteca[],
+  lista: readonly EntradaBiblioteca[],
   resumenes: ReadonlyMap<number, ResumenSerie>,
 ): EntradaBiblioteca[] {
-  return viendo.filter((v) => {
+  return lista.filter((v) => {
     const r = resumenes.get(v.aid);
     return r?.estado === 'RELEASING' && nuevoDe(r, v.ultimoEpisodio) !== null;
   });

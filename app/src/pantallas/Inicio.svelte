@@ -50,8 +50,8 @@
   const oculta = (parte: ParteInicio) => parteOculta(ajustes.inicioOcultas, parte);
   const verDestacados = $derived(destacados.length > 0 && !oculta('destacados'));
   const porAid = $derived(new Map(resumenes.map((r) => [r.aid, r])));
-  /** Lo que sigues y tiene un episodio emitido sin ver. */
-  const nuevos = $derived(conNuevoEpisodio(viendo, porAid));
+  /** Lo que sigues o tienes pendiente y tiene un episodio emitido sin ver; primero lo que estás viendo. */
+  const nuevos = $derived(conNuevoEpisodio([...viendo, ...considerando], porAid));
   let cargando = $state(true);
   let abriendo = $state<number | null>(null);
 
