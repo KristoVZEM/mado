@@ -27,8 +27,9 @@
   import { estadoSiguiente } from '../lib/siguiente.ts';
   import { recordarServidor, resolverEpisodio } from '../lib/resolverEpisodio.ts';
   import { conExcluido, estaEsperandoDatos, fraccionAlmacenada } from '../lib/buffer.ts';
-  import { servidoresElegibles, soloServidor } from '../lib/servidores.ts';
+  import { soloServidor } from '../lib/servidores.ts';
   import { fuentes } from '../lib/fuentes.ts';
+  import SelectorServidor from '../lib/componentes/SelectorServidor.svelte';
   import { SinServidor } from '../../../core/src/index.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { completarSiTermino } from '../lib/completar.ts';
@@ -67,11 +68,8 @@
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
   let menuIdioma = $state(false);
+  // Lo gestiona SelectorServidor; aquí se lee para el Esc y para no ocultar los controles con el menú abierto.
   let menuServidor = $state(false);
-  let contenedorServidor = $state<HTMLElement>();
-  // Servidores del episodio en este idioma (se piden al abrir el menú); `null` = aún no se sabe.
-  let servidoresEpisodio = $state<string[] | null>(null);
-  let claveServidores = '';
   let contenedorIdioma = $state<HTMLElement>();
   let menuVelocidad = $state(false);
   let contenedorVelocidad = $state<HTMLElement>();
@@ -292,33 +290,15 @@
     avisar(`Reproduciendo desde ${p.servidor ?? 'otro servidor'}.`);
   }
 
-  // Los servidores que se pueden elegir en este episodio; se piden la primera vez que se abre el menú.
-  async function abrirMenuServidor() {
-    menuServidor = !menuServidor;
-    if (!menuServidor) return;
-    const clave = `${numero}:${idioma}`;
-    if (clave === claveServidores && servidoresEpisodio !== null) return;
-    claveServidores = clave;
-    servidoresEpisodio = null;
-    try {
-      const todos = await fuentes.servidores(anime.slug, numero, idioma);
-      if (destruido || clave !== claveServidores) return;
-      servidoresEpisodio = todos;
-    } catch (e) {
-      console.error(e);
-      if (clave === claveServidores) servidoresEpisodio = [];
-    }
-  }
-
   // El usuario elige un servidor: se retoma el segundo y, si ese servidor no sirve, el vídeo actual sigue. Elegir
   // a mano borra lo descartado por fallos (si no, no se podría volver a un servidor que falló antes).
-  async function elegirServidor(nombre: string) {
+  async function elegirServidor(nombre: string, delEpisodio: string[]) {
     menuServidor = false;
     if (nombre === playable?.servidor || cambiandoServidor || cambiandoIdioma || destruido) return;
     cambiandoServidor = true;
     const retoma = reproductor.posicion;
     try {
-      const { preferido, excluidos: fuera } = soloServidor(servidoresEpisodio ?? [nombre], nombre);
+      const { preferido, excluidos: fuera } = soloServidor(delEpisodio, nombre);
       const p = await resolverEpisodio(anime.slug, numero, idioma, fuera, preferido);
       if (destruido) return;
       excluidos = [];
@@ -421,7 +401,6 @@
 
   function alClicFuera(e: PointerEvent) {
     if (menuIdioma && contenedorIdioma && !contenedorIdioma.contains(e.target as Node)) menuIdioma = false;
-    if (menuServidor && contenedorServidor && !contenedorServidor.contains(e.target as Node)) menuServidor = false;
     if (menuVelocidad && contenedorVelocidad && !contenedorVelocidad.contains(e.target as Node)) {
       menuVelocidad = false;
     }
@@ -645,34 +624,15 @@
           {/if}
         </div>
         {#if playable?.servidor}
-          <div class="menu-servidor" bind:this={contenedorServidor}>
-            <button
-              class="etiqueta"
-              title="Elegir servidor"
-              aria-haspopup="menu"
-              aria-expanded={menuServidor}
-              aria-label="Servidor {playable.servidor}. Elegir servidor"
-              disabled={cambiandoServidor || cambiandoIdioma}
-              onclick={abrirMenuServidor}
-              >{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor} ▾</button
-            >
-            {#if menuServidor}
-              <div class="opciones" role="menu">
-                {#if servidoresEpisodio === null}
-                  <span class="nota">Buscando servidores…</span>
-                {:else}
-                  {#each servidoresElegibles([playable.servidor, ...servidoresEpisodio]) as s (s)}
-                    <button
-                      role="menuitemradio"
-                      aria-checked={s === playable.servidor}
-                      class:activo={s === playable.servidor}
-                      onclick={() => elegirServidor(s)}>{s === playable.servidor ? '✓ ' : ''}{s}</button
-                    >
-                  {/each}
-                {/if}
-              </div>
-            {/if}
-          </div>
+          <SelectorServidor
+            servidor={playable.servidor}
+            calidad={playable.calidad}
+            clave={`${numero}:${idioma}`}
+            pedirServidores={() => fuentes.servidores(anime.slug, numero, idioma)}
+            alElegir={elegirServidor}
+            ocupado={cambiandoServidor || cambiandoIdioma}
+            bind:abierto={menuServidor}
+          />
         {/if}
         <div class="menu-idioma" bind:this={contenedorIdioma}>
           <button
@@ -809,12 +769,6 @@
     margin-right: 8px;
     font-variant-numeric: tabular-nums;
   }
-  .etiqueta {
-    padding: 2px 8px;
-    border: 1px solid #888;
-    border-radius: 4px;
-    font-size: 12px;
-  }
   input.volumen {
     width: 110px;
   }
@@ -886,10 +840,6 @@
       animation-duration: 4s;
     }
   }
-  button.etiqueta {
-    background: rgba(0, 0, 0, 0.35);
-    color: inherit;
-  }
   .burbuja {
     position: absolute;
     bottom: 24px;
@@ -904,13 +854,8 @@
     white-space: nowrap;
   }
   .menu-idioma,
-  .menu-velocidad,
-  .menu-servidor {
+  .menu-velocidad {
     position: relative;
-  }
-  .opciones .nota {
-    font-size: 12px;
-    padding: 2px 6px;
   }
   .opciones {
     position: absolute;
