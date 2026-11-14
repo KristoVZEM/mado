@@ -16,9 +16,5 @@ dist/
 # app: DLLs de libmpv (se descargan o se copian; no se versionan)
 app/src-tauri/lib/
 
-# lab: resultados del chequeo diario
-lab/data/
-lab/results-mp4upload.log
-
 # Copia real de Ukiku del usuario (historial personal; nunca se versiona)
 datos-reales/

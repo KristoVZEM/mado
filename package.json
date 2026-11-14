@@ -3,6 +3,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test \"lab/*.test.ts\" && npm test --prefix core && npm test --prefix app"
+    "test": "npm test --prefix core && npm test --prefix app"
   }
 }

@@ -13,8 +13,6 @@ técnica (el código del primero está en el historial de git). Hoy hay:
 - `app/`: aplicación de escritorio (Tauri + Svelte + libmpv) con un carril de
   iconos (Inicio, Catálogo, Emisión, Biblioteca, Historial y Ajustes), ficha
   con sinopsis y reproductor con controles flotantes.
-- `lab/`: chequeo diario de que los tres servidores siguen sirviendo, con el
-  mismo `core/` que usa la app (corre en un servidor propio).
 
 Hecho:
 
