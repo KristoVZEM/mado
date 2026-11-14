@@ -169,3 +169,9 @@ test('si Zilla no responde una lista HLS, la cadena pasa a MP4Upload', async () 
   const p = await f.resolver('one-piece', 1);
   assert.equal(p.servidor, 'MP4Upload');
 });
+
+test('servidores lista los servidores del episodio en ese idioma, sin repetir', async () => {
+  const f = crearFuentes({ http: httpFalso({ '/media/one-piece/1/__data.json': episodioPayload }) });
+  assert.deepEqual(await f.servidores('one-piece', 1, 'SUB'), ['HLS']);
+  assert.deepEqual(await f.servidores('one-piece', 1, 'DUB'), []);
+});

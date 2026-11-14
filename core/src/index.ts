@@ -46,6 +46,11 @@ export function crearFuentes(opts: OpcionesFuentes = {}) {
     buscar: (query: string) => buscar(http, query),
     catalogo: (opciones?: OpcionesCatalogo) => catalogo(http, opciones),
     episodios: (slug: string) => episodios(http, slug),
+    /** Los `server` de los embeds de ese episodio en ese idioma, sin repetir y en el orden de la página. */
+    async servidores(slug: string, n: number, idioma: Idioma = 'SUB'): Promise<string[]> {
+      const detalle = await episodio(http, slug, n);
+      return [...new Set((detalle.embeds[idioma] ?? []).map((e) => e.server))];
+    },
     /**
      * `preferido`: el `servidor` de un Playable anterior, para probarlo primero. `excluidos`: los `servidor` que
      * ya fallaron al reproducir, para no volver a ellos.

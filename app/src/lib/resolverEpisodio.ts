@@ -12,13 +12,15 @@ export async function resolverEpisodio(
   numero: number,
   idioma: Idioma,
   excluidos: readonly string[] = [],
+  /** Un servidor pedido a mano: manda sobre «Recordar el último servidor». */
+  elegido?: string,
 ): Promise<Playable> {
   await asegurarAjustes();
   return fuentes.resolver(
     slug,
     numero,
     idioma,
-    servidorPreferido(ajustes.recordarServidor, ajustes.servidorUltimo),
+    elegido ?? servidorPreferido(ajustes.recordarServidor, ajustes.servidorUltimo),
     excluidos,
   );
 }

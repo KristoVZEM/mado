@@ -27,6 +27,8 @@
   import { estadoSiguiente } from '../lib/siguiente.ts';
   import { recordarServidor, resolverEpisodio } from '../lib/resolverEpisodio.ts';
   import { conExcluido, estaEsperandoDatos, fraccionAlmacenada } from '../lib/buffer.ts';
+  import { servidoresElegibles, soloServidor } from '../lib/servidores.ts';
+  import { fuentes } from '../lib/fuentes.ts';
   import { SinServidor } from '../../../core/src/index.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { completarSiTermino } from '../lib/completar.ts';
@@ -65,6 +67,11 @@
   let aviso = $state('');
   let temporizadorAviso: ReturnType<typeof setTimeout> | undefined;
   let menuIdioma = $state(false);
+  let menuServidor = $state(false);
+  let contenedorServidor = $state<HTMLElement>();
+  // Servidores del episodio en este idioma (se piden al abrir el menú); `null` = aún no se sabe.
+  let servidoresEpisodio = $state<string[] | null>(null);
+  let claveServidores = '';
   let contenedorIdioma = $state<HTMLElement>();
   let menuVelocidad = $state(false);
   let contenedorVelocidad = $state<HTMLElement>();
@@ -138,7 +145,7 @@
     // `cambiandoServidor` se lee aquí a propósito: si el servidor nuevo falla antes de que termine el cambio,
     // el efecto vuelve a correr al acabar y prueba el siguiente.
     if (reproductor.falloCarga && (estado === 'listo' || estado === 'cargando') && !cambiandoIdioma && !cambiandoServidor) {
-      untrack(() => void probarOtroServidor(true));
+      untrack(() => void probarOtroServidor());
     }
   });
 
@@ -211,7 +218,7 @@
     controlesVisibles = true;
     clearTimeout(temporizador);
     temporizador = setTimeout(() => {
-      if (!reproductor.pausa && !menuIdioma && !menuVelocidad && arrastre === null) controlesVisibles = false;
+      if (!reproductor.pausa && !menuIdioma && !menuVelocidad && !menuServidor && arrastre === null) controlesVisibles = false;
     }, 3000);
   }
 
@@ -273,10 +280,61 @@
       .catch(falloDeDatos);
   }
 
-  // Pasa al siguiente servidor de la cadena conservando el segundo. `porFallo`: el actual no entregó el vídeo
-  // (si no queda ninguno, la pantalla pasa a error); sin él es el usuario quien lo pide y, si no hay otro, el
-  // vídeo actual sigue.
-  async function probarOtroServidor(porFallo: boolean) {
+  // Carga el vídeo de otro servidor retomando en el mismo segundo y deja la pantalla lista.
+  async function cargarEnOtroServidor(p: Playable, retoma: number) {
+    playable = p;
+    servidorRecordado = false;
+    await cargar(p, retoma > 0 ? retoma : undefined);
+    if (destruido) return;
+    estado = 'listo';
+    ultimoGuardadoMs = Date.now();
+    ultimaPosicionGuardada = retoma;
+    avisar(`Reproduciendo desde ${p.servidor ?? 'otro servidor'}.`);
+  }
+
+  // Los servidores que se pueden elegir en este episodio; se piden la primera vez que se abre el menú.
+  async function abrirMenuServidor() {
+    menuServidor = !menuServidor;
+    if (!menuServidor) return;
+    const clave = `${numero}:${idioma}`;
+    if (clave === claveServidores && servidoresEpisodio !== null) return;
+    claveServidores = clave;
+    servidoresEpisodio = null;
+    try {
+      const todos = await fuentes.servidores(anime.slug, numero, idioma);
+      if (destruido || clave !== claveServidores) return;
+      servidoresEpisodio = todos;
+    } catch (e) {
+      console.error(e);
+      if (clave === claveServidores) servidoresEpisodio = [];
+    }
+  }
+
+  // El usuario elige un servidor: se retoma el segundo y, si ese servidor no sirve, el vídeo actual sigue. Elegir
+  // a mano borra lo descartado por fallos (si no, no se podría volver a un servidor que falló antes).
+  async function elegirServidor(nombre: string) {
+    menuServidor = false;
+    if (nombre === playable?.servidor || cambiandoServidor || cambiandoIdioma || destruido) return;
+    cambiandoServidor = true;
+    const retoma = reproductor.posicion;
+    try {
+      const { preferido, excluidos: fuera } = soloServidor(servidoresEpisodio ?? [nombre], nombre);
+      const p = await resolverEpisodio(anime.slug, numero, idioma, fuera, preferido);
+      if (destruido) return;
+      excluidos = [];
+      await cargarEnOtroServidor(p, retoma);
+    } catch (e) {
+      console.error(e);
+      if (destruido) return;
+      avisar(e instanceof SinServidor ? `${nombre} no está disponible ahora para este episodio.` : `No se pudo cambiar de servidor: ${mensajeDeError(e)}`);
+    } finally {
+      cambiandoServidor = false;
+    }
+  }
+
+  // El servidor actual no entregó el vídeo: pasa al siguiente de la cadena conservando el segundo. Si no queda
+  // ninguno, la pantalla pasa a error. Elegir uno a mano es `elegirServidor`.
+  async function probarOtroServidor() {
     if (cambiandoServidor || cambiandoIdioma || destruido) return;
     const actual = playable?.servidor;
     cambiandoServidor = true;
@@ -284,28 +342,17 @@
     const candidatos = conExcluido(excluidos, actual);
     try {
       if (actual === undefined) throw new SinServidor('no se sabe qué servidor falló', []);
-      if (porFallo) avisar(`${actual} no entregó el vídeo. Probando otro servidor…`);
+      avisar(`${actual} no entregó el vídeo. Probando otro servidor…`);
       const p = await resolverEpisodio(anime.slug, numero, idioma, candidatos);
       if (destruido) return;
       excluidos = candidatos;
-      playable = p;
-      servidorRecordado = false;
-      await cargar(p, retoma > 0 ? retoma : undefined);
-      if (destruido) return;
-      estado = 'listo';
-      ultimoGuardadoMs = Date.now();
-      ultimaPosicionGuardada = retoma;
-      avisar(`Reproduciendo desde ${p.servidor ?? 'otro servidor'}.`);
+      await cargarEnOtroServidor(p, retoma);
     } catch (e) {
       console.error(e);
       if (destruido) return;
       const sinMas = e instanceof SinServidor;
-      if (porFallo) {
-        mensaje = sinMas ? 'El servidor no entregó el vídeo y no hay otro disponible para este episodio.' : mensajeDeError(e);
-        estado = 'error';
-      } else {
-        avisar(sinMas ? 'No hay otro servidor disponible para este episodio.' : `No se pudo cambiar de servidor: ${mensajeDeError(e)}`);
-      }
+      mensaje = sinMas ? 'El servidor no entregó el vídeo y no hay otro disponible para este episodio.' : mensajeDeError(e);
+      estado = 'error';
     } finally {
       cambiandoServidor = false;
     }
@@ -374,6 +421,7 @@
 
   function alClicFuera(e: PointerEvent) {
     if (menuIdioma && contenedorIdioma && !contenedorIdioma.contains(e.target as Node)) menuIdioma = false;
+    if (menuServidor && contenedorServidor && !contenedorServidor.contains(e.target as Node)) menuServidor = false;
     if (menuVelocidad && contenedorVelocidad && !contenedorVelocidad.contains(e.target as Node)) {
       menuVelocidad = false;
     }
@@ -404,9 +452,10 @@
   function teclas(e: KeyboardEvent) {
     if (e.code === 'Escape') {
       // Esc cierra primero cualquier desplegable abierto; solo sin ninguno vuelve a la ficha.
-      if (menuIdioma || menuVelocidad) {
+      if (menuIdioma || menuVelocidad || menuServidor) {
         menuIdioma = false;
         menuVelocidad = false;
+        menuServidor = false;
       } else volver();
       return;
     }
@@ -506,16 +555,6 @@
       <button onclick={volver}>← Volver</button>
       <span>{anime.title} · Ep. {numero}</span>
       {#if cambiandoIdioma}<span>Cambiando de idioma…</span>{/if}
-      {#if playable?.servidor}
-        <button
-          class="etiqueta"
-          title="Probar otro servidor"
-          aria-label="Servidor {playable.servidor}. Probar otro servidor"
-          disabled={cambiandoServidor || cambiandoIdioma}
-          onclick={() => probarOtroServidor(false)}
-          >{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor} ⇄</button
-        >
-      {/if}
     </header>
 
     {#if proximo?.visible && siguiente !== undefined}
@@ -605,6 +644,36 @@
             </div>
           {/if}
         </div>
+        {#if playable?.servidor}
+          <div class="menu-servidor" bind:this={contenedorServidor}>
+            <button
+              class="etiqueta"
+              title="Elegir servidor"
+              aria-haspopup="menu"
+              aria-expanded={menuServidor}
+              aria-label="Servidor {playable.servidor}. Elegir servidor"
+              disabled={cambiandoServidor || cambiandoIdioma}
+              onclick={abrirMenuServidor}
+              >{playable.calidad ? `${playable.calidad}p · ` : ''}{playable.servidor} ▾</button
+            >
+            {#if menuServidor}
+              <div class="opciones" role="menu">
+                {#if servidoresEpisodio === null}
+                  <span class="nota">Buscando servidores…</span>
+                {:else}
+                  {#each servidoresElegibles([playable.servidor, ...servidoresEpisodio]) as s (s)}
+                    <button
+                      role="menuitemradio"
+                      aria-checked={s === playable.servidor}
+                      class:activo={s === playable.servidor}
+                      onclick={() => elegirServidor(s)}>{s === playable.servidor ? '✓ ' : ''}{s}</button
+                    >
+                  {/each}
+                {/if}
+              </div>
+            {/if}
+          </div>
+        {/if}
         <div class="menu-idioma" bind:this={contenedorIdioma}>
           <button
             aria-haspopup="menu"
@@ -741,7 +810,6 @@
     font-variant-numeric: tabular-nums;
   }
   .etiqueta {
-    margin-left: auto;
     padding: 2px 8px;
     border: 1px solid #888;
     border-radius: 4px;
@@ -836,8 +904,13 @@
     white-space: nowrap;
   }
   .menu-idioma,
-  .menu-velocidad {
+  .menu-velocidad,
+  .menu-servidor {
     position: relative;
+  }
+  .opciones .nota {
+    font-size: 12px;
+    padding: 2px 6px;
   }
   .opciones {
     position: absolute;
