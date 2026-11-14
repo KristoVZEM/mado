@@ -17,6 +17,21 @@ Para sacar una versión: subir el número en `app/src-tauri/tauri.conf.json`, `a
 y `app/package.json`, anotar aquí los cambios, mergear, crear la etiqueta `vX.Y.Z` sobre `main` y
 construir el instalador desde esa etiqueta. Ajustes muestra la versión y el commit instalados.
 
+## 0.9.1 — 2026-11-14
+
+Arreglo que salió de probar a mano la 0.9.0, más dependencias al día.
+
+### Arreglado
+
+- **Reproductor**: el botón del servidor rotaba en un solo sentido, y tras pasar de HLS a MP4Upload no se
+  podía volver («ningún servidor resoluble»). Ahora es un desplegable junto a SUB/DUB con los servidores
+  del episodio, y se puede elegir cualquiera, también el anterior.
+
+### Por dentro
+
+- `plugin-http` 2.9.0, `plugin-notification` 2.8.1 y `vite` 8.3.8, con los crates de Rust a juego.
+- Se quitó `lab/`: el chequeo diario se apagó porque nada leía sus resultados.
+
 ## 0.9.0 — 2026-11-13
 
 Primera versión numerada de verdad: hasta aquí todo fue `0.1.0`. El salto a `0.9` refleja que la app
