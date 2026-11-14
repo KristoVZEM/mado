@@ -1,6 +1,6 @@
 [package]
 name = "ukiku-pc"
-version = "0.9.1"
+version = "0.10.0"
 description = "Cliente de escritorio no oficial inspirado en Ukiku"
 authors = ["KristoVZEM"]
 edition = "2024"

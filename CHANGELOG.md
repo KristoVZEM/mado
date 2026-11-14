@@ -17,6 +17,28 @@ Para sacar una versión: subir el número en `app/src-tauri/tauri.conf.json`, `a
 y `app/package.json`, anotar aquí los cambios, mergear, crear la etiqueta `vX.Y.Z` sobre `main` y
 construir el instalador desde esa etiqueta. Ajustes muestra la versión y el commit instalados.
 
+## 0.10.0 — 2026-11-15
+
+Dos mejoras de uso diario y una base de pruebas que antes no existía.
+
+### Nuevo
+
+- **Volver recuerda dónde estabas**: al volver a una ficha o a una sección (Alt+←, el botón atrás del ratón o
+  «Volver») la página queda en el mismo punto en que la dejaste, y lo mismo al cerrar el Reproductor y volver a la
+  ficha. Con series muy largas ya no hay que bajar de nuevo.
+- **Nuevos episodios** de Inicio incluye también las series en Considerando (las de «Pendientes»), después de las que
+  estás viendo.
+
+### Arreglado
+
+- Abrir una serie relacionada desde una ficha muy larga bajada del todo ya no la deja abierta abajo: empieza arriba.
+
+### Por dentro
+
+- Pruebas de componentes Svelte (vitest) que montan cada pantalla con una base vacía y con datos de ejemplo, y fallan
+  si escriben errores en la consola. Corren en el CI junto al resto de pruebas.
+- El selector de servidor del Reproductor es un componente propio, con pruebas.
+
 ## 0.9.1 — 2026-11-14
 
 Arreglo que salió de probar a mano la 0.9.0, más dependencias al día.
