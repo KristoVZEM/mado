@@ -1,0 +1,21 @@
+{
+  "descripcion": "DLL de libmpv fijadas por hash. Cambiar de versión es un PR que sube las DLL nuevas a una release de dependencias y actualiza este archivo y NOTICE.md.",
+  "release": "deps-libmpv-2026-11-08",
+  "versiones": {
+    "mpv": "v0.41.0-1446-g858e0e508",
+    "ffmpeg": "N-128416-g5048d707a",
+    "libmpv-wrapper": "v0.1.1"
+  },
+  "archivos": [
+    {
+      "nombre": "libmpv-2.dll",
+      "sha256": "d1b28a7ee8080537bb95ccf9ff63594faa8960e29a178c0c8c11ace67d1b3d64",
+      "url": "https://github.com/KristoVZEM/mado/releases/download/deps-libmpv-2026-11-08/libmpv-2.dll.gz"
+    },
+    {
+      "nombre": "libmpv-wrapper.dll",
+      "sha256": "0d5adead5f175c55e0790a80924ec0a2636f72e3675c79a6d9d9568b2ed2384a",
+      "url": "https://github.com/KristoVZEM/mado/releases/download/deps-libmpv-2026-11-08/libmpv-wrapper.dll.gz"
+    }
+  ]
+}
