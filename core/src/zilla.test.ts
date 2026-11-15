@@ -31,7 +31,7 @@ test('el Playable no comparte el objeto de cabeceras con la constante', () => {
 });
 
 test('ignora otras URLs', () => {
-  assert.equal(resolverZilla({ server: 'Voe', url: 'https://voe.sx/e/abc' }, 'UA'), null);
+  assert.equal(resolverZilla({ server: 'Otro', url: 'https://otro.test/e/abc' }, 'UA'), null);
 });
 
 test('no resuelve URLs que no son del host exacto o no terminan limpio en el ID', () => {
@@ -76,7 +76,7 @@ test('crearResolverZilla pide la lista con las cabeceras de Zilla y devuelve el 
 test('crearResolverZilla no toca la red con URLs que no son de Zilla', async () => {
   const vistas: { url: string }[] = [];
   const r = crearResolverZilla(httpZilla(() => new Response('#EXTM3U'), vistas));
-  assert.equal(await r({ server: 'Voe', url: 'https://voe.sx/e/abc' }, 'UA'), null);
+  assert.equal(await r({ server: 'Otro', url: 'https://otro.test/e/abc' }, 'UA'), null);
   assert.equal(vistas.length, 0);
 });
 

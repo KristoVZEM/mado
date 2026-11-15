@@ -29,6 +29,8 @@ construir el instalador desde esa etiqueta. Ajustes muestra la versión y el com
   activar en Ajustes.
 - La base se llama `mado.db` y los respaldos automáticos `mado-AAAA-MM-DD.db`; los `ukiku-*` que ya había se
   siguen podando.
+- Los avisos ya no recomiendan una VPN: sugieren cambiar de red. Los textos de la interfaz hablan de «la fuente» y no de un sitio concreto.
+- Se retira el resolutor de Voe, que la app no usaba (su dominio no estaba permitido), con sus pruebas.
 
 ## 0.10.0 — 2026-11-15
 

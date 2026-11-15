@@ -53,7 +53,7 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("cerrar_a_bandeja", 0.0, 1.0),
 ];
 
-/// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`, `Voe`…); texto corto sin símbolos raros.
+/// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`…); texto corto sin símbolos raros.
 const CLAVE_SERVIDOR: &str = "servidor_ultimo";
 
 /// Carpeta elegida para las copias automáticas; vacía = la de por defecto.
@@ -229,7 +229,7 @@ mod pruebas {
     fn el_ultimo_servidor_es_texto_corto_y_sin_simbolos() {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("CREATE TABLE ajustes (clave TEXT PRIMARY KEY, valor TEXT NOT NULL);").unwrap();
-        for bueno in ["HLS", "MP4Upload", "Voe", "Mi servidor 2", "a.b-c_d"] {
+        for bueno in ["HLS", "MP4Upload", "Otro", "Mi servidor 2", "a.b-c_d"] {
             assert!(guardar(&conn, "servidor_ultimo", bueno).is_ok(), "acepta {bueno:?}");
         }
         assert_eq!(leer(&conn, "servidor_ultimo").unwrap(), Some("a.b-c_d".to_string()));

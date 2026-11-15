@@ -17,7 +17,7 @@ test('cada causa tiene su texto, que dice qué sigue funcionando y qué probar',
   assert.notEqual(red, desafio);
   for (const t of [red, desafio]) {
     assert.match(t, /Biblioteca, Historial y Emisión siguen funcionando/);
-    assert.match(t, /VPN/);
+    assert.match(t, /de red|otra red/);
   }
   assert.match(desafio, /Cloudflare/);
 });

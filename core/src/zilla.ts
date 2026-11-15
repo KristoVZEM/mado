@@ -24,7 +24,7 @@ export function resolverZilla(embed: Embed, userAgent: string): Playable | null 
 /**
  * Zilla con comprobación previa: pide la lista con las mismas cabeceras que usará mpv y exige un
  * `#EXTM3U`. Sin esto, un Zilla caído o bloqueado se descubre dentro de mpv, cuando la cadena ya
- * no puede pasar a MP4Upload ni a Voe. Una respuesta que no es lista cuenta como "ese servidor no
+ * no puede pasar a MP4Upload. Una respuesta que no es lista cuenta como "ese servidor no
  * sirve" (`FuenteCambio`); los fallos de red (`SinRed`) y desafíos suben tal cual a la cadena.
  */
 export function crearResolverZilla(http: Http): ResolverServidor {

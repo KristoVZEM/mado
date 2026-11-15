@@ -7,7 +7,6 @@ import { createHttp } from './http.ts';
 import type { Http, HttpOptions } from './http.ts';
 import { crearResolverMP4Upload } from './resolver-mp4upload.ts';
 import type { CapturarStream } from './resolver-mp4upload.ts';
-import { crearResolverVoe } from './resolver-voe.ts';
 import { crearResolverZilla } from './zilla.ts';
 import type { Idioma, Playable, ResolverServidor } from './types.ts';
 
@@ -20,7 +19,6 @@ export type { OpcionesCatalogo, OrdenCatalogo, ResultadoBusqueda } from './busqu
 export type { Episodio, Ficha } from './episodios.ts';
 export { crearResolverMP4Upload } from './resolver-mp4upload.ts';
 export type { CapturarStream } from './resolver-mp4upload.ts';
-export { crearResolverVoe } from './resolver-voe.ts';
 
 export interface OpcionesFuentes {
   /** Cliente ya construido (tests). Si falta, se crea uno con `httpOptions`. */
@@ -31,7 +29,7 @@ export interface OpcionesFuentes {
    * `resolve_webview`). Sin ella, MP4Upload no entra en la cadena por defecto.
    */
   capturarStream?: CapturarStream;
-  /** Cadena de servidores en orden de prioridad. Por defecto: Zilla, MP4Upload (si hay captura) y Voe. */
+  /** Cadena de servidores en orden de prioridad. Por defecto: Zilla y MP4Upload (si hay captura). */
   resolvers?: ResolverServidor[];
 }
 
@@ -40,7 +38,6 @@ export function crearFuentes(opts: OpcionesFuentes = {}) {
   const resolvers = opts.resolvers ?? [
     crearResolverZilla(http),
     ...(opts.capturarStream ? [crearResolverMP4Upload(opts.capturarStream)] : []),
-    crearResolverVoe(http),
   ];
   return {
     buscar: (query: string) => buscar(http, query),

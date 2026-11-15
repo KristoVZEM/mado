@@ -23,7 +23,7 @@ export interface HttpOptions {
   backoffMs?: number;
 }
 
-/** Quita el query y el fragmento: la URL de Voe lleva un token en el query que no debe llegar a los mensajes. */
+/** Quita el query y el fragmento: una URL de vídeo puede llevar un token en el query que no debe llegar a los mensajes. */
 function sinQuery(url: string): string {
   try {
     const u = new URL(url);

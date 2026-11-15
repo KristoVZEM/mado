@@ -51,7 +51,7 @@ test('recordar el servidor está apagado salvo que se guarde 1', () => {
 test('el servidor preferido solo existe con el ajuste activo y un texto no vacío', () => {
   assert.equal(servidorPreferido(false, 'HLS'), undefined);
   assert.equal(servidorPreferido(true, 'HLS'), 'HLS');
-  assert.equal(servidorPreferido(true, '  Voe '), 'Voe');
+  assert.equal(servidorPreferido(true, '  Otro '), 'Otro');
   assert.equal(servidorPreferido(true, ''), undefined);
   assert.equal(servidorPreferido(true, '   '), undefined);
   assert.equal(servidorPreferido(true, null), undefined);

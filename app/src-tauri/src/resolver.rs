@@ -120,6 +120,6 @@ mod tests {
     #[test]
     fn servidor_desconocido() {
         assert!(rule("mp4upload").is_some());
-        assert!(rule("voe").is_none());
+        assert!(rule("otro").is_none());
     }
 }

@@ -11,7 +11,7 @@ export interface Playable {
   headers: Record<string, string>;
   userAgent: string;
   calidad?: number;
-  /** El `server` del embed que ganó (por ejemplo "HLS", "MP4Upload", "Voe"); lo rellena la cadena. */
+  /** El `server` del embed que ganó (por ejemplo "HLS", "MP4Upload"); lo rellena la cadena. */
   servidor?: string;
 }
 

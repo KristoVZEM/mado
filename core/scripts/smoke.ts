@@ -1,4 +1,4 @@
-// Prueba manual contra animeav1 (necesita red sin bloqueo; el 2026-11-07 hizo falta VPN).
+// Prueba manual contra la fuente real (necesita una red que Cloudflare no bloquee).
 // Uso: cd core && npm run smoke -- "one piece" 1 SUB
 import { crearFuentes, SinRed, Desafio } from '../src/index.ts';
 
@@ -13,7 +13,7 @@ try {
   const playable = await fuentes.resolver(hits[0].slug, Number(ep), idioma as 'SUB' | 'DUB');
   console.log('playable:', JSON.stringify(playable));
 } catch (e) {
-  if (e instanceof SinRed) console.error('SIN RED (¿bloqueo de Cloudflare? probar con VPN):', e.message);
+  if (e instanceof SinRed) console.error('SIN RED (¿bloqueo de Cloudflare? probar con otra red):', e.message);
   else if (e instanceof Desafio) console.error('DESAFÍO de Cloudflare:', e.message);
   else console.error(`${(e as Error).name}:`, (e as Error).message);
   process.exitCode = 1;

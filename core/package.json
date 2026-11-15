@@ -6,7 +6,6 @@
   "scripts": {
     "test": "node --test \"src/**/*.test.ts\"",
     "smoke": "node scripts/smoke.ts",
-    "smoke:voe": "node scripts/smoke-voe.ts",
     "smoke:sync": "node scripts/smoke-sync.ts"
   }
 }

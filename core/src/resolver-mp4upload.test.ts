@@ -27,7 +27,7 @@ test('ignora los embeds que no son de MP4Upload sin capturar nada', async () => 
     return 'https://x.test/v.mp4';
   });
   for (const url of [
-    'https://voe.sx/e/abc',
+    'https://otro.test/e/abc',
     'https://www.mp4upload.com.evil.test/embed-abc.html',
     'http://www.mp4upload.com/embed-abc.html',
     'https://www.mp4upload.com/otra-cosa',

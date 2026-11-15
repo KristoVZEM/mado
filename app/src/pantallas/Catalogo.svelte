@@ -219,7 +219,7 @@
       <Vacio titulo="Sin resultados" texto="Prueba con otro título, con el nombre en romaji o con una sola palabra." />
     {/if}
     {#if deLaFuente.length > 0}
-      {#if propias.length > 0}<h2>En animeav1</h2>{/if}
+      {#if propias.length > 0}<h2>En la fuente</h2>{/if}
       <ul class="cuadricula">
         {#each deLaFuente as r (r.aid)}
           <li><TarjetaPoster aid={r.aid} titulo={r.title} alAbrir={() => abrir({ tipo: 'ficha', anime: r })} /></li>

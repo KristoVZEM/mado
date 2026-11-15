@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { crearFuentes, SinRed, SinServidor } from './index.ts';
 import type { Http } from './index.ts';
-import { paginaRedireccionVoe, paginaVoe } from './voe.testutil.ts';
 
 const busqueda = {
   nodes: [
@@ -86,66 +85,41 @@ function payloadEpisodio(embeds: { server: string; url: string }[]) {
 
 const ZILLA = { server: 'HLS', url: 'https://player.zilla-networks.com/play/abc' };
 const MP4 = { server: 'MP4Upload', url: 'https://www.mp4upload.com/embed-abc123.html' };
-const VOE = { server: 'Voe', url: 'https://voe.sx/e/abc123' };
-const DESTINO_VOE = 'https://espejo.test/e/abc123';
-const MASTER_VOE = 'https://cdn.test/engine/master.m3u8?t=tok';
-
-// Cliente falso que sirve la ficha del episodio y las páginas de Voe.
-function httpConVoe(embeds: { server: string; url: string }[]): Http {
-  const rutas: Record<string, string> = {
-    [VOE.url]: paginaRedireccionVoe(DESTINO_VOE),
-    [DESTINO_VOE]: paginaVoe({ source: MASTER_VOE }),
-    [MASTER_VOE]: '#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720\nb.m3u8\n',
-  };
+// Cliente falso que sirve la ficha del episodio y la lista HLS de Zilla.
+function httpConEmbeds(embeds: { server: string; url: string }[]): Http {
   return {
     userAgent: 'UA-test',
     get: async (url) => {
       if (url === 'https://player.zilla-networks.com/m3u8/abc') return new Response('#EXTM3U\n');
       if (url.includes('/media/one-piece/1/__data.json')) return new Response(JSON.stringify(payloadEpisodio(embeds)));
-      return rutas[url] !== undefined ? new Response(rutas[url]) : new Response('no', { status: 404 });
+      return new Response('no', { status: 404 });
     },
   };
 }
 
-test('la cadena por defecto prefiere Zilla sobre MP4Upload y Voe, y marca el servidor', async () => {
-  const f = crearFuentes({ http: httpConVoe([VOE, MP4, ZILLA]), capturarStream: async () => 'https://mp4.test/v.mp4' });
+test('la cadena por defecto prefiere Zilla sobre MP4Upload y marca el servidor', async () => {
+  const f = crearFuentes({ http: httpConEmbeds([MP4, ZILLA]), capturarStream: async () => 'https://mp4.test/v.mp4' });
   const p = await f.resolver('one-piece', 1);
   assert.equal(p.servidor, 'HLS');
   assert.equal(p.url, 'https://player.zilla-networks.com/m3u8/abc');
 });
 
 test('sin Zilla, usa MP4Upload cuando hay capturarStream', async () => {
-  const f = crearFuentes({ http: httpConVoe([VOE, MP4]), capturarStream: async () => 'https://mp4.test/v.mp4' });
+  const f = crearFuentes({ http: httpConEmbeds([MP4]), capturarStream: async () => 'https://mp4.test/v.mp4' });
   const p = await f.resolver('one-piece', 1);
   assert.equal(p.servidor, 'MP4Upload');
   assert.equal(p.url, 'https://mp4.test/v.mp4');
   assert.equal(p.headers.referer, 'https://www.mp4upload.com/');
 });
 
-test('sin capturarStream, MP4Upload no entra en la cadena y se cae a Voe (720p)', async () => {
-  const f = crearFuentes({ http: httpConVoe([MP4, VOE]) });
-  const p = await f.resolver('one-piece', 1);
-  assert.equal(p.servidor, 'Voe');
-  assert.equal(p.url, MASTER_VOE);
-  assert.equal(p.calidad, 720);
-});
-
-test('si MP4Upload falla, la cadena sigue con Voe', async () => {
-  let llamadas = 0;
-  const f = crearFuentes({
-    http: httpConVoe([MP4, VOE]),
-    capturarStream: async () => {
-      llamadas++;
-      throw 'sin captura válida (timeout)';
-    },
-  });
-  assert.equal((await f.resolver('one-piece', 1)).servidor, 'Voe');
-  assert.equal(llamadas, 1);
+test('sin capturarStream, MP4Upload no entra en la cadena y no queda ningún servidor', async () => {
+  const f = crearFuentes({ http: httpConEmbeds([MP4]) });
+  await assert.rejects(f.resolver('one-piece', 1), SinServidor);
 });
 
 test('si ningún servidor sirve, SinServidor explica por qué falló cada uno', async () => {
   const f = crearFuentes({
-    http: httpConVoe([MP4]),
+    http: httpConEmbeds([MP4]),
     capturarStream: async () => {
       throw 'sin captura válida (timeout)';
     },
@@ -159,7 +133,7 @@ test('si ningún servidor sirve, SinServidor explica por qué falló cada uno', 
 });
 
 test('si Zilla no responde una lista HLS, la cadena pasa a MP4Upload', async () => {
-  const base = httpConVoe([ZILLA, MP4]);
+  const base = httpConEmbeds([ZILLA, MP4]);
   const http: Http = {
     userAgent: 'UA-test',
     get: async (url, init) =>

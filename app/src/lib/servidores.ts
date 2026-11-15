@@ -1,4 +1,4 @@
-/** Los servidores que la app sabe resolver. Voe queda fuera a propósito: su dominio rotativo no está permitido (#37). */
+/** Los servidores que la app sabe resolver; cualquier otro del episodio se ignora. */
 const SERVIDORES_DE_LA_APP = ['HLS', 'MP4Upload'] as const;
 
 /** De los servidores del episodio, los que se pueden elegir en la app: sin repetir y en el orden de la página. */

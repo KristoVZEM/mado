@@ -7,7 +7,7 @@ function props(extra: Record<string, unknown> = {}) {
     servidor: 'HLS',
     calidad: 1080,
     clave: '1:SUB',
-    pedirServidores: vi.fn().mockResolvedValue(['HLS', 'MP4Upload', 'Voe']),
+    pedirServidores: vi.fn().mockResolvedValue(['HLS', 'MP4Upload', 'Otro']),
     alElegir: vi.fn(),
     ...extra,
   };
@@ -27,12 +27,12 @@ describe('SelectorServidor', () => {
     render(SelectorServidor, props({ pedirServidores: () => new Promise<string[]>((r) => (llega = r)) }));
     await fireEvent.click(boton());
     expect(screen.getByText('Buscando servidores…')).toBeTruthy();
-    llega(['HLS', 'MP4Upload', 'Voe']);
+    llega(['HLS', 'MP4Upload', 'Otro']);
     const hls = await screen.findByRole('menuitemradio', { name: /HLS/ });
     const mp4 = screen.getByRole('menuitemradio', { name: /MP4Upload/ });
     expect(hls.getAttribute('aria-checked')).toBe('true');
     expect(mp4.getAttribute('aria-checked')).toBe('false');
-    expect(screen.queryByRole('menuitemradio', { name: /Voe/ })).toBeNull();
+    expect(screen.queryByRole('menuitemradio', { name: /Otro/ })).toBeNull();
   });
 
   it('pide la lista una sola vez mientras la clave no cambie', async () => {
@@ -63,7 +63,7 @@ describe('SelectorServidor', () => {
     render(SelectorServidor, p);
     await fireEvent.click(boton());
     await fireEvent.click(await screen.findByRole('menuitemradio', { name: /MP4Upload/ }));
-    expect(p.alElegir).toHaveBeenCalledWith('MP4Upload', ['HLS', 'MP4Upload', 'Voe']);
+    expect(p.alElegir).toHaveBeenCalledWith('MP4Upload', ['HLS', 'MP4Upload', 'Otro']);
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
@@ -85,7 +85,7 @@ describe('SelectorServidor', () => {
     const hls = await screen.findByRole('menuitemradio', { name: /HLS/ });
     expect(hls.getAttribute('aria-checked')).toBe('false');
     await fireEvent.click(hls);
-    expect(p.alElegir).toHaveBeenLastCalledWith('HLS', ['HLS', 'MP4Upload', 'Voe']);
+    expect(p.alElegir).toHaveBeenLastCalledWith('HLS', ['HLS', 'MP4Upload', 'Otro']);
     expect(boton().hasAttribute('disabled')).toBe(false);
   });
 

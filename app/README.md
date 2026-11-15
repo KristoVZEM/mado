@@ -8,7 +8,6 @@ relativa, sin build). La reproducción usa libmpv.
 - Node 24, Rust (MSVC) y las herramientas de compilación de C++ de Visual Studio.
 - `libmpv-2.dll` y `libmpv-wrapper.dll` en `src-tauri/lib/` (no se versionan). Si faltan:
   `npx tauri-plugin-libmpv-api setup-lib` desde esta carpeta.
-- Si tu proveedor bloquea las IPs de Cloudflare, activa una VPN para buscar y reproducir.
 
 ## Comandos
 

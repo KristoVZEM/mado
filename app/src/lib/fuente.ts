@@ -15,6 +15,6 @@ const LOCAL = 'Biblioteca, Historial y Emisión siguen funcionando.';
 /** Texto del aviso que se ve en toda la app mientras la fuente no responde. */
 export function textoAvisoFuente(causa: CausaFuente): string {
   return causa === 'desafio'
-    ? `animeav1 está pidiendo un desafío de Cloudflare. ${LOCAL} Prueba a cambiar de red o de servidor de la VPN y reintenta.`
-    : `animeav1 no responde ahora. ${LOCAL} Revisa la conexión o prueba con otra red o servidor de la VPN.`;
+    ? `La fuente está pidiendo un desafío de Cloudflare. ${LOCAL} Prueba a cambiar de red y reintenta.`
+    : `La fuente no responde ahora. ${LOCAL} Revisa la conexión o prueba con otra red.`;
 }

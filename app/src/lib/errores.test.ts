@@ -12,7 +12,7 @@ test('cada error del núcleo tiene su propio mensaje, todos en español', () => 
     mensajeDeError(new Error('otro')),
   ];
   assert.equal(new Set(mensajes).size, mensajes.length);
-  assert.match(mensajes[0], /VPN/);
+  assert.match(mensajes[0], /otra red/);
 });
 
 test('SinServidor cuenta cuántos servidores fallaron', () => {
@@ -42,7 +42,7 @@ test('textoDeError usa el texto de un rechazo de invoke y traduce el resto', () 
   assert.equal(textoDeError(new SinRed('x')), mensajeDeError(new SinRed('x')));
 });
 
-test('el desafío de Cloudflare y la falta de respuesta sugieren cambiar de red o de servidor de la VPN', () => {
-  assert.match(mensajeDeError(new Desafio('x')), /VPN/);
-  assert.match(mensajeDeError(new SinRed('x')), /otro servidor de la VPN/);
+test('el desafío de Cloudflare y la falta de respuesta sugieren cambiar de red', () => {
+  assert.match(mensajeDeError(new Desafio('x')), /cambiar de red/);
+  assert.match(mensajeDeError(new SinRed('x')), /otra red/);
 });
