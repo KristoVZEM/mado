@@ -1,8 +1,17 @@
-# Mado
+<div align="center">
+  <img src="app/src-tauri/icons/128x128.png" alt="Icono de Mado" width="96">
+  <h1>Mado</h1>
+  <p><strong>Tu biblioteca de anime, tu historial y tu lista de AniList en una app de escritorio para Windows.</strong></p>
+  <p>
+    <a href="https://github.com/KristoVZEM/mado/actions/workflows/ci.yml"><img src="https://github.com/KristoVZEM/mado/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="CHANGELOG.md"><img src="https://img.shields.io/github/v/tag/KristoVZEM/mado?label=versi%C3%B3n&sort=semver&filter=v*" alt="Versión"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-blue.svg" alt="Licencia: MIT"></a>
+    <img src="https://img.shields.io/badge/plataforma-Windows-0078d4" alt="Plataforma: Windows">
+  </p>
+  <p><a href="#funciones">Funciones</a> · <a href="#diseño-de-seguridad">Seguridad</a> · <a href="#arquitectura">Arquitectura</a> · <a href="#compilar-y-probar">Compilar</a></p>
+</div>
 
-[![CI](https://github.com/KristoVZEM/mado/actions/workflows/ci.yml/badge.svg)](https://github.com/KristoVZEM/mado/actions/workflows/ci.yml)
-[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
-![Plataforma: Windows](https://img.shields.io/badge/plataforma-Windows-0078d4)
+<sub>🇬🇧 Desktop anime library client for Windows: local history, AniList sync and libmpv playback. Built with Tauri 2, Svelte 5 and Rust. Docs are in Spanish.</sub>
 
 Cliente de escritorio para Windows que reúne tu biblioteca de anime, el historial de episodios y tu lista de
 [AniList](https://anilist.co), con reproducción por [mpv](https://mpv.io).
@@ -57,7 +66,8 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
 - Al volver a una ficha o a una sección (Alt+←, botón atrás del ratón o
   «Volver») la página queda donde la dejaste.
 
-**Atajos del reproductor**
+<details>
+<summary><strong>Atajos del reproductor</strong></summary>
 
 | Tecla | Acción |
 |---|---|
@@ -69,6 +79,8 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
 | `N` / `P` | Episodio siguiente / anterior |
 | `0`-`9` | Saltar a esa décima del episodio |
 | `F` o doble clic | Pantalla completa |
+
+</details>
 
 **Datos locales**
 
@@ -108,6 +120,25 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
 - No hay telemetría ni cuentas propias. Las únicas conexiones son a las fuentes
   de vídeo, a AniList y a TMDB.
 
+## Diseño de seguridad
+
+- **Red acotada.** La app solo puede hablar con una lista cerrada de cuatro hosts (la fuente de vídeo, el servidor
+  de vídeo, AniList y TMDB), declarada en `app/src-tauri/capabilities/default.json`.
+- **CSP estricta.** Sin fuentes ni scripts externos; las imágenes solo se cargan de tres dominios y `object-src` está
+  desactivado (`app/src-tauri/tauri.conf.json`).
+- **Lo que llega de un tercero se valida antes de llegar a mpv.** La URL del vídeo debe ser `https` y no puede llevar
+  espacios ni caracteres de control (`app/src/lib/url.ts`); las cabeceras con comas, dos puntos en el nombre, barras
+  invertidas o saltos de línea se rechazan en lugar de corromper la petición (`app/src/lib/cabeceras.ts`). mpv corre
+  con `ytdl` desactivado.
+- **Credenciales fuera del disco.** El token de AniList y la clave de TMDB viven en el Administrador de credenciales
+  de Windows. Los errores y el registro nunca los muestran: el registro descarta la causa de los errores y quita el
+  query y el fragmento de toda URL (`app/src/lib/registro.ts`).
+- **SQLite solo desde Rust.** La interfaz no puede ejecutar SQL: solo llama a comandos acotados de Tauri, sin el plugin
+  SQL genérico.
+- **Datos a salvo de las migraciones.** Antes de migrar se guarda una copia de la base, y una base creada por una
+  versión más nueva no se toca.
+- **Sin telemetría.**
+
 Para avisar de un fallo de seguridad, ver [SECURITY.md](SECURITY.md).
 
 ## Arquitectura
@@ -128,11 +159,11 @@ Así se resuelve un episodio a algo que mpv pueda reproducir:
 flowchart LR
     A[Ficha: serie, episodio, SUB o DUB] --> B[core: lista de servidores del episodio]
     B --> C{Resolutores en orden}
-    C -->|1| D[Zilla: HLS 1080p]
-    C -->|2| E[MP4Upload: 1080p vía WebView oculto]
+    C -->|1| D[Resolutor 1: HLS 1080p]
+    C -->|2| E[Resolutor 2: 1080p vía WebView oculto]
     D --> F[Playable: URL, cabeceras, user-agent]
     E --> F
-    F --> G[app: Rust valida la URL]
+    F --> G[app: valida la URL]
     G --> H[libmpv reproduce]
     C -->|ninguno sirve| X[SinServidor con las causas]
 ```
@@ -140,8 +171,8 @@ flowchart LR
 Cada resolutor devuelve un `Playable` o falla; la cadena (`core/src/cadena.ts`)
 usa el primero válido y, si uno falla por red, desafío o cambio de formato,
 pasa al siguiente.
-La URL que captura el WebView la escribe una página de terceros, así que Rust
-la valida antes de dársela a mpv.
+La URL que captura el WebView la escribe una página de terceros, así que la
+interfaz la valida (solo `https`) antes de dársela a mpv.
 
 Más detalle en [core/README.md](core/README.md) y [app/README.md](app/README.md).
 
