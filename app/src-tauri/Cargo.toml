@@ -3,6 +3,8 @@ name = "mado"
 version = "0.10.0"
 description = "Cliente de escritorio no oficial para ver anime, con libmpv"
 authors = ["KristoVZEM"]
+license = "MIT"
+repository = "https://github.com/KristoVZEM/mado"
 edition = "2024"
 
 [lib]

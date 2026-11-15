@@ -1,6 +1,7 @@
 {
   "name": "mado",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "test": "npm test --prefix core && npm test --prefix app && npm run test:componentes --prefix app"
