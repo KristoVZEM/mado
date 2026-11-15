@@ -10,6 +10,11 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.12.1 — 2026-11-15
+
+Sin cambios de funciones: se publica para comprobar la actualización automática de la 0.12.0 a una versión
+posterior, de punta a punta.
+
 ## 0.12.0 — 2026-11-15
 
 Mado se actualiza sola.
