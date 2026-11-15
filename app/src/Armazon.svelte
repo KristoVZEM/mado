@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { CARRIL, type Seccion } from './lib/carril.ts';
+  import AvisoActualizacion from './lib/componentes/AvisoActualizacion.svelte';
   import { fuente, reintentarFuente } from './lib/fuente.svelte.ts';
   import { textoAvisoFuente } from './lib/fuente.ts';
   import { irASeccion, nav } from './lib/navegacion.svelte.ts';
@@ -42,6 +43,7 @@
     {/each}
   </nav>
   <div class="contenido">
+    <AvisoActualizacion />
     {#if fuente.causa && !fuente.descartado}
       <div class="aviso-fuente" role="alert">
         <span>{textoAvisoFuente(fuente.causa)}</span>

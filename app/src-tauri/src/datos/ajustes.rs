@@ -51,6 +51,10 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("espera_conexion", 0.0, 3.0),
     // Al cerrar la ventana, seguir en la bandeja del sistema (para los avisos): 0 o ausente = no.
     ("cerrar_a_bandeja", 0.0, 1.0),
+    // Comprobar si hay una versión nueva al abrir la app: 1 o ausente = sí, 0 = no.
+    ("actualizar_al_abrir", 0.0, 1.0),
+    // Cuándo contestó por última vez la comprobación de versión (milisegundos desde 1970; 0 = nunca).
+    ("actualizacion_ultima", 0.0, 9.0e15),
 ];
 
 /// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`…); texto corto sin símbolos raros.
@@ -200,6 +204,8 @@ mod pruebas {
             ("auto_respaldo", "0", "3", "-1", "4"),
             ("respaldo_ultimo", "0", "9000000000000000", "-1", "9000000000000001"),
             ("espera_conexion", "0", "3", "-1", "4"),
+            ("actualizar_al_abrir", "0", "1", "-1", "2"),
+            ("actualizacion_ultima", "0", "9000000000000000", "-1", "9000000000000001"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");
