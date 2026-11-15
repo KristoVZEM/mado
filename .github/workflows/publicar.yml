@@ -77,7 +77,7 @@ jobs:
           releaseBody: Revisar y publicar. Los cambios están en CHANGELOG.md.
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
-          includeUpdaterJson: true
+          uploadUpdaterJson: true
           args: --bundles nsis --config src-tauri/tauri.release.conf.json
 
       - name: Sumas de comprobación
