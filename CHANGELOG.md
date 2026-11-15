@@ -10,6 +10,21 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.12.0 — 2026-11-15
+
+Mado se actualiza sola.
+
+### Nuevo
+
+- **Actualizaciones.** Al abrir (una vez al día como mucho) la app comprueba en GitHub si hay una versión nueva y, si la
+  hay, avisa con «Actualizar» y «Más tarde». La descarga muestra su avance y la firma se verifica antes de instalar.
+  Nunca se instala sola ni durante un episodio: si empieza uno mientras se descarga, la instalación espera.
+- En Ajustes, «Datos y red»: la versión instalada con «Buscar ahora», y el interruptor «Comprobar al abrir»
+  (activado por defecto).
+- Es la única conexión nueva de la app: `github.com`, para leer el archivo de versiones y bajar el instalador.
+
+La primera versión con actualizador se instala a mano; las siguientes se actualizan desde la propia app.
+
 ## 0.11.0 — 2026-11-15
 
 El proyecto pasa a llamarse Mado.

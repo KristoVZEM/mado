@@ -6,7 +6,9 @@ relativa, sin build). La reproducción usa libmpv.
 ## Requisitos
 
 - Node 24, Rust (MSVC) y las herramientas de compilación de C++ de Visual Studio.
-- `libmpv-2.dll` y `libmpv-wrapper.dll` en `src-tauri/lib/` (no se versionan). Si faltan:
+- `libmpv-2.dll` y `libmpv-wrapper.dll` en `src-tauri/lib/` (no se versionan). Para obtener las que usa el
+  proyecto, fijadas por hash, ejecuta desde la raíz del repo `node scripts/descargar-libmpv.ts`. Los hash y
+  las versiones están en `deps/libmpv.json`. Alternativa sin hash fijo (siempre la última compilación):
   `npx tauri-plugin-libmpv-api setup-lib` desde esta carpeta.
 
 ## Comandos

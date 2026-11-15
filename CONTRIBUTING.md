@@ -30,3 +30,9 @@ Los requisitos y los comandos están en el [README](README.md#compilar-y-probar)
 - Los identificadores, comentarios y mensajes de la interfaz están en español, y se mantiene así por decisión del
   proyecto. Los tipos y términos propios de las API externas (`Playable`, `episodes`) conservan su nombre.
 - Los secretos (tokens, claves) nunca entran en el repositorio: viven en el Administrador de credenciales de Windows.
+
+## Releases de dependencias
+
+Las releases con etiqueta `deps-*` (por ejemplo `deps-libmpv-2026-11-08`) no son versiones de Mado: guardan binarios
+de terceros, como las DLL de libmpv, fijados por hash. Se publican siempre como prerelease, para que nunca figuren
+como la última versión ni interfieran con el actualizador, y con la frase «no es una versión de Mado» en el título.
