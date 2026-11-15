@@ -10,6 +10,21 @@ Cliente de escritorio para Windows que reúne tu biblioteca de anime, el histori
 Busca series, lleva el progreso de cada episodio en una base de datos local, sincroniza la lista con AniList en
 ambos sentidos y reproduce el vídeo con libmpv, con controles propios sobre la ventana.
 
+![Inicio de Mado, con la serie destacada y la fila de series que sigues](docs/capturas/inicio.webp)
+
+<table>
+  <tr>
+    <td><img src="docs/capturas/catalogo.webp" alt="Catálogo con las series populares"></td>
+    <td><img src="docs/capturas/ficha.webp" alt="Ficha de una serie con sinopsis, géneros y episodios"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/capturas/emision.webp" alt="Agenda semanal de emisión"></td>
+    <td><img src="docs/capturas/ajustes-claro.webp" alt="Ajustes de apariencia con el tema claro"></td>
+  </tr>
+</table>
+
+<sub>Capturas con una biblioteca de ejemplo. Los pósteres y fondos son de sus respectivos titulares y llegan de AniList y TMDB.</sub>
+
 ## Por qué existe
 
 Mado nació para seguir en el PC lo que ya se veía con [Ukiku](https://github.com/jordyamc/UKIKU), una app Android:
