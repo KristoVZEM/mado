@@ -141,8 +141,7 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
   versión más nueva no se toca.
 - **Actualizaciones firmadas.** Cada instalador se firma en el flujo de publicación con una clave guardada como secreto
   protegido (exige aprobación para usarla), y la app solo instala una actualización cuya firma coincide con la clave
-  pública que lleva incorporada. Nunca se instala
-  sola ni durante un episodio.
+  pública que lleva incorporada. Nunca se instala sola ni durante un episodio.
 - **Sin telemetría.**
 
 Para avisar de un fallo de seguridad, ver [SECURITY.md](SECURITY.md).
@@ -190,6 +189,22 @@ Más detalle en [core/README.md](core/README.md) y [app/README.md](app/README.md
 3. Abre Mado desde el menú Inicio. Los datos se guardan en tu equipo y no se borran al desinstalar.
 
 Si prefieres no ejecutar un binario ajeno, compílalo tú mismo como se explica a continuación.
+
+Cada release trae un `SHA256SUMS` con la suma del instalador. Además, el instalador lleva una atestación de
+procedencia de GitHub, que permite comprobar que salió de este repositorio:
+
+```
+gh attestation verify Mado_X.Y.Z_x64-setup.exe --repo KristoVZEM/mado
+```
+
+### Actualizaciones
+
+Mado comprueba si hay una versión nueva poco después de abrir, como mucho una vez al día. Si la hay, lo avisa y
+espera a que pulses «Actualizar»: nunca se instala sola ni durante un episodio. Cada actualización está firmada y la
+app la rechaza si la firma no coincide con la clave pública que lleva incorporada. Se puede apagar en Ajustes →
+Datos y red → «Comprobar al abrir». La única conexión que hace para esto es a `github.com`.
+
+La primera versión con actualizador (la 0.12.0) se instala a mano; las siguientes se actualizan desde la propia app.
 
 ## Compilar y probar
 

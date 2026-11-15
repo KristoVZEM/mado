@@ -36,3 +36,25 @@ Los requisitos y los comandos están en el [README](README.md#compilar-y-probar)
 Las releases con etiqueta `deps-*` (por ejemplo `deps-libmpv-2026-11-08`) no son versiones de Mado: guardan binarios
 de terceros, como las DLL de libmpv, fijados por hash. Se publican siempre como prerelease, para que nunca figuren
 como la última versión ni interfieran con el actualizador, y con la frase «no es una versión de Mado» en el título.
+
+## Cómo sacar una release
+
+Solo para quien mantiene el repositorio. Las releases salen del flujo `Publicar release`, que compila, firma y deja un
+borrador.
+
+1. Sube la versión en `app/src-tauri/tauri.conf.json`, `app/package.json` y `app/src-tauri/Cargo.toml` (con sus
+   `Cargo.lock` y `package-lock.json`) y añade la entrada del `CHANGELOG.md`. Abre el PR y fusiónalo.
+2. Crea la etiqueta sobre `main` y súbela: `git tag vX.Y.Z && git push origin vX.Y.Z`. El flujo falla si la etiqueta no
+   está sobre `main` o si su versión no es la de `tauri.conf.json`.
+3. Aprueba el Environment `release` en la ejecución de Actions: sin esa aprobación no se usa la clave de firma.
+4. Revisa el borrador: instalador, `.sig`, `latest.json` y `SHA256SUMS`, y comprueba la atestación con
+   `gh attestation verify`. Pruébalo en un Windows limpio.
+5. Publica el borrador. Una etiqueta con sufijo (`vX.Y.Z-prueba`) sale como prerelease en borrador, para ensayar el flujo;
+   bórrala junto con su borrador al terminar.
+
+### Si se pierde la clave de firma
+
+Sin la clave privada o su contraseña no se pueden firmar más actualizaciones para las apps ya instaladas. Hay que
+generar un par nuevo (`npm run tauri signer generate` en `app/`), poner la clave pública nueva en `tauri.conf.json`,
+cambiar los dos secretos del Environment `release` y publicar una versión nueva. Quien tenga la versión anterior debe
+instalarla a mano una vez. Por eso la clave y su contraseña se guardan copiadas fuera del repositorio y de GitHub.
