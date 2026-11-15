@@ -1,0 +1,35 @@
+Licencias de los componentes que lleva Mado
+============================================
+
+Mado es software libre con licencia MIT (ver LICENSE en el repositorio:
+https://github.com/KristoVZEM/mado).
+
+Esta carpeta recoge las licencias de los componentes de terceros que se
+instalan junto a la aplicación.
+
+libmpv-2.dll (carpeta lib)
+  Biblioteca del reproductor mpv, compilada como LGPL-2.1 o posterior
+  (opción de compilación -Dgpl=false) y con FFmpeg enlazado bajo LGPL 3.
+  Versiones incluidas:
+    mpv     v0.41.0-1446-g858e0e508
+    FFmpeg  N-128416-g5048d707a
+  Compilación: https://github.com/zhongfly/mpv-winbuild (variante «lgpl»)
+  Código de mpv:    https://github.com/mpv-player/mpv
+  Código de FFmpeg: https://git.ffmpeg.org/ffmpeg.git
+
+libmpv-wrapper.dll (carpeta lib)
+  Capa de enlace de libmpv, LGPL-2.1.
+  Código: https://github.com/nini22P/libmpv-wrapper
+
+Puedes sustituir cualquiera de las dos DLL por otra versión compatible: basta
+con reemplazar el archivo de la carpeta lib. Si alguno de los enlaces de arriba
+deja de funcionar, abre una incidencia en el repositorio de Mado y se facilitará
+el código fuente de las versiones indicadas.
+
+Textos de las licencias en esta carpeta:
+  LGPL-2.1.txt   GNU Lesser General Public License 2.1
+  LGPL-3.0.txt   GNU Lesser General Public License 3
+  GPL-3.0.txt    GNU General Public License 3 (la LGPL 3 se apoya en ella)
+
+La lista completa de dependencias, con sus licencias, está en NOTICE.md del
+repositorio.
