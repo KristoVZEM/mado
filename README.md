@@ -42,8 +42,9 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
   repositorio no aloja ni distribuye contenido audiovisual.
 - Úsalo bajo tu propia responsabilidad y respeta las leyes y los derechos de
   autor de tu país.
-- No hay instaladores ni DLL de libmpv en las releases: cada persona compila la
-  app en su equipo (ver [Compilar](#compilar-y-probar)).
+- Los instaladores de las [releases](https://github.com/KristoVZEM/mado/releases) llevan las DLL de libmpv y de
+  su capa de enlace, con licencia LGPL (ver [NOTICE.md](NOTICE.md)). También puedes compilar la app tú mismo
+  (ver [Compilar](#compilar-y-probar)).
 
 ## Funciones
 
@@ -144,6 +145,15 @@ La URL que captura el WebView la escribe una página de terceros, así que Rust
 la valida antes de dársela a mpv.
 
 Más detalle en [core/README.md](core/README.md) y [app/README.md](app/README.md).
+
+## Instalar
+
+1. Descarga `Mado_X.Y.Z_x64-setup.exe` de la última [release](https://github.com/KristoVZEM/mado/releases).
+2. Ejecútalo. El instalador no está firmado con un certificado de Windows, así que SmartScreen puede avisar con
+   «Windows protegió su PC»: pulsa «Más información» y «Ejecutar de todas formas».
+3. Abre Mado desde el menú Inicio. Los datos se guardan en tu equipo y no se borran al desinstalar.
+
+Si prefieres no ejecutar un binario ajeno, compílalo tú mismo como se explica a continuación.
 
 ## Compilar y probar
 
