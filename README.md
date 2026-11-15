@@ -1,65 +1,182 @@
-# ukiku-pc
+# Mado
 
-Cliente de escritorio no oficial, de uso personal, para ver anime en PC con
-los mismos datos que usa la app Android [Ukiku](https://github.com/jordyamc/UKIKU).
+[![CI](https://github.com/KristoVZEM/mado/actions/workflows/ci.yml/badge.svg)](https://github.com/KristoVZEM/mado/actions/workflows/ci.yml)
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+![Plataforma: Windows](https://img.shields.io/badge/plataforma-Windows-0078d4)
 
-## Estado
+Cliente de escritorio para Windows que reúne tu biblioteca de anime, el historial de episodios y tu lista de
+[AniList](https://anilist.co), con reproducción por [mpv](https://mpv.io).
 
-En desarrollo. Un spike de resolución y otro de libmpv en Tauri validaron la
-técnica (el código del primero está en el historial de git). Hoy hay:
+Busca series, lleva el progreso de cada episodio en una base de datos local, sincroniza la lista con AniList en
+ambos sentidos y reproduce el vídeo con libmpv, con controles propios sobre la ventana.
 
-- `core/`: núcleo de fuentes en TypeScript (buscar, episodios y resolver
-  Zilla, MP4Upload y Voe, con errores tipados).
-- `app/`: aplicación de escritorio (Tauri + Svelte + libmpv) con un carril de
-  iconos (Inicio, Catálogo, Emisión, Biblioteca, Historial y Ajustes), ficha
-  con sinopsis y reproductor con controles flotantes.
+## Por qué existe
 
-Hecho:
+Mado nació para seguir en el PC lo que ya se veía con [Ukiku](https://github.com/jordyamc/UKIKU), una app Android:
+el mismo historial, las mismas series seguidas y los mismos favoritos, importados desde su copia de seguridad. Con el
+tiempo se volvió un cliente completo. No es un fork de Ukiku: está escrito desde cero en TypeScript, Rust y Svelte
+(detalle en [NOTICE.md](NOTICE.md)).
 
-- Datos locales con SQLite: progreso, historial, ajustes y biblioteca con
-  estado y favoritos.
-- Importación de la copia de Ukiku desde una carpeta (historial, siguiendo y
-  favoritos, mezclando o reemplazando).
-- Datos de [AniList](https://anilist.co): banner, puntuación, próximo
-  episodio, agenda semanal de emisión y emparejado automático de las series.
-  La lista (estado y episodios vistos) se sincroniza con una cuenta de
-  AniList en los dos sentidos, con vista previa la primera vez.
-- Avisos de episodios nuevos con notificación de Windows, mientras la app
-  está abierta.
-- Imágenes de [TMDB](https://www.themoviedb.org) (fondo y logo) con la clave
-  del usuario, guardada en el almacén de credenciales de Windows.
-- Ajustes de reproducción, apariencia (tema claro u oscuro y color de
-  acento), avisos, datos y cuentas.
-- Copia de seguridad: exportar, restaurar y copia automática.
-- Modo degradado si la fuente no responde: lo local sigue funcionando.
-- Instalador NSIS con `npm run tauri build` desde `app/`.
-
-Pendiente: las descargas.
-
-## Versiones
-
-La versión actual y lo que cambió en cada una están en [CHANGELOG.md](CHANGELOG.md), junto
-con la regla para numerarlas.
-
-## Plan general
-
-- Stack objetivo: TypeScript y Tauri.
-- Fases: spike, lector de archivos `.backup` de Ukiku, cliente para buscar y
-  reproducir, y después favoritos, historial, progreso y descargas con datos
-  locales.
-- La compatibilidad con la app del móvil y la tablet empieza como
-  importación y exportación del archivo `.backup`.
+Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
 
 ## Aviso
 
-Proyecto no oficial, sin relación con el autor de Ukiku. Es de uso personal y
-no está pensado para distribuirse.
+- Mado es un proyecto no oficial, sin relación con Ukiku, AniList, TMDB, mpv ni
+  con ningún sitio de streaming.
+- El vídeo se obtiene de una fuente de streaming no oficial de terceros. Este
+  repositorio no aloja ni distribuye contenido audiovisual.
+- Úsalo bajo tu propia responsabilidad y respeta las leyes y los derechos de
+  autor de tu país.
+- No hay instaladores ni DLL de libmpv en las releases: cada persona compila la
+  app en su equipo (ver [Compilar](#compilar-y-probar)).
 
-## Créditos
+## Funciones
 
-Inspirado en [Ukiku](https://github.com/jordyamc/UKIKU), de Jordy Mendoza
-(licencia MIT).
+**Ver**
 
-## Licencia
+- Catálogo con búsqueda, ficha de cada serie (sinopsis, episodios, series
+  relacionadas) y agenda semanal de emisión.
+- Reproductor con libmpv y controles flotantes (atajos más abajo).
+- Selector de audio SUB/DUB y de servidor. Si un vídeo falla, la app prueba el
+  siguiente servidor desde el mismo segundo.
+- Al volver a una ficha o a una sección (Alt+←, botón atrás del ratón o
+  «Volver») la página queda donde la dejaste.
 
-Sin licencia por ahora (repositorio privado).
+**Atajos del reproductor**
+
+| Tecla | Acción |
+|---|---|
+| Espacio | Pausa |
+| ← → | Salto corto (10 s por defecto) |
+| ↑ ↓ | Volumen |
+| `S` | Salto largo (85 s por defecto) |
+| `M` | Silencio |
+| `N` / `P` | Episodio siguiente / anterior |
+| `0`-`9` | Saltar a esa décima del episodio |
+| `F` o doble clic | Pantalla completa |
+
+**Datos locales**
+
+- Progreso, historial, biblioteca con estados (viendo, considerando,
+  completado, dropeado, pausado) y favoritos, en una base SQLite en tu equipo.
+- Importación de la copia de seguridad de Ukiku (historial, series seguidas y
+  favoritos), mezclando con lo existente o reemplazándolo.
+- Copia de seguridad propia: exportar, restaurar y copia automática.
+- Sin conexión con la fuente, la biblioteca, el historial y las fichas ya guardadas siguen funcionando.
+
+**AniList y TMDB**
+
+- Datos de AniList: banner, puntuación, próximo episodio y emparejado
+  automático de las series con su entrada.
+- Sincronización de la lista (estado y episodios vistos) con una cuenta de
+  AniList, en ambos sentidos y con vista previa la primera vez.
+- Avisos de episodios nuevos con notificación de Windows. Funcionan mientras la
+  app esté abierta; opcionalmente puede quedarse en la bandeja del sistema al
+  cerrar y abrirse al iniciar Windows.
+- Fondo y logo de [TMDB](https://www.themoviedb.org) usando tu propia clave de
+  la API.
+
+**Ajustes**
+
+- Reproducción (saltos, idioma por defecto, siguiente episodio automático,
+  recordar el servidor, aceleración por hardware), apariencia (tema claro,
+  oscuro o del sistema, y color de acento), avisos, datos y cuentas.
+- Registro de errores en un archivo, accesible desde Ajustes.
+
+## Privacidad
+
+- Todo lo personal queda en tu equipo: historial, progreso y ajustes en una
+  base SQLite dentro de la carpeta de datos locales de la app.
+- El token de AniList y la clave de TMDB se guardan solo en el Administrador de
+  credenciales de Windows. No van a la base de datos, a archivos ni a los
+  registros.
+- No hay telemetría ni cuentas propias. Las únicas conexiones son a las fuentes
+  de vídeo, a AniList y a TMDB.
+
+Para avisar de un fallo de seguridad, ver [SECURITY.md](SECURITY.md).
+
+## Arquitectura
+
+El repositorio tiene dos piezas:
+
+- `core/`: núcleo de fuentes en TypeScript, sin dependencias. Busca series,
+  lista episodios, resuelve un episodio a un vídeo reproducible y habla con las
+  API de AniList y TMDB. Los fallos son errores tipados (`SinRed`, `Desafio`,
+  `FuenteCambio`, `SinServidor`).
+- `app/`: aplicación de escritorio con Tauri 2, Svelte 5 y libmpv. Rust guarda
+  los datos en SQLite y gestiona las credenciales; la interfaz orquesta. Importa
+  `core/` por ruta relativa, sin paso de compilación aparte.
+
+Así se resuelve un episodio a algo que mpv pueda reproducir:
+
+```mermaid
+flowchart LR
+    A[Ficha: serie, episodio, SUB o DUB] --> B[core: lista de servidores del episodio]
+    B --> C{Resolutores en orden}
+    C -->|1| D[Zilla: HLS 1080p]
+    C -->|2| E[MP4Upload: 1080p vía WebView oculto]
+    D --> F[Playable: URL, cabeceras, user-agent]
+    E --> F
+    F --> G[app: Rust valida la URL]
+    G --> H[libmpv reproduce]
+    C -->|ninguno sirve| X[SinServidor con las causas]
+```
+
+Cada resolutor devuelve un `Playable` o falla; la cadena (`core/src/cadena.ts`)
+usa el primero válido y, si uno falla por red, desafío o cambio de formato,
+pasa al siguiente.
+La URL que captura el WebView la escribe una página de terceros, así que Rust
+la valida antes de dársela a mpv.
+
+Más detalle en [core/README.md](core/README.md) y [app/README.md](app/README.md).
+
+## Compilar y probar
+
+Requisitos: Windows 11, Node 24, Rust (toolchain MSVC) y las herramientas de
+compilación de C++ de Visual Studio.
+
+```
+cd app
+npx tauri-plugin-libmpv-api setup-lib   # descarga libmpv a src-tauri/lib/ (no se versiona)
+npm ci
+npm run tauri dev                       # ejecutar en desarrollo
+npm run tauri build                     # instalador NSIS
+```
+
+El instalador queda en `app/src-tauri/target/release/bundle/nsis/`.
+
+Si Cloudflare bloquea tu conexión, la app avisa y sigue funcionando con lo local; prueba con otra red.
+
+Pruebas:
+
+- `npm test` en la raíz: pruebas de `core/`, de la lógica de `app/src/lib` y de
+  componentes Svelte (vitest) montando cada pantalla. Requiere haber hecho
+  `npm ci` en `app/`.
+- `cd app/src-tauri && cargo test`: capa de datos (SQLite, migraciones,
+  importación, copias) y validación de URL. `cargo clippy` debe quedar limpio.
+- `npm run check` en `app/`: tipos de TypeScript y Svelte.
+- La integración continua (GitHub Actions) ejecuta todo lo anterior en cada
+  pull request.
+
+## Estructura del repositorio
+
+```
+core/                   Núcleo de fuentes, AniList y TMDB (TypeScript, sin dependencias)
+app/                    Aplicación de escritorio
+  src/                  Interfaz Svelte y lógica en src/lib
+  src-tauri/            Backend en Rust: SQLite, mpv, credenciales, bandeja
+.github/workflows/      Integración continua
+CHANGELOG.md            Cambios por versión y regla de numeración
+LICENSE  NOTICE.md  SECURITY.md  CONTRIBUTING.md
+```
+
+## Estado
+
+Mado cubre el uso diario, pero sigue en versión 0.x. Los cambios de cada versión están en
+[CHANGELOG.md](CHANGELOG.md).
+
+## Créditos y licencia
+
+Mado se publica con licencia [MIT](LICENSE). La inspiración en Ukiku (de Jordy
+Mendoza, también MIT), el software de terceros que usa y lo que no se
+distribuye con el repositorio están en [NOTICE.md](NOTICE.md).

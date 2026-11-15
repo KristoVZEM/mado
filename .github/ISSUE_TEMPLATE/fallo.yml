@@ -1,0 +1,40 @@
+name: Fallo
+description: Algo no funciona como debería
+labels: [fallo]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Si el problema es que la fuente de vídeo cambió o dejó de responder, descríbelo igualmente: se trata como un
+        arreglo de compatibilidad, no como un fallo de seguridad. Para un problema de seguridad **no abras una
+        incidencia**: usa el aviso privado descrito en [SECURITY.md](https://github.com/KristoVZEM/mado/blob/main/SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: Versión de Mado
+      description: Aparece al pie de Ajustes.
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Versión de Windows
+      placeholder: Windows 11 23H2
+    validations:
+      required: true
+  - type: textarea
+    id: que-pasa
+    attributes:
+      label: Qué pasa y qué esperabas
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+  - type: textarea
+    id: registro
+    attributes:
+      label: Registro
+      description: En Ajustes > Datos hay un botón para abrir la carpeta de registros. El registro no guarda tokens ni claves, pero revísalo antes de pegarlo.
+      render: text
