@@ -1,9 +1,11 @@
 <script lang="ts">
   import { invoke } from '@tauri-apps/api/core';
+  import { getVersion } from '@tauri-apps/api/app';
   import { open, save } from '@tauri-apps/plugin-dialog';
   import { onMount } from 'svelte';
   import FilaAjuste from '../lib/componentes/FilaAjuste.svelte';
   import { ajustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
+  import { actualizacion, buscarActualizacion } from '../lib/actualizacion.svelte.ts';
   import { carpetaRespaldos, exportarCopia, guardarAjuste, leerAjuste, limpiarCacheTmdb, restaurarCopia } from '../lib/datos.ts';
   import { AUTO_RESPALDOS, ESPERAS_CONEXION, autoRespaldoDe, nombreCopia } from '../lib/datosAjustes.ts';
   import { textoDeError } from '../lib/errores.ts';
@@ -17,8 +19,10 @@
   let mensaje = $state('');
   let falloMensaje = $state(false);
   let ocupado = $state(false);
+  let versionInstalada = $state('');
 
   onMount(async () => {
+    getVersion().then((v) => (versionInstalada = v), () => {});
     autoRespaldo = autoRespaldoDe(await leerAjuste('auto_respaldo').catch(() => null));
     await cargarCarpeta();
   });
@@ -115,6 +119,11 @@
     guardarAjusteSilencioso('auto_respaldo', v);
   }
 
+  function cambiarActualizarAlAbrir(activo: boolean) {
+    ajustes.actualizarAlAbrir = activo;
+    guardarAjusteSilencioso('actualizar_al_abrir', activo ? '1' : '0');
+  }
+
   async function limpiarTmdb() {
     ocupado = true;
     avisar('');
@@ -196,6 +205,20 @@
   <select id="espera" value={String(ajustes.espera)} onchange={(e) => cambiarEspera(e.currentTarget.value)}>
     {#each ESPERAS_CONEXION as e, i (e.segundos)}<option value={String(i)}>{e.nombre}</option>{/each}
   </select>
+</FilaAjuste>
+
+<FilaAjuste
+  id="buscar-actualizacion"
+  titulo="Actualizaciones"
+  ayuda={`${versionInstalada ? `Versión instalada: ${versionInstalada}. ` : ''}${actualizacion.mensaje}`.trim() || 'Comprueba si hay una versión nueva de Mado.'}
+>
+  <button id="buscar-actualizacion" onclick={() => buscarActualizacion(true)} disabled={actualizacion.estado === 'comprobando' || actualizacion.estado === 'descargando'}>
+    {actualizacion.estado === 'comprobando' ? 'Buscando…' : 'Buscar ahora'}
+  </button>
+</FilaAjuste>
+
+<FilaAjuste id="actualizar-al-abrir" titulo="Comprobar al abrir" ayuda="Al abrir Mado mira, como mucho una vez al día, si hay una versión nueva. Nunca se instala sola ni durante un episodio.">
+  <input id="actualizar-al-abrir" type="checkbox" checked={ajustes.actualizarAlAbrir} onchange={(e) => cambiarActualizarAlAbrir(e.currentTarget.checked)} />
 </FilaAjuste>
 
 <FilaAjuste id="registros" titulo="Registro de errores" ayuda="Si algo falla, el detalle queda anotado en un archivo de texto en esta carpeta. No guarda tokens ni claves.">

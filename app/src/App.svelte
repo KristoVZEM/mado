@@ -12,6 +12,7 @@
   import { getCurrentWindow } from '@tauri-apps/api/window';
   import { ajustes, asegurarAjustes } from './lib/ajustes.svelte.ts';
   import { onMount } from 'svelte';
+  import { comprobarSiToca } from './lib/actualizacion.svelte.ts';
   import { ejecutarAlCerrar } from './lib/cierre.ts';
   import { asegurarVinculo } from './lib/anilistServicio.ts';
   import { estadoDatos, guardarAjuste, leerAjuste, pendientesEmparejar, reintentarNingunos } from './lib/datos.ts';
@@ -34,6 +35,10 @@
       .then(() => invoke('bandeja_visible', { visible: ajustes.cerrarABandeja }))
       .catch((e) => console.error('icono de la bandeja:', e));
     void dormir(15_000).then(iniciarRespaldoAutomatico);
+    // Versión nueva: se mira poco después de abrir y se repite cada media hora por si el primer intento se aplazó
+    // por un episodio en marcha. `comprobarSiToca` respeta el ajuste y no pasa de una comprobación al día.
+    void dormir(20_000).then(() => comprobarSiToca());
+    setInterval(() => void comprobarSiToca(), 30 * 60_000);
     // Cerrar con la X: se retiene el cierre, se guarda lo pendiente (progreso, volumen) y se cierra.
     // `ejecutarAlCerrar` tiene tope de tiempo, así que la ventana nunca queda colgada.
     void getCurrentWindow()

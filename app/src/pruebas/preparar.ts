@@ -22,6 +22,8 @@ vi.mock('@tauri-apps/plugin-notification', () => ({
 vi.mock('@tauri-apps/plugin-log', () => ({
   error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn(), trace: vi.fn(), attachConsole: async () => () => {},
 }));
+// El actualizador no sale a la red: por defecto no hay versión nueva. Cada prueba fija lo que `check` devuelve.
+vi.mock('@tauri-apps/plugin-updater', () => ({ check: vi.fn(async () => null) }));
 vi.mock('@tauri-apps/plugin-autostart', () => ({ isEnabled: async () => false, enable: vi.fn(), disable: vi.fn() }));
 vi.mock('../lib/fuentes.ts', () => ({
   fuentes: {

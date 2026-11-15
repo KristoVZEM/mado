@@ -118,7 +118,8 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
   credenciales de Windows. No van a la base de datos, a archivos ni a los
   registros.
 - No hay telemetría ni cuentas propias. Las únicas conexiones son a las fuentes
-  de vídeo, a AniList y a TMDB.
+  de vídeo, a AniList, a TMDB y a GitHub para comprobar si hay una versión nueva
+  (se puede apagar en Ajustes).
 
 ## Diseño de seguridad
 
@@ -137,6 +138,10 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
   SQL genérico.
 - **Datos a salvo de las migraciones.** Antes de migrar se guarda una copia de la base, y una base creada por una
   versión más nueva no se toca.
+- **Actualizaciones firmadas.** Cada instalador se firma en el flujo de publicación con una clave guardada como secreto
+  protegido (exige aprobación para usarla), y la app solo instala una actualización cuya firma coincide con la clave
+  pública que lleva incorporada. Nunca se instala
+  sola ni durante un episodio.
 - **Sin telemetría.**
 
 Para avisar de un fallo de seguridad, ver [SECURITY.md](SECURITY.md).

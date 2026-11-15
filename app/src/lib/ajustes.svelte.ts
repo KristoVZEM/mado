@@ -1,4 +1,5 @@
 import { idiomaDefectoDe, LIMITES, numeroDeAjuste, ordenDescendenteDe, volumenInicial } from './ajustes.ts';
+import { actualizarAlAbrirDe } from './actualizacion.ts';
 import { acentoDe, inicioOcultasDe, tamanoPostersDe, temaDe, type TemaElegido } from './apariencia.ts';
 import { cerrarABandejaDe } from './avisosAjustes.ts';
 import { esperaDe } from './datosAjustes.ts';
@@ -28,6 +29,8 @@ export const ajustes = $state({
   espera: 1,
   /** Al cerrar la ventana la app sigue en la bandeja del sistema. */
   cerrarABandeja: false,
+  /** Comprobar si hay una versión nueva al abrir la app (una vez al día como mucho). */
+  actualizarAlAbrir: true,
 });
 
 /** Guarda un ajuste sin esperar ni propagar fallos: los datos nunca bloquean la reproducción. */
@@ -67,7 +70,7 @@ async function leerSeguro(clave: string): Promise<string | null> {
 }
 
 async function cargar(): Promise<void> {
-  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo, espera, cerrarABandeja] = await Promise.all([
+  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo, espera, cerrarABandeja, actualizarAlAbrir] = await Promise.all([
     leerSeguro('volumen'),
     leerSeguro('salto_corto'),
     leerSeguro('salto_largo'),
@@ -85,6 +88,7 @@ async function cargar(): Promise<void> {
     leerSeguro('servidor_ultimo'),
     leerSeguro('espera_conexion'),
     leerSeguro('cerrar_a_bandeja'),
+    leerSeguro('actualizar_al_abrir'),
   ]);
   ajustes.idiomaDefecto = idiomaDefectoDe(idiomaDefecto);
   ajustes.ordenDescendente = ordenDescendenteDe(ordenEpisodios);
@@ -111,6 +115,7 @@ async function cargar(): Promise<void> {
   ajustes.servidorUltimo = servidorUltimo?.trim() ?? '';
   ajustes.espera = esperaDe(espera);
   ajustes.cerrarABandeja = cerrarABandejaDe(cerrarABandeja);
+  ajustes.actualizarAlAbrir = actualizarAlAbrirDe(actualizarAlAbrir);
 }
 
 let cargado: Promise<void> | null = null;

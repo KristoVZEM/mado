@@ -1,6 +1,6 @@
 [package]
 name = "mado"
-version = "0.11.0"
+version = "0.12.0"
 description = "Cliente de escritorio no oficial para ver anime, con libmpv"
 authors = ["KristoVZEM"]
 license = "MIT"
@@ -30,6 +30,7 @@ log = "0.4"
 tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-autostart = "2"
+tauri-plugin-updater = "2"
 
 [profile.release]
 codegen-units = 1

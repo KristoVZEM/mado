@@ -138,6 +138,9 @@ pub fn run() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        // Actualizaciones firmadas: la clave pública y el endpoint están en `tauri.conf.json`. La comprobación y la
+        // instalación las pide la interfaz (nunca durante una reproducción) y la firma se verifica antes de instalar.
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // La base vive en el directorio de datos locales de la app (no Roaming). Si no se puede
             // abrir (p. ej. es de una versión más nueva), la app arranca igual y cada comando de

@@ -1,13 +1,5 @@
 {
   "bundle": {
     "createUpdaterArtifacts": true
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMzMTJFMTZDMEI1NDY1MzQKUldRMFpWUUxiT0VTdzBMQ3FyTkkrSkVYeG02amM3WXdLd2tCNnRLTmtZQ2NYWDMzUjdyR0xtdXQK",
-      "endpoints": [
-        "https://github.com/KristoVZEM/mado/releases/latest/download/latest.json"
-      ]
-    }
   }
 }
