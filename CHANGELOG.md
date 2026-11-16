@@ -10,6 +10,18 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.13.0 — 2026-11-16
+
+Mado tiene logo propio.
+
+### Cambia
+
+- **Nuevo logo e iconos.** Sustituye al icono por defecto de Tauri: una ventana shoji de papel con ojos que miran desde
+  detrás, inspirada en el yokai *mokumokuren* («mado» significa ventana). Se ve en el instalador, la barra de tareas, la
+  bandeja y el README. A 48 px o menos se usa una versión simplificada, de cuatro ojos grandes, que se sigue leyendo a
+  16 px. Los archivos del logo y cómo regenerar los iconos están en `docs/logo/`.
+- Las capturas del README ya no llevan la barra de desplazamiento, y el repositorio tiene imagen de vista previa propia.
+
 ## 0.12.1 — 2026-11-15
 
 Sin cambios de funciones: se publica para comprobar la actualización automática de la 0.12.0 a una versión
