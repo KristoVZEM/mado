@@ -2,6 +2,12 @@
 // Aquí se limpian y se parten en bloques de texto plano (títulos, viñetas, párrafos con negritas). Nada de HTML ni de
 // enlaces: lo que se pinte sale siempre como texto, nunca como marcado.
 
+/** Lo que se pinta: las viñetas seguidas ya van juntas en una lista. */
+export type Elemento =
+  | { tipo: 'titulo'; texto: string }
+  | { tipo: 'parrafo'; partes: Parte[] }
+  | { tipo: 'lista'; items: Parte[][] };
+
 /** Tope de caracteres que se enseñan; el resto se corta con unos puntos suspensivos. */
 export const MAX_NOTAS = 4000;
 
@@ -94,4 +100,19 @@ export function bloquesDeNotas(notas: string): Bloque[] {
     }
   }
   return bloques.map((b): Bloque => (b.tipo === 'titulo' ? b : { tipo: b.tipo, partes: partesDe(b.lineas.join(' ')) }));
+}
+
+/** Junta las viñetas consecutivas en una sola lista; un título o un párrafo en medio la parte en dos. */
+export function agruparListas(bloques: Bloque[]): Elemento[] {
+  const elementos: Elemento[] = [];
+  for (const b of bloques) {
+    if (b.tipo !== 'item') {
+      elementos.push(b);
+      continue;
+    }
+    const ultimo = elementos.at(-1);
+    if (ultimo?.tipo === 'lista') ultimo.items.push(b.partes);
+    else elementos.push({ tipo: 'lista', items: [b.partes] });
+  }
+  return elementos;
 }

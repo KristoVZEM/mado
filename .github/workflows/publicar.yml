@@ -68,6 +68,15 @@ jobs:
 
       - run: npm ci --prefix app
 
+      - name: Notas de la versión (de CHANGELOG.md)
+        id: notas
+        # Falla si la versión no tiene entrada con texto en CHANGELOG.md: no se publica sin changelog. El texto va al
+        # borrador de la release y a las `notes` de latest.json, que la app enseña como «Novedades» al ofrecer la
+        # actualización. La etiqueta llega por una variable de entorno, no pegada en el script.
+        env:
+          ETIQUETA: ${{ github.ref_name }}
+        run: node scripts/notas-version.ts "$ETIQUETA"
+
       - name: Descargar las DLL de libmpv (verificadas por hash)
         run: node scripts/descargar-libmpv.ts
 
@@ -85,7 +94,7 @@ jobs:
           projectPath: app
           tagName: ${{ github.ref_name }}
           releaseName: Mado ${{ github.ref_name }}
-          releaseBody: Revisar y publicar. Los cambios están en CHANGELOG.md.
+          releaseBody: ${{ steps.notas.outputs.cuerpo }}
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           uploadUpdaterJson: true

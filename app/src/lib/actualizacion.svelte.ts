@@ -5,6 +5,7 @@ import { numeroDeAjuste } from './ajustes.ts';
 import { ejecutarAlCerrar } from './cierre.ts';
 import { guardarAjuste, leerAjuste } from './datos.ts';
 import { nav } from './navegacion.svelte.ts';
+import { notasSeguras } from './notasActualizacion.ts';
 
 /**
  * - `inactivo`: nada que ofrecer.
@@ -25,7 +26,9 @@ export const actualizacion = $state<{
   descartado: boolean;
   /** Resultado de la última comprobación a mano («Estás al día.», un fallo de red…) o del último intento de instalar. */
   mensaje: string;
-}>({ estado: 'inactivo', version: '', porcentaje: null, descartado: false, mensaje: '' });
+  /** Novedades de la versión ofrecida (el texto del CHANGELOG), ya limpias; `null` si no vinieron. */
+  notas: string | null;
+}>({ estado: 'inactivo', version: '', porcentaje: null, descartado: false, mensaje: '', notas: null });
 
 /** La versión nueva que ofreció la última comprobación, y si su instalador ya está descargado. */
 let pendiente: Update | null = null;
@@ -57,11 +60,14 @@ export async function buscarActualizacion(manual: boolean): Promise<void> {
       pendiente = nueva;
       descargado = false;
       actualizacion.version = nueva.version;
+      // `latest.json` no va firmado: las notas son texto no fiable y se limpian antes de guardarlas.
+      actualizacion.notas = notasSeguras(nueva.body);
       actualizacion.porcentaje = null;
       actualizacion.descartado = false;
       actualizacion.estado = 'disponible';
     } else {
       pendiente = null;
+      actualizacion.notas = null;
       actualizacion.estado = 'inactivo';
       if (manual) actualizacion.mensaje = 'Estás al día.';
     }

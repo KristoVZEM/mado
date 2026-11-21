@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { bloquesDeNotas, MAX_NOTAS, notasSeguras } from './notasActualizacion.ts';
+import { agruparListas, bloquesDeNotas, MAX_NOTAS, notasSeguras } from './notasActualizacion.ts';
 
 test('sin notas, o con algo que no es texto, no hay nada que mostrar', () => {
   for (const v of [undefined, null, 42, {}, [], '', '   \n  \n']) assert.equal(notasSeguras(v), null);
@@ -71,4 +71,21 @@ test('negritas sin cerrar no rompen nada', () => {
 test('sin texto no hay bloques', () => {
   assert.deepEqual(bloquesDeNotas(''), []);
   assert.deepEqual(bloquesDeNotas('\n\n  \n'), []);
+});
+
+test('las viñetas seguidas forman una lista, y un título la corta', () => {
+  const e = agruparListas(bloquesDeNotas('Intro.\n\n### Nuevo\n\n- Uno.\n- Dos.\n\n### Cambia\n\n- Tres.'));
+  assert.deepEqual(e.map((x) => x.tipo), ['parrafo', 'titulo', 'lista', 'titulo', 'lista']);
+  const lista = e[2] as { items: unknown[] };
+  assert.equal(lista.items.length, 2);
+  assert.equal((e[4] as { items: unknown[] }).items.length, 1);
+});
+
+test('un párrafo entre viñetas parte la lista en dos', () => {
+  const e = agruparListas(bloquesDeNotas('- Uno.\n\nTexto.\n\n- Dos.'));
+  assert.deepEqual(e.map((x) => x.tipo), ['lista', 'parrafo', 'lista']);
+});
+
+test('sin bloques no hay elementos', () => {
+  assert.deepEqual(agruparListas([]), []);
 });
