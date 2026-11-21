@@ -378,6 +378,15 @@ export interface FilaIntro {
 export const introLeer = (malId: number, episodio: number, duracionS: number) =>
   invoke<FilaIntro | null>('intro_leer', { malId, episodio, duracionS });
 export const introGuardar = (fila: FilaIntro) => invoke<void>('intro_guardar', { fila });
+/** La última lista de episodios guardada de una serie: la `Ficha` como JSON y cuándo se pidió (milisegundos). */
+export interface FilaEpisodios {
+  slug: string;
+  datos: string;
+  consultadoEn: number;
+}
+
+export const episodiosLeer = (slug: string) => invoke<FilaEpisodios | null>('episodios_leer', { slug });
+export const episodiosGuardar = (slug: string, datos: string) => invoke<void>('episodios_guardar', { slug, datosJson: datos });
 export const guardarClaveTmdb = (clave: string) => invoke<void>('guardar_clave_tmdb', { clave });
 export const leerClaveTmdb = () => invoke<string | null>('leer_clave_tmdb');
 export const borrarClaveTmdb = () => invoke<void>('borrar_clave_tmdb');

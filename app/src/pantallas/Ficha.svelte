@@ -6,6 +6,7 @@
   import { urlFondoTmdb, urlLogoTmdb } from '../lib/tmdb.ts';
   import { imagenesTmdb } from '../lib/tmdbServicio.ts';
   import { fuentes } from '../lib/fuentes.ts';
+  import { cargarEpisodios as cargarEpisodiosDeApp } from '../lib/episodiosApp.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { abrir, buscarEnCatalogo, cerrarSuperior } from '../lib/navegacion.svelte.ts';
   import {
@@ -211,23 +212,33 @@
   });
 
   /**
-   * Pide los episodios a la fuente. Si falla, la Ficha sigue mostrando lo guardado (datos de AniList, estado,
-   * favorito y vistos) y ofrece reintentar. Los datos de AniList se cargan en todo caso.
+   * Carga los episodios con la caché primero: si ya se vio esta serie, la última lista guardada sale al instante y la
+   * fresca de la fuente la sustituye al llegar. Si la fuente falla, la Ficha sigue con lo guardado (la lista, los datos de
+   * AniList, estado, favorito y vistos) y lo avisa; sin nada guardado, ofrece reintentar. Los datos de AniList se
+   * cargan en todo caso.
    */
   async function cargarEpisodios() {
     cargando = true;
     error = '';
-    try {
-      ficha = await fuentes.episodios(anime.slug);
-      fuenteRecuperada();
-    } catch (e) {
-      console.error(e);
-      error = mensajeDeError(e);
-      avisarFalloDeFuente(e);
-    } finally {
+    let aniListIniciado = false;
+    const r = await cargarEpisodiosDeApp(anime.slug, (f, origen) => {
+      ficha = f;
+      // Con la lista a la vista ya no hay nada que esperar; AniList (portada, notas) empieza sin esperar a la fuente.
       cargando = false;
+      if (origen === 'cache' && !aniListIniciado) {
+        aniListIniciado = true;
+        void cargarAniList();
+      }
+    });
+    if (r.error === null) {
+      fuenteRecuperada();
+    } else {
+      console.error(r.error);
+      error = r.ficha ? `Se muestra la última lista guardada. ${mensajeDeError(r.error)}` : mensajeDeError(r.error);
+      avisarFalloDeFuente(r.error);
     }
-    if (ficha || vinculo === null) void cargarAniList();
+    cargando = false;
+    if (!aniListIniciado && (ficha || vinculo === null)) void cargarAniList();
   }
 
   /** Quita un episodio de los vistos; si falla, vuelve a ponerlo y avisa. */
