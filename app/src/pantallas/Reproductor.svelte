@@ -30,6 +30,9 @@
   import { soloServidor } from '../lib/servidores.ts';
   import { fuentes } from '../lib/fuentes.ts';
   import SelectorServidor from '../lib/componentes/SelectorServidor.svelte';
+  import BotonIntro from '../lib/componentes/BotonIntro.svelte';
+  import { cambioDeCorte, introVisible, type TramoIntro } from '../lib/intro.ts';
+  import { tramoDeIntro } from '../lib/aniskip.ts';
   import { SinServidor } from '../../../core/src/index.ts';
   import { ajustes, asegurarAjustes, guardarAjusteSilencioso } from '../lib/ajustes.svelte.ts';
   import { completarSiTermino } from '../lib/completar.ts';
@@ -157,6 +160,29 @@
       recordarServidor(actual);
     });
   });
+
+  // Tramo del opening según AniSkip (solo con el ajuste activo). Se pide una vez por corte del vídeo: la duración
+  // de mpv puede variar un poco al cargar, y cambiar de servidor o de idioma puede traer otro corte.
+  let tramoIntro = $state<TramoIntro | null>(null);
+  let duracionIntro: number | null = null;
+  $effect(() => {
+    const duracion = reproductor.duracion;
+    if (!ajustes.aniskipActivo || estado !== 'listo' || !playable || !(duracion > 0) || reproductor.falloCarga) return;
+    const malId = playable.malId;
+    untrack(() => {
+      if (!cambioDeCorte(duracionIntro, duracion)) return;
+      duracionIntro = duracion;
+      tramoIntro = null;
+      void tramoDeIntro({ malId, episodio: numero, duracion }).then((t) => {
+        // Si mientras tanto llegó otra duración, esta respuesta ya no vale.
+        if (!destruido && duracionIntro === duracion) tramoIntro = t;
+      });
+    });
+  });
+
+  function saltarIntro() {
+    if (tramoIntro) void saltarAbsoluto(tramoIntro.fin);
+  }
 
   const esperando = $derived(
     estado === 'listo' &&
@@ -542,6 +568,8 @@
         <span class="texto-siguiente">Siguiente episodio ({siguiente}) ▸</span>
       </button>
     {/if}
+
+    <BotonIntro visible={introVisible(reproductor.posicion, tramoIntro)} alto={controlesVisibles} alSaltar={saltarIntro} />
 
     {#if aviso}
       <div class="aviso" role="status">{aviso}</div>
