@@ -10,6 +10,31 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.14.0 — 2026-11-22
+
+Mado puede saltar el opening, maneja mejor las series largas y te cuenta qué cambia al actualizar.
+
+### Nuevo
+
+- **Botón «Saltar intro».** Mientras suena el opening de un episodio aparece un botón que salta hasta su final. Es opcional
+  y viene apagado: se activa en Ajustes → Reproducción. Con él activado, Mado pide a AniSkip, un servicio comunitario de
+  tiempos, el tramo del opening y le envía el id de la serie, el episodio, la duración del vídeo y tu dirección IP; apagado,
+  no envía nada. Los tiempos los aporta la comunidad y a veces fallan, sobre todo en algunos primeros episodios: si el botón no
+  aparece, el salto de +85 s sigue donde estaba.
+- **Series largas en la Ficha.** Los episodios se muestran de 24 en 24, con flechas y un desplegable de rangos para saltar a
+  cualquier tramo. Un campo «Ir al episodio» lleva directo al número que pidas, y el botón «Hasta aquí» de cada episodio marca
+  como vistos ese y todos los anteriores (pide confirmación).
+- **Miniaturas difuminadas.** Las capturas de los episodios sin ver se difuminan para no revelar la trama; se aclaran al
+  pasar el ratón. El siguiente por ver y los que ya empezaste se ven con nitidez. Se apaga en Ajustes → Apariencia.
+- **Novedades al actualizar.** El aviso de versión nueva tiene un botón «Novedades» que despliega lo que cambia. Lo verás a
+  partir de la actualización que siga a esta.
+
+### Cambia
+
+- La base de datos pasa a la versión 9, con una caché de los tiempos de intro. La migración es automática y guarda una copia
+  antes.
+- AniSkip, opcional, es el quinto servidor con el que Mado puede hablar; ya está recogido en el README y en `NOTICE.md`.
+
 ## 0.13.0 — 2026-11-16
 
 Mado tiene logo propio.
