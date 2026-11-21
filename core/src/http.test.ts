@@ -265,3 +265,87 @@ test('el mensaje del desafío no incluye el query de la URL', async () => {
     return true;
   });
 });
+
+test('una petición de prioridad alta pasa por delante de las de fondo que esperan su turno', async () => {
+  const reloj = relojFalso();
+  const orden: string[] = [];
+  const http = createHttp({
+    ...reloj,
+    gapMs: 1500,
+    fetch: async (url) => {
+      orden.push(String(url));
+      return new Response('ok');
+    },
+  });
+  const fondo = http.conPrioridad('baja');
+  const pedidas = [fondo.get('https://x.test/f1'), fondo.get('https://x.test/f2'), fondo.get('https://x.test/f3')];
+  const alta = http.get('https://x.test/alta');
+  await Promise.all([...pedidas, alta]);
+  // La primera de fondo ya había salido; la alta se cuela antes de las que seguían esperando.
+  assert.deepEqual(orden, ['https://x.test/f1', 'https://x.test/alta', 'https://x.test/f2', 'https://x.test/f3']);
+});
+
+test('la prioridad no acorta la pausa: entre dos peticiones, de cualquier prioridad, pasan al menos gapMs', async () => {
+  // Un reloj que avanza al acabar la espera, no antes: así la hora de salida de cada petición se anota antes de que corra
+  // la pausa de la siguiente, como en la realidad.
+  let t = 10_000;
+  const reloj = {
+    now: () => t,
+    sleep: async (ms: number) => {
+      await Promise.resolve();
+      t += ms;
+    },
+  };
+  const salidas: number[] = [];
+  const http = createHttp({
+    ...reloj,
+    gapMs: 1500,
+    fetch: async () => {
+      salidas.push(reloj.now());
+      return new Response('ok');
+    },
+  });
+  const fondo = http.conPrioridad('baja');
+  await Promise.all([fondo.get('https://x.test/1'), http.get('https://x.test/2'), fondo.get('https://x.test/3'), http.get('https://x.test/4')]);
+  assert.equal(salidas.length, 4);
+  for (let i = 1; i < salidas.length; i++) assert.ok(salidas[i] - salidas[i - 1] >= 1500, `entre ${i - 1} y ${i}: ${salidas[i] - salidas[i - 1]}`);
+});
+
+test('la vista de fondo comparte la pausa con la principal', async () => {
+  const reloj = relojFalso();
+  const http = createHttp({ ...reloj, gapMs: 1500, fetch: async () => new Response('ok') });
+  await http.conPrioridad('baja').get('https://x.test/fondo');
+  await http.get('https://x.test/alta');
+  assert.deepEqual(reloj.esperas, [1500]);
+});
+
+test('sin otras peticiones a la vista, una de prioridad alta sale al momento', async () => {
+  const reloj = relojFalso();
+  const http = createHttp({ ...reloj, gapMs: 1500, fetch: async () => new Response('ok') });
+  await http.get('https://x.test/sola');
+  assert.deepEqual(reloj.esperas, []);
+});
+
+test('una petición de fondo que se reintenta conserva su prioridad en cada intento', async () => {
+  const reloj = relojFalso();
+  const orden: string[] = [];
+  let intentos = 0;
+  const http = createHttp({
+    ...reloj,
+    gapMs: 1500,
+    retries: 1,
+    backoffMs: 0,
+    fetch: async (url) => {
+      orden.push(String(url));
+      if (String(url).endsWith('/fondo') && intentos++ === 0) throw new TypeError('fallo de red');
+      return new Response('ok');
+    },
+  });
+  const fondo = http.conPrioridad('baja').get('https://x.test/fondo');
+  const alta = http.get('https://x.test/alta');
+  await Promise.all([fondo, alta]);
+  // El primer intento de fondo salió antes que la alta; su reintento, de fondo, va detrás de la alta si esta sigue esperando.
+  assert.equal(orden[0], 'https://x.test/fondo');
+  assert.equal(orden.filter((u) => u.endsWith('/fondo')).length, 2);
+  assert.ok(orden.indexOf('https://x.test/alta') < orden.lastIndexOf('https://x.test/fondo'));
+});
