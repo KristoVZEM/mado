@@ -33,4 +33,9 @@ vi.mock('../lib/fuentes.ts', () => ({
     servidores: vi.fn(async () => []),
     resolver: vi.fn(),
   },
+  // Las tareas de fondo usan esta otra fachada (misma cola, prioridad baja).
+  fuentesFondo: {
+    buscar: vi.fn(async () => []),
+    episodios: vi.fn(async () => ({ title: '', episodes: [], synopsis: '', genres: [], status: '', anio: null })),
+  },
 }));

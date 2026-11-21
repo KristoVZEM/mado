@@ -3,7 +3,7 @@ import { clienteAnilist } from './anilistCliente.ts';
 import { leerAjuste, guardarAjuste } from './datos.ts';
 import type { ItemDestacado } from './destacado.ts';
 import { titulosParaBuscar } from './emision.ts';
-import { fuentes } from './fuentes.ts';
+import { fuentesFondo } from './fuentes.ts';
 
 const CLAVE = 'inicio_populares';
 /** La lista se rehace cada 6 h: la popularidad apenas cambia y cada serie cuesta unas búsquedas en la fuente. */
@@ -30,7 +30,7 @@ async function buscarEnFuente(m: MediaAnilist): Promise<ItemDestacado | null> {
   };
   let mejor: { aid: number; slug: string; title: string; c: number } | null = null;
   for (const t of titulosParaBuscar(m)) {
-    for (const res of await fuentes.buscar(t)) {
+    for (const res of await fuentesFondo.buscar(t)) {
       const c = confianza({ titulo: res.title }, candidato);
       if (!mejor || c > mejor.c) mejor = { aid: res.aid, slug: res.slug, title: res.title, c };
     }
