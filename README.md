@@ -124,8 +124,9 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
 
 ## Diseño de seguridad
 
-- **Red acotada.** La app solo puede hablar con una lista cerrada de cuatro hosts (la fuente de vídeo, el servidor
-  de vídeo, AniList y TMDB), declarada en `app/src-tauri/capabilities/default.json`.
+- **Red acotada.** La app solo puede hablar con una lista cerrada de cinco hosts (la fuente de vídeo, el servidor
+  de vídeo, AniList, TMDB y AniSkip), declarada en `app/src-tauri/capabilities/default.json`. AniSkip es opcional: está
+  apagado por defecto y, si se activa, solo recibe el id de la serie, el episodio y la duración del vídeo.
 - **CSP estricta.** Sin fuentes ni scripts externos; las imágenes solo se cargan de tres dominios y `object-src` está
   desactivado (`app/src-tauri/tauri.conf.json`).
 - **Lo que llega de un tercero se valida antes de llegar a mpv.** La URL del vídeo debe ser `https` y no puede llevar
@@ -142,7 +143,7 @@ Está en desarrollo (versión 0.x) y solo se ha probado en Windows 11.
 - **Actualizaciones firmadas.** Cada instalador se firma en el flujo de publicación con una clave guardada como secreto
   protegido (exige aprobación para usarla), y la app solo instala una actualización cuya firma coincide con la clave
   pública que lleva incorporada. Nunca se instala sola ni durante un episodio.
-- **Sin telemetría.**
+- **Sin telemetría.** Mado no envía nada por su cuenta; lo único opcional es la consulta a AniSkip, que se activa en Ajustes.
 
 Para avisar de un fallo de seguridad, ver [SECURITY.md](SECURITY.md).
 

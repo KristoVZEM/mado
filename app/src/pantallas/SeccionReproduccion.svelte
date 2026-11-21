@@ -66,6 +66,11 @@
     guardarAjusteSilencioso('siguiente_auto', activo ? '1' : '0');
   }
 
+  function cambiarAniskip(activo: boolean) {
+    ajustes.aniskipActivo = activo;
+    guardarAjusteSilencioso('aniskip_activo', activo ? '1' : '0');
+  }
+
   function cambiarRecordarServidor(activo: boolean) {
     ajustes.recordarServidor = activo;
     guardarAjusteSilencioso('recordar_servidor', activo ? '1' : '0');
@@ -119,6 +124,14 @@
 
 <FilaAjuste id="siguiente-auto" titulo="Pasar al siguiente episodio solo" ayuda="Al acabar, salta al siguiente tras la cuenta atrás. Desactivado, solo con el botón.">
   <input id="siguiente-auto" type="checkbox" checked={ajustes.siguienteAuto} onchange={(e) => cambiarSiguienteAuto(e.currentTarget.checked)} />
+</FilaAjuste>
+
+<FilaAjuste
+  id="aniskip"
+  titulo="Botón «Saltar intro» (AniSkip)"
+  ayuda="Pide a AniSkip el tramo del opening. Envía a ese servicio el id de la serie, el episodio, la duración del vídeo y tu IP. Desactivado, no se consulta nada."
+>
+  <input id="aniskip" type="checkbox" checked={ajustes.aniskipActivo} onchange={(e) => cambiarAniskip(e.currentTarget.checked)} />
 </FilaAjuste>
 
 <FilaAjuste id="redimension" titulo="Tamaño del vídeo" ayuda="Cómo encaja el vídeo cuando la ventana no tiene su misma proporción.">

@@ -4,6 +4,7 @@ import { acentoDe, difuminarMiniaturasDe, inicioOcultasDe, tamanoPostersDe, tema
 import { cerrarABandejaDe } from './avisosAjustes.ts';
 import { esperaDe } from './datosAjustes.ts';
 import { guardarAjuste, leerAjuste } from './datos.ts';
+import { aniskipActivoDe } from './intro.ts';
 import { hwdecDe, recordarServidorDe, redimensionDe, siguienteAutoDe } from './reproduccion.ts';
 import { SALTO_CORTO_S, SALTO_LARGO_S } from './saltos.ts';
 
@@ -33,6 +34,8 @@ export const ajustes = $state({
   cerrarABandeja: false,
   /** Comprobar si hay una versión nueva al abrir la app (una vez al día como mucho). */
   actualizarAlAbrir: true,
+  /** Pedir a AniSkip el tramo del opening para el botón «Saltar intro». Apagado: consultar revela qué se ve. */
+  aniskipActivo: false,
 });
 
 /** Guarda un ajuste sin esperar ni propagar fallos: los datos nunca bloquean la reproducción. */
@@ -72,7 +75,7 @@ async function leerSeguro(clave: string): Promise<string | null> {
 }
 
 async function cargar(): Promise<void> {
-  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo, espera, cerrarABandeja, actualizarAlAbrir, difuminarMiniaturas] = await Promise.all([
+  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo, espera, cerrarABandeja, actualizarAlAbrir, difuminarMiniaturas, aniskipActivo] = await Promise.all([
     leerSeguro('volumen'),
     leerSeguro('salto_corto'),
     leerSeguro('salto_largo'),
@@ -92,6 +95,7 @@ async function cargar(): Promise<void> {
     leerSeguro('cerrar_a_bandeja'),
     leerSeguro('actualizar_al_abrir'),
     leerSeguro('difuminar_miniaturas'),
+    leerSeguro('aniskip_activo'),
   ]);
   ajustes.idiomaDefecto = idiomaDefectoDe(idiomaDefecto);
   ajustes.ordenDescendente = ordenDescendenteDe(ordenEpisodios);
@@ -120,6 +124,7 @@ async function cargar(): Promise<void> {
   ajustes.cerrarABandeja = cerrarABandejaDe(cerrarABandeja);
   ajustes.actualizarAlAbrir = actualizarAlAbrirDe(actualizarAlAbrir);
   ajustes.difuminarMiniaturas = difuminarMiniaturasDe(difuminarMiniaturas);
+  ajustes.aniskipActivo = aniskipActivoDe(aniskipActivo);
 }
 
 let cargado: Promise<void> | null = null;

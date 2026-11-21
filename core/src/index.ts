@@ -67,8 +67,9 @@ export function crearFuentes(opts: OpcionesFuentes = {}) {
         preferido,
         excluidos,
       );
-      return playable;
+      return detalle.malId === null ? playable : { ...playable, malId: detalle.malId };
     },
   };
 }
 export * from './tmdb/index.ts';
+export * from './aniskip/index.ts';

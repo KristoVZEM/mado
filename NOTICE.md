@@ -5,7 +5,7 @@ la inspiración, qué software de terceros usa y qué no se distribuye con el re
 
 ## Sin relación con terceros
 
-Mado es un proyecto personal y no oficial. No tiene relación, aval ni afiliación con Ukiku, AniList, TMDB, mpv ni
+Mado es un proyecto personal y no oficial. No tiene relación, aval ni afiliación con Ukiku, AniList, TMDB, AniSkip, mpv ni
 con ningún sitio de streaming. Todos los nombres y marcas pertenecen a sus dueños.
 
 ## Inspiración: Ukiku
@@ -36,6 +36,7 @@ Mado usa, entre otros, estos proyectos, cada uno con su licencia:
 | [Zen Kaku Gothic New](https://fonts.google.com/specimen/Zen+Kaku+Gothic+New) (vía `@fontsource`) | Tipografía | SIL OFL 1.1 |
 | [AniList](https://anilist.co) | Datos de series y sincronización de la lista | API con sus propios términos de uso |
 | [TMDB](https://www.themoviedb.org) | Imágenes de fondo y logos | API con sus propios términos de uso |
+| [AniSkip](https://github.com/aniskip/aniskip-api) | Tiempos del opening para el botón «Saltar intro» (opcional) | Código de la API bajo MIT; los tiempos son aportes de su comunidad y solo se guardan en la caché local de cada usuario, nunca se empaquetan |
 
 La lista completa está en `app/src-tauri/Cargo.lock` y `app/package-lock.json`. En el árbol de dependencias de
 Rust no hay licencias GPL ni AGPL; las únicas de copyleft de archivo son MPL-2.0, y Mado no modifica esos archivos.

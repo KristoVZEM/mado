@@ -13,6 +13,8 @@ export interface Playable {
   calidad?: number;
   /** El `server` del embed que ganó (por ejemplo "HLS", "MP4Upload"); lo rellena la cadena. */
   servidor?: string;
+  /** Id de MyAnimeList de la serie, si la fuente lo trae; lo rellena `resolver`. */
+  malId?: number;
 }
 
 export type ResolverServidor = (
