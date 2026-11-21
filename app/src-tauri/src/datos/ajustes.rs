@@ -35,6 +35,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("tamano_posters", 0.0, 2.0),
     // Partes de Inicio ocultas: máscara de bits (1 destacados, 2 continuar viendo, 4 nuevos episodios, 8 siguiendo, 16 pendientes).
     ("inicio_ocultas", 0.0, 31.0),
+    // Difuminar las miniaturas de los episodios sin ver en la Ficha (evita destripar): 1 o ausente = sí, 0 = no.
+    ("difuminar_miniaturas", 0.0, 1.0),
     // Ajuste del vídeo a la ventana: 0 = ajustar (barras), 1 = llenar (recorta), 2 = estirar.
     ("redimension", 0.0, 2.0),
     // Pasar solo al siguiente episodio al acabar: 1 o ausente = sí; 0 = solo con el botón.
@@ -200,6 +202,7 @@ mod pruebas {
             ("acento", "0", "5", "-1", "6"),
             ("tamano_posters", "0", "2", "-1", "3"),
             ("inicio_ocultas", "0", "31", "-1", "32"),
+            ("difuminar_miniaturas", "0", "1", "-1", "2"),
             ("redimension", "0", "2", "-1", "3"),
             ("siguiente_auto", "0", "1", "-1", "2"),
             ("recordar_servidor", "0", "1", "-1", "2"),

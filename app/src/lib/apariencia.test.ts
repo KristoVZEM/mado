@@ -8,6 +8,7 @@ import {
   acentoDe,
   conParte,
   contraste,
+  difuminarMiniaturasDe,
   inicioOcultasDe,
   parteOculta,
   tamanoPostersDe,
@@ -83,4 +84,13 @@ test('ocultar partes de Inicio: máscara de bits', () => {
 test('la máscara máxima cubre todas las partes', () => {
   assert.equal(PARTES_INICIO.length, 5);
   assert.equal((1 << PARTES_INICIO.length) - 1, 31);
+});
+
+test('difuminar miniaturas: ausente o inválido es sí; solo «0» lo desactiva', () => {
+  assert.equal(difuminarMiniaturasDe(null), true);
+  assert.equal(difuminarMiniaturasDe(''), true);
+  assert.equal(difuminarMiniaturasDe('x'), true);
+  assert.equal(difuminarMiniaturasDe('2'), true);
+  assert.equal(difuminarMiniaturasDe('1'), true);
+  assert.equal(difuminarMiniaturasDe('0'), false);
 });

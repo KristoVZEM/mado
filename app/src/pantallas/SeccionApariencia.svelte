@@ -33,6 +33,11 @@
     guardarAjusteSilencioso('tamano_posters', v);
   }
 
+  function cambiarDifuminado(activo: boolean) {
+    ajustes.difuminarMiniaturas = activo;
+    guardarAjusteSilencioso('difuminar_miniaturas', activo ? '1' : '0');
+  }
+
   function mostrarParte(parte: ParteInicio, visible: boolean) {
     ajustes.inicioOcultas = conParte(ajustes.inicioOcultas, parte, !visible);
     guardarAjusteSilencioso('inicio_ocultas', String(ajustes.inicioOcultas));
@@ -74,6 +79,14 @@
     <option value="asc">Del primero al último</option>
     <option value="desc">Del último al primero</option>
   </select>
+</FilaAjuste>
+
+<FilaAjuste
+  id="difuminar"
+  titulo="Difuminar las miniaturas de los episodios sin ver"
+  ayuda="Evita destripar con la captura. Se aclaran al pasar el ratón; los vistos, los empezados y el siguiente se ven siempre."
+>
+  <input id="difuminar" type="checkbox" checked={ajustes.difuminarMiniaturas} onchange={(e) => cambiarDifuminado(e.currentTarget.checked)} />
 </FilaAjuste>
 
 <fieldset class="partes">
