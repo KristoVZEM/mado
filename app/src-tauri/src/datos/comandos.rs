@@ -3,6 +3,7 @@
 
 use super::anilist;
 use super::avisos;
+use super::intro;
 use super::tmdb;
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
 use super::progreso::{self, EntradaContinuar, EntradaHistorial, Serie};
@@ -293,6 +294,18 @@ pub fn tmdb_leer(datos: State<'_, Datos>, anilist_id: i64) -> Result<Option<tmdb
 #[tauri::command(async)]
 pub fn tmdb_guardar(datos: State<'_, Datos>, fila: tmdb::FilaTmdb) -> Result<(), String> {
     con(&datos, |c| tmdb::guardar(c, &fila))
+}
+
+/// Lo guardado del intro de un episodio (o `None` si no hay nada vigente).
+#[tauri::command(async)]
+pub fn intro_leer(datos: State<'_, Datos>, mal_id: i64, episodio: i64, duracion_s: i64) -> Result<Option<intro::FilaIntro>, String> {
+    con(&datos, |c| intro::leer(c, mal_id, episodio, duracion_s, ahora_ms()))
+}
+
+/// Guarda el resultado de una consulta a AniSkip (también el de «no hay»), tras revalidarlo.
+#[tauri::command(async)]
+pub fn intro_guardar(datos: State<'_, Datos>, fila: intro::FilaIntro) -> Result<(), String> {
+    con(&datos, |c| intro::guardar(c, &fila, ahora_ms()))
 }
 
 #[tauri::command(async)]
