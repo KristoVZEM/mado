@@ -1,11 +1,15 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import Portada from './Portada.svelte';
+  import { crearConfirmacion } from '../confirmar.ts';
   import { fraccionVista } from '../continuar.ts';
   import { minutosDe, textoQuedan, type ProgresoEp } from '../episodiosFicha.ts';
+  import { etiquetaPagina, paginaDe, paginar, seMuestraPaginador } from '../paginasEpisodios.ts';
   import type { Idioma } from '../../../../core/src/index.ts';
 
-  // Lista de episodios de la Ficha: cabecera con el selector de idioma y una tarjeta por episodio con su
-  // miniatura, marca de visto y progreso. No guarda nada: avisa a la Ficha de lo que el usuario pide.
+  // Lista de episodios de la Ficha: cabecera con el selector de idioma, el paginador y una tarjeta por episodio
+  // con su miniatura, marca de visto y progreso. Las series largas se muestran de 24 en 24. No guarda nada:
+  // avisa a la Ficha de lo que el usuario pide.
   let {
     aid,
     titulo,
@@ -18,8 +22,10 @@
     idioma = $bindable(),
     conCuenta,
     aviso,
+    difuminar,
     alReproducir,
     alDesmarcar,
+    alMarcarHasta,
   }: {
     aid: number;
     titulo: string;
@@ -38,9 +44,59 @@
     conCuenta: boolean;
     // Mensaje de error al desmarcar un episodio, o vacío.
     aviso: string;
+    // Difuminar la captura de los episodios sin ver, para no destripar (el siguiente, los empezados y los vistos no).
+    difuminar: boolean;
     alReproducir: (numero: number) => void;
     alDesmarcar: (numero: number) => void;
+    // Marcar como visto este episodio y todos los anteriores.
+    alMarcarHasta: (numero: number) => void;
   } = $props();
+
+  // Página elegida por el usuario; mientras no toque nada, la lista sigue al episodio principal.
+  let elegida = $state<number | null>(null);
+  const paginas = $derived(paginar(mostrados));
+  const inicial = $derived(Math.max(0, paginaDe(mostrados, principalNumero ?? Number.NaN)));
+  const pagina = $derived(Math.min(elegida ?? inicial, Math.max(0, paginas.length - 1)));
+  const visibles = $derived(paginas[pagina] ?? []);
+  const conPaginador = $derived(seMuestraPaginador(mostrados.length));
+
+  let irA = $state<number | null>(null);
+  let avisoIr = $state('');
+  let resaltado = $state<number | null>(null);
+  let relojResaltado: ReturnType<typeof setTimeout> | undefined;
+
+  function irAlEpisodio(e: SubmitEvent) {
+    e.preventDefault();
+    if (irA === null || !Number.isFinite(Number(irA))) return;
+    const numero = Number(irA);
+    const destino = paginaDe(mostrados, numero);
+    if (destino === -1) {
+      avisoIr = `No hay episodio ${numero}.`;
+      return;
+    }
+    avisoIr = '';
+    elegida = destino;
+    resaltado = numero;
+    clearTimeout(relojResaltado);
+    relojResaltado = setTimeout(() => (resaltado = null), 2500);
+    // Espera a que se pinte la página nueva antes de llevar la vista al episodio.
+    queueMicrotask(() => document.getElementById(`episodio-${numero}`)?.scrollIntoView?.({ block: 'center' }));
+  }
+
+  // «Hasta aquí» marca muchos episodios de golpe: pide confirmar con un segundo clic, como el «¿Quitar?» de Inicio.
+  let pendiente = $state<number | null>(null);
+  const confirmarHasta = crearConfirmacion<number>((n) => (pendiente = n));
+  onDestroy(() => {
+    confirmarHasta.cancelar();
+    clearTimeout(relojResaltado);
+  });
+
+  function marcarHasta(n: number) {
+    if (!confirmarHasta.pedir(n)) return;
+    // Al marcar, el episodio principal avanza y, sin esto, la lista saltaría a su página.
+    elegida = pagina;
+    alMarcarHasta(n);
+  }
 </script>
 
 <div class="barra-episodios">
@@ -49,16 +105,30 @@
     <button disabled={idioma === 'SUB'} onclick={() => (idioma = 'SUB')}>SUB</button>
     <button disabled={idioma === 'DUB'} onclick={() => (idioma = 'DUB')}>DUB</button>
   </div>
+  {#if conPaginador}
+    <div class="paginador" role="group" aria-label="Páginas de episodios">
+      <button aria-label="Página anterior" disabled={pagina === 0} onclick={() => (elegida = pagina - 1)}>‹</button>
+      <select aria-label="Página" value={String(pagina)} onchange={(e) => (elegida = Number(e.currentTarget.value))}>
+        {#each paginas as p, i (i)}<option value={String(i)}>{etiquetaPagina(p)}</option>{/each}
+      </select>
+      <button aria-label="Página siguiente" disabled={pagina >= paginas.length - 1} onclick={() => (elegida = pagina + 1)}>›</button>
+    </div>
+    <form class="ir-a" role="search" aria-label="Ir a un episodio" onsubmit={irAlEpisodio}>
+      <input type="number" min="0" step="any" placeholder="Ir al ep." aria-label="Ir al episodio" bind:value={irA} />
+      <button type="submit">Ir</button>
+    </form>
+  {/if}
 </div>
+{#if avisoIr}<p class="aviso-ir" role="status">{avisoIr}</p>{/if}
 <ul class="lista-episodios" aria-label="Episodios">
   <!-- La fuente puede traer números repetidos: la clave lleva la posición para no chocar (each_key_duplicate). -->
-  {#each mostrados as n, i (`${n}:${i}`)}
+  {#each visibles as n, i (`${n}:${i}`)}
     {@const p = progresoPorNumero.get(n)}
     {@const fr = p ? fraccionVista(p.posicionS, p.duracionS) : null}
     {@const quedan = p ? textoQuedan(p.posicionS, p.duracionS) : null}
-    <li class="episodio" class:visto={vistos.has(n)} class:actual={principalNumero === n}>
+    <li id="episodio-{n}" class="episodio" class:visto={vistos.has(n)} class:actual={principalNumero === n} class:resaltado={resaltado === n}>
       <button class="fila" onclick={() => alReproducir(n)}>
-        <span class="miniatura">
+        <span class="miniatura" data-difuminada={difuminar && !vistos.has(n) && !p && principalNumero !== n ? '' : undefined}>
           <Portada {aid} {titulo} numero={n} />
           <span class="reproducir" aria-hidden="true">
             <svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z" /></svg>
@@ -79,13 +149,21 @@
           {#if vistos.has(n)}<span>Visto</span>{:else if quedan}<span>{quedan}</span>{:else if principalNumero === n}<span>Siguiente</span>{/if}
         </span>
       </button>
-      {#if vistos.has(n)}
+      <div class="acciones">
         <button
-          class="quitar"
-          onclick={() => alDesmarcar(n)}
-          aria-label={`Marcar el episodio ${n} como no visto`}
-          title={conCuenta ? 'Marcar como no visto. AniList puede volver a marcarlo.' : 'Marcar como no visto'}>×</button>
-      {/if}
+          class="hasta"
+          onclick={() => marcarHasta(n)}
+          onblur={() => confirmarHasta.cancelar()}
+          aria-label={`Marcar como vistos los episodios hasta el ${n}`}
+          title="Marcar como vistos este episodio y todos los anteriores">{pendiente === n ? '¿Seguro?' : 'Hasta aquí'}</button>
+        {#if vistos.has(n)}
+          <button
+            class="quitar"
+            onclick={() => alDesmarcar(n)}
+            aria-label={`Marcar el episodio ${n} como no visto`}
+            title={conCuenta ? 'Marcar como no visto. AniList puede volver a marcarlo.' : 'Marcar como no visto'}>×</button>
+        {/if}
+      </div>
     </li>
   {/each}
 </ul>
@@ -103,9 +181,22 @@
     color: var(--texto-suave);
     font-weight: 400;
   }
-  .idioma {
+  .idioma,
+  .paginador,
+  .ir-a {
     display: flex;
     gap: 4px;
+  }
+  .ir-a input {
+    width: 7rem;
+  }
+  .aviso-ir {
+    margin: 8px 0 0;
+    color: var(--texto-suave);
+    font-size: 0.875rem;
+  }
+  .episodio.resaltado .contorno {
+    box-shadow: inset 0 0 0 2px var(--acento);
   }
   .idioma button:disabled {
     background: var(--boton-claro);
@@ -148,7 +239,18 @@
   .miniatura :global(img) {
     transition:
       opacity 300ms ease-out,
-      transform 300ms ease-out;
+      transform 300ms ease-out,
+      filter 300ms ease-out;
+  }
+  /* Captura difuminada de un episodio sin ver: el zoom esconde el borde claro que deja el desenfoque. */
+  .miniatura[data-difuminada] :global(img) {
+    filter: blur(14px);
+    transform: scale(1.15);
+  }
+  .episodio:hover .miniatura[data-difuminada] :global(img),
+  .fila:focus-visible .miniatura[data-difuminada] :global(img) {
+    filter: none;
+    transform: scale(1.05);
   }
   .fila:hover .miniatura :global(img) {
     opacity: 0.75;
@@ -254,18 +356,22 @@
     color: var(--texto-suave);
     font-size: 0.875rem;
   }
-  .quitar {
+  .acciones {
     position: absolute;
     top: 8px;
     right: 8px;
-    min-height: 0;
-    padding: 0 8px;
-    background: rgb(0 0 0 / 0.7);
+    display: flex;
+    gap: 4px;
     opacity: 0;
     transition: opacity 150ms;
   }
-  .episodio:hover .quitar,
-  .episodio:focus-within .quitar {
+  .acciones button {
+    min-height: 0;
+    padding: 0 8px;
+    background: rgb(0 0 0 / 0.7);
+  }
+  .episodio:hover .acciones,
+  .episodio:focus-within .acciones {
     opacity: 1;
   }
   :global(.capa) h2 {
@@ -288,7 +394,7 @@
     .miniatura :global(img),
     .contorno,
     .reproducir,
-    .quitar {
+    .acciones {
       transition: none;
     }
     .fila:hover .miniatura :global(img) {

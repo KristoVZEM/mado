@@ -16,7 +16,9 @@
     estadoSerie,
     fijarEstado,
     leerAjuste,
+    marcarVisto,
     progresoDeSerie,
+    seriesParaSync,
     vinculoConMedia,
     type FilaTmdb,
     type RelacionAnilist,
@@ -32,6 +34,8 @@
   import { avisarFalloDeFuente, fuenteRecuperada } from '../lib/fuente.svelte.ts';
   import { ordenarEpisodios } from '../lib/ajustes.ts';
   import { idiomaGuardado } from '../lib/continuar.ts';
+  import { completarSiTermino } from '../lib/completar.ts';
+  import { anterioresDe } from '../lib/progreso.ts';
   import { episodioPrincipal, textoPrincipal, type ProgresoEp } from '../lib/episodiosFicha.ts';
   import { avisarCambio, cargarCuenta, sync } from '../lib/sync.svelte.ts';
   import { ESTADOS, nombreEstado } from '../lib/biblioteca.ts';
@@ -165,7 +169,7 @@
   );
   /** Orden de la lista en pantalla; `numeros` se queda ascendente porque el reproductor calcula el siguiente con él. */
   const mostrados = $derived(ordenarEpisodios(numeros, ajustes.ordenDescendente));
-  let avisoDesmarcar = $state('');
+  let avisoEpisodios = $state('');
   const progresoPorNumero = $derived(new Map(progresos.map((p) => [p.numero, p])));
   /** El episodio que ofrece el botón grande: el que dejaste a medias, el siguiente sin ver, o volver al primero. */
   const principal = $derived(episodioPrincipal(numeros, vistos, progresos));
@@ -230,13 +234,38 @@
   async function desmarcar(n: number) {
     const antes = vistos;
     vistos = new Set([...vistos].filter((x) => x !== n));
-    avisoDesmarcar = '';
+    avisoEpisodios = '';
     try {
       await desmarcarVisto(anime.aid, n);
     } catch (e) {
       console.error(e);
       vistos = antes;
-      avisoDesmarcar = `No se pudo quitar el episodio ${n} de los vistos: ${textoDeError(e)}`;
+      avisoEpisodios = `No se pudo quitar el episodio ${n} de los vistos: ${textoDeError(e)}`;
+    }
+  }
+
+  /**
+   * Marca el episodio `n` y todos los anteriores como vistos. Como al verlo en el reproductor, si con esto se
+   * completa la serie el estado cambia antes de avisar a la sincronización. Al acabar relee la base: es la
+   * fuente de verdad de lo visto y de lo que queda a medias.
+   */
+  async function marcarHasta(n: number) {
+    avisoEpisodios = '';
+    try {
+      await marcarVisto(serie, n, undefined, anterioresDe(numeros, n));
+      await completarSiTermino(serie, { local: async (aid) => (await seriesParaSync(aid))[0], fijarEstado });
+      avisarCambio(serie.aid);
+    } catch (e) {
+      console.error(e);
+      avisoEpisodios = `No se pudo marcar como vistos los episodios hasta el ${n}: ${textoDeError(e)}`;
+    }
+    try {
+      const [v, p, e] = await Promise.all([episodiosVistos(anime.aid), progresoDeSerie(anime.aid), estadoSerie(anime.aid)]);
+      vistos = new Set(v);
+      progresos = p;
+      estado = e ?? 0;
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -462,9 +491,11 @@
         duracionMedia={media?.duracion}
         bind:idioma
         conCuenta={Boolean(sync.cuenta)}
-        aviso={avisoDesmarcar}
+        aviso={avisoEpisodios}
+        difuminar={ajustes.difuminarMiniaturas}
         alReproducir={reproducir}
         alDesmarcar={desmarcar}
+        alMarcarHasta={marcarHasta}
       />
     {/if}
 

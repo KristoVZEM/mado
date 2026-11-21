@@ -16,6 +16,7 @@ export const LIMITES_APARIENCIA = {
   acento: [0, 5],
   tamanoPosters: [0, 2],
   inicioOcultas: [0, 31],
+  difuminarMiniaturas: [0, 1],
 } as const;
 
 /** Sin ajuste guardado la app sigue oscura, como siempre; el claro y el del sistema se eligen. */
@@ -101,4 +102,9 @@ function luminancia(hex: string): number {
 export function contraste(a: string, b: string): number {
   const [la, lb] = [luminancia(a), luminancia(b)].sort((x, y) => y - x);
   return (la + 0.05) / (lb + 0.05);
+}
+
+/** `difuminar_miniaturas`: ausente o inválido = sí (evita destripar con la captura); solo `0` lo desactiva. */
+export function difuminarMiniaturasDe(valor: string | null | undefined): boolean {
+  return numeroDeAjuste(valor, 1, ...LIMITES_APARIENCIA.difuminarMiniaturas) === 1;
 }

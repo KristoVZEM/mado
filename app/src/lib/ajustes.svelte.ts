@@ -1,6 +1,6 @@
 import { idiomaDefectoDe, LIMITES, numeroDeAjuste, ordenDescendenteDe, volumenInicial } from './ajustes.ts';
 import { actualizarAlAbrirDe } from './actualizacion.ts';
-import { acentoDe, inicioOcultasDe, tamanoPostersDe, temaDe, type TemaElegido } from './apariencia.ts';
+import { acentoDe, difuminarMiniaturasDe, inicioOcultasDe, tamanoPostersDe, temaDe, type TemaElegido } from './apariencia.ts';
 import { cerrarABandejaDe } from './avisosAjustes.ts';
 import { esperaDe } from './datosAjustes.ts';
 import { guardarAjuste, leerAjuste } from './datos.ts';
@@ -19,6 +19,8 @@ export const ajustes = $state({
   acento: 0,
   tamanoPosters: 1,
   inicioOcultas: 0,
+  /** Difuminar la captura de los episodios sin ver en la Ficha, para no destripar. */
+  difuminarMiniaturas: true,
   redimension: 0,
   hwdec: 0,
   siguienteAuto: true,
@@ -70,7 +72,7 @@ async function leerSeguro(clave: string): Promise<string | null> {
 }
 
 async function cargar(): Promise<void> {
-  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo, espera, cerrarABandeja, actualizarAlAbrir] = await Promise.all([
+  const [volumen, corto, largo, velocidad, idiomaDefecto, ordenEpisodios, tema, acento, tamanoPosters, inicioOcultas, redimension, hwdec, siguienteAuto, recordarServidor, servidorUltimo, espera, cerrarABandeja, actualizarAlAbrir, difuminarMiniaturas] = await Promise.all([
     leerSeguro('volumen'),
     leerSeguro('salto_corto'),
     leerSeguro('salto_largo'),
@@ -89,6 +91,7 @@ async function cargar(): Promise<void> {
     leerSeguro('espera_conexion'),
     leerSeguro('cerrar_a_bandeja'),
     leerSeguro('actualizar_al_abrir'),
+    leerSeguro('difuminar_miniaturas'),
   ]);
   ajustes.idiomaDefecto = idiomaDefectoDe(idiomaDefecto);
   ajustes.ordenDescendente = ordenDescendenteDe(ordenEpisodios);
@@ -116,6 +119,7 @@ async function cargar(): Promise<void> {
   ajustes.espera = esperaDe(espera);
   ajustes.cerrarABandeja = cerrarABandejaDe(cerrarABandeja);
   ajustes.actualizarAlAbrir = actualizarAlAbrirDe(actualizarAlAbrir);
+  ajustes.difuminarMiniaturas = difuminarMiniaturasDe(difuminarMiniaturas);
 }
 
 let cargado: Promise<void> | null = null;
