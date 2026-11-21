@@ -43,7 +43,11 @@ Solo para quien mantiene el repositorio. Las releases salen del flujo `Publicar 
 borrador.
 
 1. Sube la versión en `app/src-tauri/tauri.conf.json`, `app/package.json` y `app/src-tauri/Cargo.toml` (con sus
-   `Cargo.lock` y `package-lock.json`) y añade la entrada del `CHANGELOG.md`. Abre el PR y fusiónalo.
+   `Cargo.lock` y `package-lock.json`) y añade la entrada del `CHANGELOG.md`. Abre el PR y fusiónalo. Esa entrada es
+   obligatoria (el flujo falla sin ella) y es lo que verán los usuarios: se publica como cuerpo de la release y la app la
+   enseña como «Novedades» al ofrecer la actualización. Escríbela para ellos, con el formato de las anteriores
+   (`## X.Y.Z — fecha`, una frase de resumen y listas bajo `### Nuevo` o `### Cambia`); la app solo pinta títulos,
+   viñetas y negritas, y recorta lo que pase de 4000 caracteres.
 2. Crea la etiqueta sobre `main` y súbela: `git tag vX.Y.Z && git push origin vX.Y.Z`. El flujo falla si la etiqueta no
    está sobre `main` o si su versión no es la de `tauri.conf.json`.
 3. Aprueba el Environment `release` en la ejecución de Actions: sin esa aprobación no se usa la clave de firma.
