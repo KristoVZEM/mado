@@ -8,6 +8,13 @@ export interface DetalleEpisodio {
   number: number;
   variants: Record<string, number>;
   embeds: Record<string, Embed[]>;
+  /** Id de MyAnimeList de la serie; `null` si la fuente no lo trae. Es decoración: nunca provoca FuenteCambio. */
+  malId: number | null;
+}
+
+/** Entero >= 1, que es lo que acepta AniSkip; cualquier otra cosa es `null`. */
+function malIdDe(v: unknown): number | null {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? v : null;
 }
 
 export function parseEpisodio(payload: Parameters<typeof decodePage>[0]): DetalleEpisodio {
@@ -25,6 +32,7 @@ export function parseEpisodio(payload: Parameters<typeof decodePage>[0]): Detall
     number: page.episode.number,
     variants: page.episode.variants ?? {},
     embeds: page.embeds,
+    malId: malIdDe(page.media?.malId),
   };
 }
 

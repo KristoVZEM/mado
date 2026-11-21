@@ -149,3 +149,35 @@ test('servidores lista los servidores del episodio en ese idioma, sin repetir', 
   assert.deepEqual(await f.servidores('one-piece', 1, 'SUB'), ['HLS']);
   assert.deepEqual(await f.servidores('one-piece', 1, 'DUB'), []);
 });
+
+const episodioConMalId = {
+  nodes: [
+    null,
+    {
+      type: 'data',
+      data: [
+        { episode: 1, embeds: 2, media: 9 },
+        { number: 3, variants: 4 },
+        { SUB: 5 },
+        1,
+        { SUB: 3 },
+        [6],
+        { server: 7, url: 8 },
+        'HLS',
+        'https://player.zilla-networks.com/play/abc',
+        { malId: 10 },
+        1535,
+      ],
+    },
+  ],
+};
+
+test('resolver añade el malId del mismo JSON del episodio al Playable', async () => {
+  const f = crearFuentes({ http: httpFalso({ '/media/one-piece/1/__data.json': episodioConMalId }) });
+  assert.equal((await f.resolver('one-piece', 1, 'SUB')).malId, 1535);
+});
+
+test('resolver no inventa malId si el JSON no lo trae', async () => {
+  const f = crearFuentes({ http: httpFalso({ '/media/one-piece/1/__data.json': episodioPayload }) });
+  assert.equal('malId' in (await f.resolver('one-piece', 1, 'SUB')), false);
+});
