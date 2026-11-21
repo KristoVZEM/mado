@@ -13,6 +13,7 @@ pub mod copia;
 pub mod progreso;
 pub mod respaldo;
 pub mod sync;
+pub mod episodios;
 pub mod intro;
 pub mod tmdb;
 
@@ -216,9 +217,19 @@ CREATE TABLE intro_tiempos (
 );
 ";
 
+/// Esquema de la versión 10: caché de la lista de episodios de cada serie (la última `Ficha` de la fuente, como JSON). Solo
+/// agrega; `consultado_en` va en milisegundos. La app recuerda como mucho las últimas 500 series.
+const V10: &str = "
+CREATE TABLE episodios_cache (
+    slug          TEXT    PRIMARY KEY CHECK (length(slug) BETWEEN 1 AND 200),
+    datos         TEXT    NOT NULL,
+    consultado_en INTEGER NOT NULL
+);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7, V8, V9];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7, V8, V9, V10];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -330,6 +341,7 @@ mod pruebas {
                 "anilist_vinculo",
                 "anime",
                 "avisos",
+                "episodios_cache",
                 "favoritos",
                 "historial",
                 "intro_tiempos",

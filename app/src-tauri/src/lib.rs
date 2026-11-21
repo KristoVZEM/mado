@@ -206,6 +206,8 @@ pub fn run() {
             datos::comandos::avisos_guardar,
             datos::comandos::tmdb_leer,
             datos::comandos::tmdb_guardar,
+            datos::comandos::episodios_leer,
+            datos::comandos::episodios_guardar,
             datos::comandos::intro_leer,
             datos::comandos::intro_guardar,
             datos::comandos::exportar_copia,
