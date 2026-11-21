@@ -13,6 +13,7 @@ pub mod copia;
 pub mod progreso;
 pub mod respaldo;
 pub mod sync;
+pub mod intro;
 pub mod tmdb;
 
 use rusqlite::Connection;
@@ -195,9 +196,29 @@ const V8: &str = "
 ALTER TABLE anilist_media ADD COLUMN duracion INTEGER;
 ";
 
+/// Esquema de la versión 9: caché de los tiempos de intro de AniSkip. Solo agrega. Una fila `no` es «se preguntó y no
+/// hay»; `consultado_en` va en milisegundos. La duración (redondeada, en segundos) forma parte de la clave porque los
+/// tiempos son de un corte concreto del vídeo.
+const V9: &str = "
+CREATE TABLE intro_tiempos (
+    mal_id        INTEGER NOT NULL CHECK (mal_id > 0),
+    episodio      INTEGER NOT NULL CHECK (episodio >= 0),
+    duracion_s    INTEGER NOT NULL CHECK (duracion_s > 0),
+    estado        TEXT    NOT NULL CHECK (estado IN ('si', 'no')),
+    inicio        REAL,
+    fin           REAL,
+    consultado_en INTEGER NOT NULL,
+    PRIMARY KEY (mal_id, episodio, duracion_s),
+    CHECK (
+        (estado = 'si' AND inicio IS NOT NULL AND fin IS NOT NULL AND inicio >= 0 AND fin > inicio)
+        OR (estado = 'no' AND inicio IS NULL AND fin IS NULL)
+    )
+);
+";
+
 // Ojo: una migración que reconstruya tablas (patrón de 12 pasos de SQLite) debe desactivar `PRAGMA foreign_keys` FUERA de la transacción; con ON DELETE CASCADE, un DROP TABLE anime borraría progreso e historial.
 /// Migraciones en orden: la posición `i` lleva la base de la versión `i` a la `i + 1`.
-const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7, V8];
+const MIGRACIONES: &[&str] = &[V1, V2, V3, V4, V5, V6, V7, V8, V9];
 
 /// Versión de esquema que conoce esta app.
 pub const VERSION: u32 = MIGRACIONES.len() as u32;
@@ -311,6 +332,7 @@ mod pruebas {
                 "avisos",
                 "favoritos",
                 "historial",
+                "intro_tiempos",
                 "progreso",
                 "siguiendo",
                 "tmdb_media"

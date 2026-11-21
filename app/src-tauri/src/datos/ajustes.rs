@@ -55,6 +55,9 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     ("actualizar_al_abrir", 0.0, 1.0),
     // Cuándo contestó por última vez la comprobación de versión (milisegundos desde 1970; 0 = nunca).
     ("actualizacion_ultima", 0.0, 9.0e15),
+    // Pedir a AniSkip el tramo del opening para el botón «Saltar intro»: 1 = sí; 0 o ausente = no. Apagado por defecto
+    // porque cada consulta cuenta a ese servicio qué serie y episodio se ve.
+    ("aniskip_activo", 0.0, 1.0),
 ];
 
 /// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`…); texto corto sin símbolos raros.
@@ -206,6 +209,7 @@ mod pruebas {
             ("espera_conexion", "0", "3", "-1", "4"),
             ("actualizar_al_abrir", "0", "1", "-1", "2"),
             ("actualizacion_ultima", "0", "9000000000000000", "-1", "9000000000000001"),
+            ("aniskip_activo", "0", "1", "-1", "2"),
         ];
         for (clave, min, max, bajo, alto) in casos {
             assert!(validar(clave, min).is_ok(), "{clave} acepta {min}");

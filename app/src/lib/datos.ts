@@ -364,6 +364,20 @@ export interface FilaTmdb {
 
 export const tmdbLeer = (anilistId: number) => invoke<FilaTmdb | null>('tmdb_leer', { anilistId });
 export const tmdbGuardar = (fila: FilaTmdb) => invoke<void>('tmdb_guardar', { fila });
+/** Lo guardado del intro de un episodio. `inicio` y `fin` (en segundos) son `null` si `estado` es `no`. */
+export interface FilaIntro {
+  malId: number;
+  episodio: number;
+  /** Duración del vídeo redondeada al segundo: los tiempos dependen del corte. */
+  duracionS: number;
+  estado: 'si' | 'no';
+  inicio: number | null;
+  fin: number | null;
+}
+
+export const introLeer = (malId: number, episodio: number, duracionS: number) =>
+  invoke<FilaIntro | null>('intro_leer', { malId, episodio, duracionS });
+export const introGuardar = (fila: FilaIntro) => invoke<void>('intro_guardar', { fila });
 export const guardarClaveTmdb = (clave: string) => invoke<void>('guardar_clave_tmdb', { clave });
 export const leerClaveTmdb = () => invoke<string | null>('leer_clave_tmdb');
 export const borrarClaveTmdb = () => invoke<void>('borrar_clave_tmdb');

@@ -24,7 +24,8 @@
         { "url": "https://animeav1.com" },
         { "url": "https://graphql.anilist.co" },
         { "url": "https://api.themoviedb.org" },
-        { "url": "https://player.zilla-networks.com" }
+        { "url": "https://player.zilla-networks.com" },
+        { "url": "https://api.aniskip.com/v2/skip-times/*" }
       ]
     }
   ]
