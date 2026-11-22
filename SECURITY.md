@@ -16,7 +16,7 @@
   cuya firma coincide.
 - La clave privada está cifrada con una contraseña y vive como secreto de un Environment de GitHub (`release`) que
   exige la aprobación del mantenedor cada vez que el flujo la usa. La cuenta del mantenedor tiene verificación en dos
-  pasos. Hay una copia de la clave y de su contraseña fuera del repositorio y de GitHub.
+  pasos.
 - Cada release se crea como borrador y la publica una persona después de revisarla. El instalador incluye una atestación
   de procedencia que se puede comprobar con `gh attestation verify`, y un `SHA256SUMS`.
 - El instalador no está firmado con un certificado de Windows (de pago), así que SmartScreen puede avisar al ejecutarlo.
