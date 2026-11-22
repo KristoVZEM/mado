@@ -10,6 +10,23 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.14.1 — 2026-11-22
+
+Abrir una serie ya no hace esperar.
+
+### Cambia
+
+- **La Ficha sale al instante en las series que ya has visto.** Mado guarda la última lista de episodios de cada serie
+  (hasta 500) y la muestra de inmediato mientras pide la actualizada en segundo plano. Si no consigue actualizarla, se queda
+  con la guardada y te lo dice.
+- **Lo que abres tú pasa antes que lo que Mado hace por su cuenta.** Hasta ahora las tareas de fondo, como buscar las series
+  populares de Inicio o los avisos de episodios nuevos, hacían cola delante de lo que abrías y una serie podía tardar varios
+  segundos en cargar. Ahora esas tareas esperan su turno detrás. En una prueba, el peor caso bajó de 9 a 1,6 segundos.
+- **Inicio se prepara antes y se actualiza solo.** Descarga por adelantado las imágenes de lo primero que se ve, aunque la
+  app arranque oculta con Windows, y vuelve a pedir sus datos al mostrar la ventana si pasaron más de 10 minutos o si la carga
+  anterior falló.
+- La base de datos pasa a la versión 10, con la caché de episodios. La migración es automática y guarda una copia antes.
+
 ## 0.14.0 — 2026-11-22
 
 Mado puede saltar el opening, maneja mejor las series largas y te cuenta qué cambia al actualizar.

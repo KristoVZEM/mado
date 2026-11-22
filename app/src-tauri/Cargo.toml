@@ -1,6 +1,6 @@
 [package]
 name = "mado"
-version = "0.14.0"
+version = "0.14.1"
 description = "Cliente de escritorio no oficial para ver anime, con libmpv"
 authors = ["KristoVZEM"]
 license = "MIT"
