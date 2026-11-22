@@ -60,7 +60,15 @@ export async function leerJson(res: Response, contexto: string): Promise<any> {
   }
 }
 
-export function createHttp(opts: HttpOptions = {}): Http {
+/** `alta`: lo que el usuario acaba de pedir (abrir una serie, reproducir). `baja`: tareas de fondo que pueden esperar. */
+export type Prioridad = 'alta' | 'baja';
+
+/** El cliente principal (prioridad `alta`) y la forma de sacar vistas de otra prioridad que comparten su cola. */
+export interface HttpConPrioridad extends Http {
+  conPrioridad(prioridad: Prioridad): Http;
+}
+
+export function createHttp(opts: HttpOptions = {}): HttpConPrioridad {
   const doFetch = opts.fetch ?? fetch;
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = opts.now ?? Date.now;
@@ -69,23 +77,39 @@ export function createHttp(opts: HttpOptions = {}): Http {
   const retries = opts.retries ?? 2;
   const backoffMs = opts.backoffMs ?? 500;
 
-  // Cola de turnos: aunque lleguen peticiones a la vez, cada una espera su turno
-  // y arranca al menos gapMs después de la anterior.
+  // Cola de turnos con dos prioridades: aunque lleguen peticiones a la vez, cada una espera su turno y arranca al menos
+  // gapMs después de la anterior. El siguiente se elige DESPUÉS de esperar la pausa: una petición `alta` (lo que hace el
+  // usuario) que llega mientras se espera por una `baja` (tareas de fondo) pasa por delante, y espera como mucho el resto
+  // de la pausa, no toda la cola.
   let ultimo = -Infinity;
-  let cola: Promise<void> = Promise.resolve();
-  function turno(): Promise<void> {
-    const mio = cola.then(async () => {
-      const espera = ultimo + gapMs - now();
-      if (espera > 0) await sleep(espera);
-      ultimo = now();
+  const pendientes: Record<Prioridad, Array<() => void>> = { alta: [], baja: [] };
+  let bombeando = false;
+  async function bombear(): Promise<void> {
+    if (bombeando) return;
+    bombeando = true;
+    try {
+      while (pendientes.alta.length + pendientes.baja.length > 0) {
+        const espera = ultimo + gapMs - now();
+        if (espera > 0) await sleep(espera);
+        const siguiente = pendientes.alta.shift() ?? pendientes.baja.shift();
+        if (!siguiente) continue;
+        ultimo = now();
+        siguiente();
+      }
+    } finally {
+      bombeando = false;
+    }
+  }
+  function turno(prioridad: Prioridad): Promise<void> {
+    return new Promise<void>((resolver) => {
+      pendientes[prioridad].push(resolver);
+      void bombear();
     });
-    cola = mio.catch(() => {});
-    return mio;
   }
 
-  async function get(url: string, init: RequestInit = {}): Promise<Response> {
+  async function pedir(url: string, init: RequestInit, prioridad: Prioridad): Promise<Response> {
     for (let intento = 0; ; intento++) {
-      await turno();
+      await turno(prioridad);
       try {
         const res = await doFetch(url, {
           ...init,
@@ -110,5 +134,11 @@ export function createHttp(opts: HttpOptions = {}): Http {
     }
   }
 
-  return { userAgent: UA, get };
+  /** Una vista del mismo cliente con otra prioridad: comparte la cola y la pausa. */
+  const vista = (prioridad: Prioridad): Http => ({
+    userAgent: UA,
+    get: (url, init) => pedir(url, init ?? {}, prioridad),
+  });
+
+  return { userAgent: UA, get: (url, init) => pedir(url, init ?? {}, 'alta'), conPrioridad: vista };
 }

@@ -4,13 +4,13 @@ import { responder } from './tauriFalso.ts';
 const LISTAS = ['continuar_viendo', 'listar_historial', 'episodios_vistos', 'progreso_de_serie', 'emision_entre',
   'avisos_candidatas', 'pendientes_emparejar', 'series_para_sync', 'resumenes_vinculados', 'vinculos_auto'];
 const NULOS = ['estado_datos', 'leer_ajuste', 'leer_cuenta', 'leer_clave_tmdb', 'leer_token_anilist', 'leer_media',
-  'tmdb_leer', 'vinculo_con_media', 'estado_serie', 'progreso_de'];
+  'tmdb_leer', 'episodios_leer', 'vinculo_con_media', 'estado_serie', 'progreso_de'];
 const ESCRITURAS = ['alternar_favorito', 'aplicar_bajadas', 'avisos_guardar', 'bandeja_visible', 'borrar_clave_tmdb',
   'borrar_cuenta', 'borrar_token_anilist', 'crear_respaldo', 'descartar_progreso', 'desmarcar_visto', 'exportar_copia',
   'fijar_estado', 'fijar_vinculo', 'guardar_ajuste', 'guardar_clave_tmdb', 'guardar_cuenta', 'guardar_emision',
   'guardar_media', 'guardar_progreso', 'guardar_token_anilist', 'importar_copia', 'limpiar_cache_tmdb',
   'marcar_sincronizada', 'marcar_visto', 'previsualizar_copia', 'reintentar_ningunos', 'restaurar_copia',
-  'tmdb_guardar', 'abrir_registros', 'resolve_webview'];
+  'tmdb_guardar', 'episodios_guardar', 'abrir_registros', 'resolve_webview'];
 
 /** Una base de datos recién creada: sin series, sin ajustes, sin cuenta. Un comando nuevo no listado falla con su nombre. */
 export function backendVacio(): void {

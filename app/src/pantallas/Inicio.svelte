@@ -34,6 +34,8 @@
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { avisarFalloDeFuente } from '../lib/fuente.svelte.ts';
   import { fuentes } from '../lib/fuentes.ts';
+  import { precargarImagenes, urlsDeInicio } from '../lib/precargaInicio.ts';
+  import { debeRefrescar } from '../lib/refrescoInicio.ts';
   import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
 
   /** Tope de tarjetas por fila; el resto se ve en Biblioteca. */
@@ -55,8 +57,51 @@
   let cargando = $state(true);
   let abriendo = $state<number | null>(null);
 
+  // Cuándo se pidieron por última vez los datos y si aquello salió mal: al volver a verse la ventana (sobre todo si la app
+  // arrancó oculta con Windows, con la red quizá sin lista) se piden otra vez si ya son viejos o si fallaron.
+  let ultimoIntentoMs = 0;
+  let fallo = false;
+  let cargandoAhora = false;
+
+  /** Pide a la descarga de imágenes lo primero que se ve, aunque la ventana esté oculta y `loading="lazy"` espere. */
+  function precargar() {
+    precargarImagenes(
+      urlsDeInicio({
+        destacados,
+        pendientes,
+        nuevos,
+        viendo,
+        considerando,
+        bannerDe: (aid) => porAid.get(aid)?.banner ?? null,
+      }),
+    );
+  }
+
+  function alVolverAVerse() {
+    if (document.visibilityState === 'hidden' || cargando || cargandoAhora) return;
+    if (!debeRefrescar({ ahora: Date.now(), ultimoIntentoMs, fallo })) return;
+    void cargar();
+  }
+
   onMount(async () => {
+    document.addEventListener('visibilitychange', alVolverAVerse);
+    window.addEventListener('focus', alVolverAVerse);
     await asegurarAjustes();
+    await cargar();
+  });
+
+  onDestroy(() => {
+    document.removeEventListener('visibilitychange', alVolverAVerse);
+    window.removeEventListener('focus', alVolverAVerse);
+  });
+
+  /** Lee los datos de Inicio: lo local de golpe y, sin esperar, la cabecera con las populares. Sirve para la primera carga y para refrescar. */
+  async function cargar() {
+    if (cargandoAhora) return;
+    cargandoAhora = true;
+    ultimoIntentoMs = Date.now();
+    fallo = false;
+    error = '';
     try {
       avisoDatos = (await estadoDatos()) ?? '';
       if (!avisoDatos) {
@@ -73,18 +118,29 @@
         } else {
           error = textoDeError(b.reason);
         }
+        precargar();
         // Sin esperar: buscar las series populares en la fuente tarda y las filas no dependen de ello.
         void cargarDestacados()
-          .then((d) => (destacados = d))
-          .catch((e) => console.error(e));
+          .then((d) => {
+            destacados = d;
+            fallo = fallo || d.length === 0;
+            precargar();
+          })
+          .catch((e) => {
+            fallo = true;
+            console.error(e);
+          });
       }
     } catch (e) {
+      fallo = true;
       console.error(e);
       avisoDatos = mensajeDeError(e);
     } finally {
+      fallo = fallo || error !== '' || avisoDatos !== '';
       cargando = false;
+      cargandoAhora = false;
     }
-  });
+  }
 
   /**
    * La cabecera enseña las series más populares en emisión; si AniList o la fuente no responden, las de tu

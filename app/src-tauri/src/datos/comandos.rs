@@ -3,6 +3,7 @@
 
 use super::anilist;
 use super::avisos;
+use super::episodios;
 use super::intro;
 use super::tmdb;
 use super::copia::{self, AplicadoCopia, Modo, ResumenCopia};
@@ -294,6 +295,18 @@ pub fn tmdb_leer(datos: State<'_, Datos>, anilist_id: i64) -> Result<Option<tmdb
 #[tauri::command(async)]
 pub fn tmdb_guardar(datos: State<'_, Datos>, fila: tmdb::FilaTmdb) -> Result<(), String> {
     con(&datos, |c| tmdb::guardar(c, &fila))
+}
+
+/// La última lista de episodios guardada de una serie (o `None` si nunca se pidió).
+#[tauri::command(async)]
+pub fn episodios_leer(datos: State<'_, Datos>, slug: String) -> Result<Option<episodios::FilaEpisodios>, String> {
+    con(&datos, |c| episodios::leer(c, &slug))
+}
+
+/// Guarda la lista de episodios de una serie (la `Ficha` como JSON), tras acotarla.
+#[tauri::command(async)]
+pub fn episodios_guardar(datos: State<'_, Datos>, slug: String, datos_json: String) -> Result<(), String> {
+    con(&datos, |c| episodios::guardar(c, &slug, &datos_json, ahora_ms()))
 }
 
 /// Lo guardado del intro de un episodio (o `None` si no hay nada vigente).

@@ -2,7 +2,7 @@ import { isPermissionGranted, requestPermission, sendNotification } from '@tauri
 import { crearVigilante } from './avisos.ts';
 import { alcanceAvisosDe, incluirFavoritasDe, intervaloAvisosDe, intervaloAvisosMs } from './avisosAjustes.ts';
 import { avisosCandidatas, avisosGuardar, leerAjuste } from './datos.ts';
-import { fuentes } from './fuentes.ts';
+import { fuentesFondo } from './fuentes.ts';
 
 /** Los avisos están activos salvo que el ajuste valga 0. */
 export const avisosActivos = async () => (await leerAjuste('avisos_activos').catch(() => null)) !== '0';
@@ -22,7 +22,7 @@ const vigilante = crearVigilante({
   activo: avisosActivos,
   candidatas: async () =>
     avisosCandidatas(incluirFavoritasDe(alcanceAvisosDe(await leerAjuste('avisos_alcance').catch(() => null)))),
-  disponibles: async (slug) => (await fuentes.episodios(slug)).episodes.map((e) => e.number),
+  disponibles: async (slug) => (await fuentesFondo.episodios(slug)).episodes.map((e) => e.number),
   guardar: avisosGuardar,
   notificar: enviarAviso,
   pausa: (ms) => new Promise((r) => setTimeout(r, ms)),
