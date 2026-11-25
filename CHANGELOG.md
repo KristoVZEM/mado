@@ -10,6 +10,28 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.15.0 — 2026-11-25
+
+La Ficha y el reproductor, más despejados, y las series populares de Inicio salen al momento.
+
+### Cambia
+
+- **«Hasta aquí» pasa a llamarse «Visto».** Sigue marcando como vistos ese episodio y todos los anteriores, pero con un
+  solo clic, sin confirmación. En los episodios que ya has visto solo aparece la «×», para desmarcarlos.
+- **Una Ficha más sencilla.** Desaparecen el campo «Ir al episodio» y los botones SUB/DUB. Las páginas de 24 episodios
+  siguen igual, y el idioma se cambia en el reproductor, que lo recuerda para cada serie.
+- **Miniaturas menos difuminadas.** Las capturas de los episodios sin ver se difuminan bastante menos: siguen sin revelar
+  la trama, pero se distingue lo que hay.
+- **Un símbolo para el salto largo.** El botón «+85 s» del reproductor pasa a ser un icono. Salta lo que tengas puesto en
+  Ajustes → Reproducción.
+- **Las series populares de Inicio salen al momento.** Al abrir Inicio, Mado enseña la última lista guardada y la renueva
+  en segundo plano. Además recuerda dónde encontró cada serie, así que no vuelve a buscarla: rehacer la lista bajó de unos
+  20 segundos a menos de medio segundo.
+
+### Arreglado
+
+- La cabecera de Inicio ya no se queda en blanco cuando cambia la lista de series, y sigue en la serie que estabas viendo.
+
 ## 0.14.1 — 2026-11-22
 
 Abrir una serie ya no hace esperar.
