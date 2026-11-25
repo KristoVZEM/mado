@@ -10,6 +10,16 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.15.1 — 2026-11-25
+
+Las series populares de Inicio ya salen al momento de verdad.
+
+### Arreglado
+
+- **Mado no conseguía guardar la lista de series populares de Inicio**, así que cada vez que abrías Inicio la volvía a
+  preparar desde cero y la cabecera tardaba unos 20 segundos en mostrarlas. Pasaba desde que existe el carrusel. Por eso la
+  mejora de la 0.15.0 no se notaba: ahora la lista se guarda y, desde la segunda vez, sale al instante.
+
 ## 0.15.0 — 2026-11-25
 
 La Ficha y el reproductor, más despejados, y las series populares de Inicio salen al momento.
