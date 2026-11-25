@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import type { MediaAnilist } from '../../../../core/src/index.ts';
   import type { Destacado, ItemDestacado } from '../destacado.ts';
@@ -41,6 +42,26 @@
   const reducido = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const MS_FUNDIDO = reducido ? 0 : 700;
   const MS_TEXTO = reducido ? 0 : 300;
+
+  /**
+   * Si la lista cambia (llega la renovada, o las populares sustituyen a las de la biblioteca), sigue en la misma serie
+   * si está en la nueva; si no, se queda en la misma posición, sin pasarse del final.
+   */
+  let anteriores: ItemDestacado[] | null = null;
+  $effect.pre(() => {
+    const nuevos = items;
+    if (anteriores === null || nuevos === anteriores) {
+      anteriores = nuevos;
+      return;
+    }
+    const previos = anteriores;
+    untrack(() => {
+      const aid = previos[indice]?.destacado.aid;
+      const donde = nuevos.findIndex((it) => it.destacado.aid === aid);
+      indice = donde >= 0 ? donde : Math.min(indice, Math.max(0, nuevos.length - 1));
+    });
+    anteriores = nuevos;
+  });
 
   const actual = $derived(items[indice] ?? null);
   const textoPlano = (t: string) => t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
