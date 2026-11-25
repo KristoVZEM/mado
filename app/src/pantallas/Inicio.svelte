@@ -152,17 +152,26 @@
       if (destacados.length === 0) destacados = d;
     });
     try {
-      const populares = await popularesDeInicio();
-      if (populares.length > 0) {
-        return populares.map((it) => {
-          const p = pendientes.find((x) => x.aid === it.destacado.aid);
-          return p ? { ...it, destacado: { ...it.destacado, numero: p.numero } } : it;
-        });
-      }
+      // Si la lista guardada estaba vencida, llega ya y la nueva entra en cuanto se termina de rehacer.
+      const populares = await popularesDeInicio({
+        alRenovar: (nuevas) => {
+          destacados = conEpisodioPendiente(nuevas);
+          precargar();
+        },
+      });
+      if (populares.length > 0) return conEpisodioPendiente(populares);
     } catch (e) {
       console.error(e);
     }
     return deBiblioteca();
+  }
+
+  /** Si una de las populares ya tiene un episodio a medias, el botón retoma ese episodio. */
+  function conEpisodioPendiente(populares: ItemDestacado[]): ItemDestacado[] {
+    return populares.map((it) => {
+      const p = pendientes.find((x) => x.aid === it.destacado.aid);
+      return p ? { ...it, destacado: { ...it.destacado, numero: p.numero } } : it;
+    });
   }
 
   async function deBiblioteca(): Promise<ItemDestacado[]> {
