@@ -607,7 +607,15 @@
         <button onclick={() => saltarRelativo(-ajustes.saltoCorto)}>−{ajustes.saltoCorto}</button>
         <button onclick={alternarPausa}>{reproductor.pausa ? '▶' : '⏸'}</button>
         <button onclick={() => saltarRelativo(ajustes.saltoCorto)}>+{ajustes.saltoCorto}</button>
-        <button onclick={() => saltarRelativo(ajustes.saltoLargo)}>+{ajustes.saltoLargo} s</button>
+        <!-- Salto largo (85 s por defecto) con un símbolo, como el botón de Ukiku: una flecha que pasa por encima. -->
+        <button
+          class="salto-largo"
+          onclick={() => saltarRelativo(ajustes.saltoLargo)}
+          aria-label={`Avanzar ${ajustes.saltoLargo} segundos`}
+          ><svg viewBox="0 0 24 24" aria-hidden="true"
+            ><path d="M3 15a8 8 0 0 1 16 0" /><path d="M16 12l3 3 3-3" /><circle cx="11" cy="17" r="2" /></svg
+          ></button
+        >
         <button
           onclick={irAlSiguiente}
           disabled={siguiente === undefined}
@@ -791,6 +799,23 @@
     display: flex;
     gap: 8px;
     align-items: center;
+  }
+  .salto-largo {
+    display: inline-grid;
+    place-items: center;
+  }
+  .salto-largo svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .salto-largo circle {
+    fill: currentColor;
+    stroke: none;
   }
   .tiempo {
     margin-left: auto;
