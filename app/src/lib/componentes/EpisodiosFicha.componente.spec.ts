@@ -13,7 +13,6 @@ function props(extra: Record<string, unknown> = {}) {
     progresoPorNumero: new Map([[2, { numero: 2, posicionS: 300, duracionS: 1400 }]]),
     principalNumero: 2,
     duracionMedia: 24,
-    idioma: 'SUB' as const,
     conCuenta: false,
     aviso: '',
     difuminar: true,
@@ -42,10 +41,11 @@ describe('EpisodiosFicha', () => {
     expect(p.alDesmarcar).toHaveBeenCalledWith(1);
   });
 
-  it('el botón del idioma actual está deshabilitado y el otro no', () => {
-    render(EpisodiosFicha, props({ idioma: 'DUB' }));
-    expect((screen.getByRole('button', { name: 'DUB' }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole('button', { name: 'SUB' }) as HTMLButtonElement).disabled).toBe(false);
+  it('no ofrece elegir idioma ni ir a un episodio (eso se hace en el reproductor y con el paginador)', () => {
+    render(EpisodiosFicha, props());
+    expect(screen.queryByRole('button', { name: 'SUB' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'DUB' })).toBeNull();
+    expect(screen.queryByLabelText('Ir al episodio')).toBeNull();
   });
 
   it('con la lista vacía no revienta y enseña el total', () => {
@@ -112,22 +112,6 @@ describe('EpisodiosFicha', () => {
       await fireEvent.change(sel, { target: { value: '2' } });
       expect(visibles()).toEqual([2, 1]);
     });
-
-    it('«Ir al episodio» cambia a su página y lo resalta', async () => {
-      render(EpisodiosFicha, sinVer(100));
-      await fireEvent.input(screen.getByLabelText('Ir al episodio'), { target: { value: '90' } });
-      await fireEvent.submit(screen.getByRole('search', { name: 'Ir a un episodio' }));
-      expect(visibles()).toContain(90);
-      expect(screen.getByText('Episodio 90').closest('li')!.classList.contains('resaltado')).toBe(true);
-    });
-
-    it('«Ir al episodio» con un número que no existe avisa y no mueve la página', async () => {
-      render(EpisodiosFicha, sinVer(100));
-      await fireEvent.input(screen.getByLabelText('Ir al episodio'), { target: { value: '500' } });
-      await fireEvent.submit(screen.getByRole('search', { name: 'Ir a un episodio' }));
-      expect(screen.getByRole('status').textContent).toContain('500');
-      expect(visibles()[0]).toBe(1);
-    });
   });
 
   describe('miniaturas difuminadas', () => {
@@ -148,16 +132,21 @@ describe('EpisodiosFicha', () => {
     });
   });
 
-  describe('marcar vistos hasta aquí', () => {
-    it('el primer clic pide confirmar y el segundo avisa con ese número', async () => {
+  describe('botón «Visto» (marca hasta aquí)', () => {
+    it('un solo clic avisa con ese número, sin pedir confirmación', async () => {
       const p = props({ mostrados: [1, 2, 3], total: 3 });
       render(EpisodiosFicha, p);
       const boton = screen.getByLabelText('Marcar como vistos los episodios hasta el 3');
-      await fireEvent.click(boton);
-      expect(p.alMarcarHasta).not.toHaveBeenCalled();
-      expect(boton.textContent).toContain('¿Seguro?');
+      expect(boton.textContent).toBe('Visto');
       await fireEvent.click(boton);
       expect(p.alMarcarHasta).toHaveBeenCalledWith(3);
+    });
+
+    it('un episodio ya visto solo ofrece la × para desmarcarlo', () => {
+      render(EpisodiosFicha, props());
+      expect(screen.queryByLabelText('Marcar como vistos los episodios hasta el 1')).toBeNull();
+      expect(screen.getByLabelText('Marcar el episodio 1 como no visto')).toBeTruthy();
+      expect(screen.getByLabelText('Marcar como vistos los episodios hasta el 2')).toBeTruthy();
     });
 
     it('al marcar hasta el último de la página, la lista no salta a la del nuevo episodio principal', async () => {
@@ -165,7 +154,6 @@ describe('EpisodiosFicha', () => {
       const p = props({ mostrados, total: 100, vistos: new Set(), progresoPorNumero: new Map(), principalNumero: 1 });
       const { rerender } = render(EpisodiosFicha, p);
       const boton = screen.getByLabelText('Marcar como vistos los episodios hasta el 24');
-      await fireEvent.click(boton);
       await fireEvent.click(boton);
       // Marcar hasta el 24 hace que el siguiente pase a ser el 25, que está en la página de después.
       await rerender({ ...p, principalNumero: 25, vistos: new Set(mostrados.slice(0, 24)) });

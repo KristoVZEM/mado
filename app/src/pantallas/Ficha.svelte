@@ -500,7 +500,6 @@
         {progresoPorNumero}
         principalNumero={principal?.numero}
         duracionMedia={media?.duracion}
-        bind:idioma
         conCuenta={Boolean(sync.cuenta)}
         aviso={avisoEpisodios}
         difuminar={ajustes.difuminarMiniaturas}
