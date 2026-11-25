@@ -80,6 +80,15 @@ fn servidor_valido(valor: &str) -> bool {
         && valor.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, ' ' | '_' | '.' | '-'))
 }
 
+/// Lista de series populares de la cabecera de Inicio, con lo recordado de la fuente: un objeto JSON que escribe la app.
+const CLAVE_POPULARES: &str = "inicio_populares";
+/// Ocupa unos 25 KB; el tope deja margen para lo recordado sin dejar que crezca sin límite.
+const MAX_POPULARES: usize = 256 * 1024;
+
+fn populares_valido(valor: &str) -> bool {
+    valor.len() <= MAX_POPULARES && serde_json::from_str::<serde_json::Value>(valor).is_ok_and(|v| v.is_object())
+}
+
 const PREFIJO_IDIOMA: &str = "idioma:";
 
 fn invalido<T>(mensaje: impl Into<String>) -> Resultado<T> {
@@ -119,6 +128,13 @@ pub fn validar(clave: &str, valor: &str) -> Resultado<()> {
             invalido("carpeta_respaldos: debe ser una ruta absoluta")
         };
     }
+    if clave == CLAVE_POPULARES {
+        return if populares_valido(valor) {
+            Ok(())
+        } else {
+            invalido(format!("inicio_populares: debe ser un objeto JSON de hasta {MAX_POPULARES} bytes"))
+        };
+    }
     if aid_de_idioma(clave).is_some() {
         return if valor == "SUB" || valor == "DUB" {
             Ok(())
@@ -133,6 +149,7 @@ pub fn validar(clave: &str, valor: &str) -> Resultado<()> {
 fn validar_clave(clave: &str) -> Resultado<()> {
     if NUMERICOS.iter().any(|(c, _, _)| *c == clave) || clave == CLAVE_SERVIDOR
         || clave == CLAVE_CARPETA_RESPALDOS
+        || clave == CLAVE_POPULARES
         || aid_de_idioma(clave).is_some()
     {
         Ok(())
@@ -173,6 +190,20 @@ mod pruebas {
         assert_eq!(leer(&conn, "anilist_client_id").unwrap(), Some("12345".to_string()));
         assert!(guardar(&conn, "anilist_client_id", "0").is_err());
         assert!(guardar(&conn, "anilist_client_id", "abc").is_err());
+    }
+
+    #[test]
+    fn la_lista_de_populares_de_inicio_se_guarda_si_es_un_objeto_json_acotado() {
+        let conn = abrir_en_memoria().unwrap();
+        assert_eq!(leer(&conn, "inicio_populares").unwrap(), None);
+        let lista = r#"{"en":1,"items":[],"recordadas":{"1":{"aid":null,"en":1}}}"#;
+        guardar(&conn, "inicio_populares", lista).unwrap();
+        assert_eq!(leer(&conn, "inicio_populares").unwrap(), Some(lista.to_string()));
+        assert!(guardar(&conn, "inicio_populares", "[]").is_err());
+        assert!(guardar(&conn, "inicio_populares", "{roto").is_err());
+        assert!(guardar(&conn, "inicio_populares", "").is_err());
+        let enorme = format!(r#"{{"x":"{}"}}"#, "a".repeat(MAX_POPULARES));
+        assert!(guardar(&conn, "inicio_populares", &enorme).is_err());
     }
 
     #[test]
