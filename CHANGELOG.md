@@ -10,6 +10,36 @@ Lo que cambia en cada versión, de la más nueva a la más antigua. Cada versió
 - **Menor** (`0.9.1` a `0.10.0`): algo nuevo o un cambio visible. Después de `0.9` viene `0.10`, no `1.0`: los
   números no son decimales.
 
+## 0.16.0 — 2026-11-26
+
+Una Biblioteca nueva: busca, filtra, ordena y actúa sobre cada serie sin abrir su Ficha.
+
+### Nuevo
+
+- **Busca dentro de tu biblioteca.** Escribe parte del título, sin preocuparte por tildes ni mayúsculas. Ctrl+F lleva al
+  buscador y Esc lo vacía.
+- **Ordena como prefieras:** por lo último que viste, por cuánto te falta, por la nota de AniList o por título. Mado
+  recuerda el orden que elijas.
+- **Filtra por favoritos, por episodios nuevos y por género.** Los filtros se combinan con la pestaña de estado, así que
+  puedes ver, por ejemplo, tus favoritas que estás viendo.
+- **Un menú en cada serie.** El botón «⋯» del póster, o el clic derecho, deja continuar con el siguiente episodio, cambiar
+  el estado, marcarla como favorita o quitarla de la biblioteca sin entrar en su Ficha.
+- **Más información en cada póster:** una barra con lo que llevas visto, una estrella en las favoritas y cuándo la viste
+  por última vez.
+- **Un resumen arriba,** con cuántas series tienes, cuántas estás viendo y cuántas tienen episodios nuevos. Pulsa el número
+  de nuevos para verlas.
+
+### Cambia
+
+- **Favoritos pasa a ser un filtro** en lugar de una pestaña, y la pestaña «Todas» incluye también las favoritas sin
+  estado.
+- **«Nuevo» solo aparece en series que se están emitiendo,** también en Inicio. Antes salía en series terminadas en las que
+  ibas atrasado.
+- **«Lo último que viste» solo tiene en cuenta lo que viste de verdad.** Marcar muchos episodios de golpe como vistos, o
+  traerlos de AniList o de una copia de Ukiku, ya no sube esa serie al principio.
+- **Las pestañas de estado se recorren con las flechas del teclado.**
+- **Continuar desde Inicio arranca antes,** porque aprovecha la lista de episodios guardada si es reciente.
+
 ## 0.15.1 — 2026-11-25
 
 Las series populares de Inicio ya salen al momento de verdad.
