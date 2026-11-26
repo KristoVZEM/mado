@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { crearPrecargador, MAX_PRECARGA, urlsDeInicio } from './precargaInicio.ts';
 
 const ent = (aid: number, numero = 1) => ({ aid, slug: `s${aid}`, titulo: `Serie ${aid}`, numero });
-const bib = (aid: number) => ({ aid, slug: `s${aid}`, titulo: `Serie ${aid}`, estado: 1, ultimoEpisodio: 1 });
+const bib = (aid: number) => ({ aid, slug: `s${aid}`, titulo: `Serie ${aid}`, estado: 1, ultimoEpisodio: 1, vistoEn: null, vistos: 0, total: null, puntuacion: null, generos: [] });
 const dest = (aid: number, banner = `https://s4.anilist.co/banner/${aid}.jpg`) => ({
   destacado: { aid, anilistId: aid, slug: `s${aid}`, titulo: `Serie ${aid}`, banner, numero: null },
   media: null,

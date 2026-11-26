@@ -12,7 +12,7 @@ const cont = (aid: number, numero = 3): EntradaContinuar => ({
   duracionS: 100,
   actualizado: 0,
 });
-const bib = (aid: number): EntradaBiblioteca => ({ aid, slug: `s${aid}`, titulo: `S${aid}`, estado: 1, ultimoEpisodio: 2 });
+const bib = (aid: number): EntradaBiblioteca => ({ aid, slug: `s${aid}`, titulo: `S${aid}`, estado: 1, ultimoEpisodio: 2, vistoEn: null, vistos: 0, total: null, puntuacion: null, generos: [] });
 const res = (aid: number, banner: string | null, extra: Partial<ResumenSerie> = {}): ResumenSerie => ({
   aid,
   anilistId: aid * 10,

@@ -19,6 +19,11 @@ const e = (aid: number, titulo: string, estado: number | null, ultimoEpisodio: n
   titulo,
   estado,
   ultimoEpisodio,
+  vistoEn: null,
+  vistos: 0,
+  total: null,
+  puntuacion: null,
+  generos: [],
 });
 
 const b: Biblioteca = {

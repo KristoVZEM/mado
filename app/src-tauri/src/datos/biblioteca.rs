@@ -57,7 +57,9 @@ pub fn alternar_favorito(conn: &Connection, serie: &Serie) -> Resultado<bool> {
     Ok(!quitada)
 }
 
-/// Una fila de la biblioteca. `ultimo_episodio` es el número más alto del historial de la serie.
+/// Una fila de la biblioteca. `ultimo_episodio` es el número más alto del historial de la serie; `visto_en`, la última
+/// actividad (episodio visto o progreso guardado, en ms); `total`, los episodios de AniList o, si la obra sigue en emisión
+/// sin total, los ya emitidos. `puntuacion` y `generos` son los de AniList (vacíos sin vínculo).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EntradaBiblioteca {
@@ -66,6 +68,11 @@ pub struct EntradaBiblioteca {
     pub titulo: String,
     pub estado: Option<u8>,
     pub ultimo_episodio: Option<f64>,
+    pub visto_en: Option<i64>,
+    pub vistos: i64,
+    pub total: Option<i64>,
+    pub puntuacion: Option<i64>,
+    pub generos: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, serde::Serialize)]
@@ -74,34 +81,55 @@ pub struct Biblioteca {
     pub favoritos: Vec<EntradaBiblioteca>,
 }
 
+/// Columnas comunes de las dos listas; `a` es `anime`, `s` es `siguiendo` y `m` es `anilist_media` (puede faltar).
+const COLUMNAS: &str = "a.aid, a.slug, a.titulo, s.estado,
+    (SELECT MAX(h.numero) FROM historial h WHERE h.aid = a.aid),
+    NULLIF(MAX(COALESCE((SELECT MAX(h.visto_en) FROM historial h WHERE h.aid = a.aid), 0),
+               COALESCE((SELECT MAX(p.actualizado) FROM progreso p WHERE p.aid = a.aid), 0)), 0),
+    (SELECT COUNT(*) FROM historial h WHERE h.aid = a.aid),
+    m.episodios, m.siguiente_ep, m.puntuacion, m.generos";
+
+/// Un vínculo `ninguno` no tiene `anilist_id`, así que no encuentra obra y deja `m` vacío.
+const CON_ANILIST: &str =
+    "LEFT JOIN anilist_vinculo v ON v.aid = a.aid LEFT JOIN anilist_media m ON m.anilist_id = v.anilist_id";
+
+/// Total de episodios: el de AniList y, si no lo hay, los ya emitidos (`siguiente_ep - 1`). Nunca menos de 1.
+fn total_de(episodios: Option<i64>, siguiente_ep: Option<i64>) -> Option<i64> {
+    episodios.filter(|&n| n > 0).or_else(|| siguiente_ep.map(|s| s - 1).filter(|&n| n > 0))
+}
+
 fn entradas(conn: &Connection, sql: &str) -> Resultado<Vec<EntradaBiblioteca>> {
     let mut st = conn.prepare(sql)?;
     let filas = st.query_map([], |f| {
+        let generos: Option<String> = f.get(10)?;
         Ok(EntradaBiblioteca {
             aid: f.get(0)?,
             slug: f.get(1)?,
             titulo: f.get(2)?,
             estado: f.get(3)?,
             ultimo_episodio: f.get(4)?,
+            visto_en: f.get(5)?,
+            vistos: f.get(6)?,
+            total: total_de(f.get(7)?, f.get(8)?),
+            puntuacion: f.get(9)?,
+            // Un JSON roto en la caché no tumba la biblioteca: se queda sin géneros.
+            generos: generos.and_then(|g| serde_json::from_str(&g).ok()).unwrap_or_default(),
         })
     })?;
     Ok(filas.collect::<Result<Vec<_>, _>>()?)
 }
 
-/// Toda la biblioteca, sin orden garantizado (la interfaz ordena por título) y sin límite: son
+/// Toda la biblioteca, sin orden garantizado (la interfaz ordena) y sin límite: son
 /// cientos de filas. En favoritos, `estado` es el de `siguiendo` si la serie también se sigue.
 pub fn listar_biblioteca(conn: &Connection) -> Resultado<Biblioteca> {
-    let siguiendo = entradas(
-        conn,
-        "SELECT a.aid, a.slug, a.titulo, s.estado,
-                (SELECT MAX(h.numero) FROM historial h WHERE h.aid = a.aid)
-         FROM siguiendo s JOIN anime a ON a.aid = s.aid",
-    )?;
+    let siguiendo =
+        entradas(conn, &format!("SELECT {COLUMNAS} FROM siguiendo s JOIN anime a ON a.aid = s.aid {CON_ANILIST}"))?;
     let favoritos = entradas(
         conn,
-        "SELECT a.aid, a.slug, a.titulo, s.estado,
-                (SELECT MAX(h.numero) FROM historial h WHERE h.aid = a.aid)
-         FROM favoritos f JOIN anime a ON a.aid = f.aid LEFT JOIN siguiendo s ON s.aid = f.aid",
+        &format!(
+            "SELECT {COLUMNAS} FROM favoritos f JOIN anime a ON a.aid = f.aid
+             LEFT JOIN siguiendo s ON s.aid = f.aid {CON_ANILIST}"
+        ),
     )?;
     Ok(Biblioteca { siguiendo, favoritos })
 }
@@ -110,6 +138,7 @@ pub fn listar_biblioteca(conn: &Connection) -> Resultado<Biblioteca> {
 mod pruebas {
     use super::*;
     use crate::datos::abrir_en_memoria;
+    use crate::datos::anilist::{fijar_vinculo, guardar_media, MediaAnilist};
     use crate::datos::progreso::{guardar_progreso, marcar_visto};
 
     const ONE_PIECE: Serie<'static> = Serie { aid: 10, slug: "one-piece", titulo: "One Piece" };
@@ -252,6 +281,11 @@ mod pruebas {
             titulo: "One Piece".into(),
             estado: Some(1),
             ultimo_episodio: Some(7.5),
+            visto_en: Some(2),
+            vistos: 2,
+            total: None,
+            puntuacion: None,
+            generos: vec![],
         };
         let naruto = EntradaBiblioteca {
             aid: 20,
@@ -259,11 +293,83 @@ mod pruebas {
             titulo: "Naruto".into(),
             estado: Some(3),
             ultimo_episodio: None,
+            visto_en: None,
+            vistos: 0,
+            total: None,
+            puntuacion: None,
+            generos: vec![],
         };
-        let akira =
-            EntradaBiblioteca { aid: 30, slug: "akira".into(), titulo: "Akira".into(), estado: None, ultimo_episodio: None };
+        let akira = EntradaBiblioteca {
+            aid: 30,
+            slug: "akira".into(),
+            titulo: "Akira".into(),
+            estado: None,
+            ultimo_episodio: None,
+            visto_en: None,
+            vistos: 0,
+            total: None,
+            puntuacion: None,
+            generos: vec![],
+        };
         assert_eq!(b.siguiendo, vec![one_piece.clone(), naruto]);
         assert_eq!(b.favoritos, vec![one_piece, akira]);
+    }
+
+    #[test]
+    fn listar_biblioteca_trae_actividad_progreso_y_datos_de_anilist() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        fijar_estado(&conn, &NARUTO, 2).unwrap();
+        fijar_estado(&conn, &AKIRA, 3).unwrap();
+        marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
+        marcar_visto(&conn, 2_000, &ONE_PIECE, 2.0, None, &[]).unwrap();
+        // El progreso de un episodio a medias es más reciente que el último visto: cuenta como actividad.
+        guardar_progreso(&conn, 5_000, &ONE_PIECE, 3.0, 600.0, 1400.0).unwrap();
+
+        // One Piece: en emisión, sin total; se usa el último emitido (siguiente_ep - 1).
+        let op = MediaAnilist {
+            anilist_id: 7,
+            titulo_romaji: "One Piece".into(),
+            episodios: None,
+            siguiente_ep: Some(1101),
+            puntuacion: Some(87),
+            generos: vec!["Action".into(), "Adventure".into()],
+            ..Default::default()
+        };
+        guardar_media(&conn, 1, &op).unwrap();
+        fijar_vinculo(&conn, 1, &ONE_PIECE, Some(7), 0.9, "auto").unwrap();
+        // Naruto: total conocido, sin nota y con géneros rotos en la base.
+        let na = MediaAnilist { anilist_id: 8, titulo_romaji: "Naruto".into(), episodios: Some(220), ..Default::default() };
+        guardar_media(&conn, 1, &na).unwrap();
+        fijar_vinculo(&conn, 1, &NARUTO, Some(8), 0.9, "auto").unwrap();
+        conn.execute("UPDATE anilist_media SET generos = 'no es json' WHERE anilist_id = 8", []).unwrap();
+        // Akira: se buscó y no hubo resultado.
+        fijar_vinculo(&conn, 1, &AKIRA, None, 0.0, "ninguno").unwrap();
+
+        let b = listar_biblioteca(&conn).unwrap();
+        let de = |aid: i64| b.siguiendo.iter().find(|e| e.aid == aid).unwrap().clone();
+        let one_piece = de(10);
+        assert_eq!(
+            (one_piece.visto_en, one_piece.vistos, one_piece.total, one_piece.puntuacion),
+            (Some(5_000), 2, Some(1100), Some(87))
+        );
+        assert_eq!(one_piece.generos, vec!["Action".to_string(), "Adventure".to_string()]);
+        let naruto = de(20);
+        assert_eq!((naruto.visto_en, naruto.vistos, naruto.total, naruto.puntuacion), (None, 0, Some(220), None));
+        assert!(naruto.generos.is_empty());
+        let akira = de(30);
+        assert_eq!((akira.total, akira.puntuacion), (None, None));
+        assert!(akira.generos.is_empty());
+    }
+
+    #[test]
+    fn un_siguiente_episodio_1_no_da_total() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &NARUTO, 1).unwrap();
+        let m = MediaAnilist { anilist_id: 8, titulo_romaji: "Naruto".into(), siguiente_ep: Some(1), ..Default::default() };
+        guardar_media(&conn, 1, &m).unwrap();
+        fijar_vinculo(&conn, 1, &NARUTO, Some(8), 0.9, "auto").unwrap();
+        assert_eq!(listar_biblioteca(&conn).unwrap().siguiendo[0].total, None);
     }
 
     #[test]
@@ -277,7 +383,18 @@ mod pruebas {
 
     #[test]
     fn la_entrada_se_serializa_en_camel_case() {
-        let e = EntradaBiblioteca { aid: 1, slug: "a".into(), titulo: "A".into(), estado: None, ultimo_episodio: Some(2.0) };
+        let e = EntradaBiblioteca {
+            aid: 1,
+            slug: "a".into(),
+            titulo: "A".into(),
+            estado: None,
+            ultimo_episodio: Some(2.0),
+            visto_en: None,
+            vistos: 0,
+            total: None,
+            puntuacion: None,
+            generos: vec![],
+        };
         let v = serde_json::to_value(&e).unwrap();
         assert_eq!(v["ultimoEpisodio"], 2.0);
         assert!(v["estado"].is_null());
