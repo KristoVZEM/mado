@@ -101,6 +101,16 @@ export interface EntradaBiblioteca {
   estado: number | null;
   /** Episodio más alto del historial; `null` si no hay ninguno visto. */
   ultimoEpisodio: number | null;
+  /** Última actividad (episodio visto o progreso guardado), en ms; `null` si nunca. */
+  vistoEn: number | null;
+  /** Episodios distintos en el historial. */
+  vistos: number;
+  /** Episodios de AniList, o los ya emitidos si sigue en emisión sin total; `null` si no se sabe. */
+  total: number | null;
+  /** Media de AniList (0-100); `null` sin vínculo o sin nota. */
+  puntuacion: number | null;
+  /** Géneros de AniList, en inglés tal cual; vacío sin vínculo. */
+  generos: string[];
 }
 
 export interface Biblioteca {

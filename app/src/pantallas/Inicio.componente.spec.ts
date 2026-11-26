@@ -12,6 +12,11 @@ const serie = (aid: number, titulo: string, estado: number): EntradaBiblioteca =
   titulo,
   estado,
   ultimoEpisodio: 2,
+  vistoEn: null,
+  vistos: 0,
+  total: null,
+  puntuacion: null,
+  generos: [],
 });
 const resumen = (aid: number, extra: Partial<ResumenSerie>): ResumenSerie => ({
   aid,

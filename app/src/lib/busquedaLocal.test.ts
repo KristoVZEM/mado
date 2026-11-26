@@ -9,6 +9,11 @@ const bib = (aid: number, titulo: string, estado: number): EntradaBiblioteca => 
   titulo,
   estado,
   ultimoEpisodio: null,
+  vistoEn: null,
+  vistos: 0,
+  total: null,
+  puntuacion: null,
+  generos: [],
 });
 
 test('coincide ignora tildes y mayúsculas y exige todas las palabras', () => {

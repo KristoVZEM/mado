@@ -30,6 +30,10 @@ ambos sentidos y reproduce el vídeo con libmpv, con controles propios sobre la 
     <td><img src="docs/capturas/emision.webp" alt="Agenda semanal de emisión"></td>
     <td><img src="docs/capturas/ajustes-claro.webp" alt="Ajustes de apariencia con el tema claro"></td>
   </tr>
+  <tr>
+    <td><img src="docs/capturas/biblioteca.webp" alt="Biblioteca con pestañas por estado, búsqueda, filtros y orden"></td>
+    <td><img src="docs/capturas/biblioteca-menu.webp" alt="Menú de una serie en la Biblioteca: continuar, cambiar de estado y favoritos"></td>
+  </tr>
 </table>
 
 <sub>Capturas con una biblioteca de ejemplo. Los pósteres y fondos son de sus respectivos titulares y llegan de AniList y TMDB.</sub>

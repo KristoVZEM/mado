@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { EntradaBiblioteca, EntradaContinuar, ResumenSerie } from './datos.ts';
-import { conNuevoEpisodio, elegirDestacado, elegirDestacados, etiquetaNuevo, nuevoDe } from './destacado.ts';
+import { conNuevoEpisodio, elegirDestacado, elegirDestacados, etiquetaNuevo, nuevoDe, tieneNuevo } from './destacado.ts';
 
 const cont = (aid: number, numero = 3): EntradaContinuar => ({
   aid,
@@ -12,7 +12,7 @@ const cont = (aid: number, numero = 3): EntradaContinuar => ({
   duracionS: 100,
   actualizado: 0,
 });
-const bib = (aid: number): EntradaBiblioteca => ({ aid, slug: `s${aid}`, titulo: `S${aid}`, estado: 1, ultimoEpisodio: 2 });
+const bib = (aid: number): EntradaBiblioteca => ({ aid, slug: `s${aid}`, titulo: `S${aid}`, estado: 1, ultimoEpisodio: 2, vistoEn: null, vistos: 0, total: null, puntuacion: null, generos: [] });
 const res = (aid: number, banner: string | null, extra: Partial<ResumenSerie> = {}): ResumenSerie => ({
   aid,
   anilistId: aid * 10,
@@ -60,6 +60,11 @@ test('etiquetaNuevo solo da texto si hay episodio nuevo', () => {
   assert.equal(etiquetaNuevo(emision, 5), 'Nuevo · Ep. 7 emitido');
   assert.equal(etiquetaNuevo(emision, 7), undefined);
   assert.equal(etiquetaNuevo(undefined, 0), undefined);
+  // Una serie terminada con episodios sin ver no es «nuevo».
+  const terminada = res(2, null, { episodios: 24, estado: 'FINISHED' });
+  assert.equal(etiquetaNuevo(terminada, 3), undefined);
+  assert.equal(tieneNuevo(terminada, 3), false);
+  assert.equal(tieneNuevo(emision, 5), true);
 });
 
 test('conNuevoEpisodio: solo series en emisión con un episodio emitido que no has visto', () => {

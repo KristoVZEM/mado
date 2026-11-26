@@ -10,12 +10,11 @@
   import { ajustes, asegurarAjustes } from '../lib/ajustes.svelte.ts';
   import { parteOculta, type ParteInicio } from '../lib/apariencia.ts';
   import { entradasDe, textoUltimoVisto } from '../lib/biblioteca.ts';
-  import { fraccionVista, idiomaGuardado, textoRestante } from '../lib/continuar.ts';
+  import { fraccionVista, textoRestante } from '../lib/continuar.ts';
   import {
     continuarViendo,
     descartarProgreso,
     estadoDatos,
-    leerAjuste,
     leerMedia,
     listarBiblioteca,
     resumenesVinculados,
@@ -33,10 +32,12 @@
   import { popularesDeInicio } from '../lib/popularesInicio.ts';
   import { mensajeDeError, textoDeError } from '../lib/errores.ts';
   import { avisarFalloDeFuente } from '../lib/fuente.svelte.ts';
-  import { fuentes } from '../lib/fuentes.ts';
+  import { prepararReproduccion } from '../lib/reanudar.ts';
+  import { depsReanudar } from '../lib/reanudarApp.ts';
   import { precargarImagenes, urlsDeInicio } from '../lib/precargaInicio.ts';
   import { debeRefrescar } from '../lib/refrescoInicio.ts';
   import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
+  import { SIN_FILTROS } from '../lib/bibliotecaVista.ts';
 
   /** Tope de tarjetas por fila; el resto se ve en Biblioteca. */
   const MAX_FILA = 12;
@@ -189,20 +190,8 @@
     abriendo = p.aid;
     error = '';
     try {
-      const [ficha, idioma] = await Promise.all([
-        fuentes.episodios(p.slug),
-        leerAjuste(`idioma:${p.aid}`).catch(() => null),
-        asegurarAjustes(),
-      ]);
-      const numeros = ficha.episodes.map((e) => e.number).sort((a, b) => a - b);
-      if (!numeros.includes(p.numero)) throw new Error(`El episodio ${p.numero} ya no está en la lista.`);
-      abrir({
-        tipo: 'reproducir',
-        anime: { aid: p.aid, slug: p.slug, title: p.titulo },
-        numeros,
-        numero: p.numero,
-        idioma: idiomaGuardado(idioma, ajustes.idiomaDefecto),
-      });
+      const r = await prepararReproduccion(depsReanudar, p, p.numero);
+      abrir({ tipo: 'reproducir', anime: { aid: p.aid, slug: p.slug, title: p.titulo }, ...r });
     } catch (e) {
       console.error(e);
       error = mensajeDeError(e);
@@ -230,12 +219,14 @@
   }
 
   function verTodoSiguiendo() {
-    nav.pestana = 'viendo';
+    nav.biblioteca.pestana = 'viendo';
+    nav.biblioteca.filtros = { ...SIN_FILTROS };
     irASeccion('biblioteca');
   }
 
   function verTodoPendientes() {
-    nav.pestana = 'considerando';
+    nav.biblioteca.pestana = 'considerando';
+    nav.biblioteca.filtros = { ...SIN_FILTROS };
     irASeccion('biblioteca');
   }
 

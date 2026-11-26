@@ -24,7 +24,7 @@ export function backendVacio(): void {
 
 export const SERIE_FALSA = { aid: 1, title: 'Serie de prueba', slug: 'serie-de-prueba' };
 
-const ENTRADA: EntradaBiblioteca = { aid: 1, slug: 'serie-de-prueba', titulo: 'Serie de prueba', estado: 1, ultimoEpisodio: 3 };
+const ENTRADA: EntradaBiblioteca = { aid: 1, slug: 'serie-de-prueba', titulo: 'Serie de prueba', estado: 1, ultimoEpisodio: 3, vistoEn: null, vistos: 3, total: 12, puntuacion: null, generos: [] };
 const HISTORIAL: EntradaHistorial = { aid: 1, slug: 'serie-de-prueba', titulo: 'Serie de prueba', numero: 3, vistoEn: Date.now() };
 const CONTINUAR: EntradaContinuar = {
   aid: 1, slug: 'serie-de-prueba', titulo: 'Serie de prueba', numero: 4, posicionS: 600, duracionS: 1400, actualizado: Date.now(),
