@@ -61,6 +61,11 @@ export function nuevoDe(resumen: ResumenSerie | undefined, ultimoVisto: number |
   return hayNuevo(emitido, ultimoVisto) ? emitido : null;
 }
 
+/** Hay un episodio emitido sin ver y la serie sigue en emisión: una serie terminada con episodios pendientes no es «nuevo». */
+export function tieneNuevo(resumen: ResumenSerie | undefined, ultimoVisto: number | null): boolean {
+  return resumen?.estado === 'RELEASING' && nuevoDe(resumen, ultimoVisto) !== null;
+}
+
 /**
  * Series de la lista (las que sigues o tienes pendientes) que se están emitiendo con un episodio emitido que aún
  * no has visto, en el orden de la lista.
@@ -70,14 +75,10 @@ export function conNuevoEpisodio(
   lista: readonly EntradaBiblioteca[],
   resumenes: ReadonlyMap<number, ResumenSerie>,
 ): EntradaBiblioteca[] {
-  return lista.filter((v) => {
-    const r = resumenes.get(v.aid);
-    return r?.estado === 'RELEASING' && nuevoDe(r, v.ultimoEpisodio) !== null;
-  });
+  return lista.filter((v) => tieneNuevo(resumenes.get(v.aid), v.ultimoEpisodio));
 }
 
-/** Texto de la pastilla de una tarjeta: «Nuevo · Ep. 7 emitido»; `undefined` si no hay episodio nuevo. */
+/** Texto de la pastilla de una tarjeta: «Nuevo · Ep. 7 emitido»; `undefined` si no hay episodio nuevo o la serie ya no se emite. */
 export function etiquetaNuevo(resumen: ResumenSerie | undefined, ultimoVisto: number | null): string | undefined {
-  const n = nuevoDe(resumen, ultimoVisto);
-  return n === null ? undefined : `Nuevo · Ep. ${n} emitido`;
+  return tieneNuevo(resumen, ultimoVisto) ? `Nuevo · Ep. ${nuevoDe(resumen, ultimoVisto)} emitido` : undefined;
 }
