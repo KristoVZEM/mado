@@ -1,5 +1,6 @@
 import type { Idioma, ResultadoBusqueda } from '../../../core/src/index.ts';
 import type { Pestana } from './biblioteca.ts';
+import { SIN_FILTROS, type Filtros } from './bibliotecaVista.ts';
 import { SECCION_INICIAL, type Seccion } from './carril.ts';
 import type { ListadoId } from './listados.ts';
 import { pilaAlAbrir, pilaAlVolver } from './pila.ts';
@@ -34,14 +35,15 @@ interface Estado {
     /** Sube cada vez que se pide la búsqueda (Ctrl+K): el Catálogo pone el cursor en su campo. */
     enfoque: number;
   };
-  pestana: Pestana;
+  /** Pestaña y filtros de la Biblioteca: se conservan al volver de una Ficha y se reinician al cerrar la app. */
+  biblioteca: { pestana: Pestana; filtros: Filtros };
 }
 
 export const nav = $state<Estado>({
   seccion: SECCION_INICIAL,
   superior: null,
   catalogo: { texto: '', resultados: [], buscado: false, pendiente: false, listados: {}, abierto: null, enfoque: 0 },
-  pestana: 'todos',
+  biblioteca: { pestana: 'todos', filtros: { ...SIN_FILTROS } },
 });
 
 /** Fichas por las que se pasó hasta la actual; «Volver» las recorre hacia atrás. Detalle en `pila.ts`. */

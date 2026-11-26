@@ -218,12 +218,12 @@
   }
 
   function verTodoSiguiendo() {
-    nav.pestana = 'viendo';
+    nav.biblioteca.pestana = 'viendo';
     irASeccion('biblioteca');
   }
 
   function verTodoPendientes() {
-    nav.pestana = 'considerando';
+    nav.biblioteca.pestana = 'considerando';
     irASeccion('biblioteca');
   }
 

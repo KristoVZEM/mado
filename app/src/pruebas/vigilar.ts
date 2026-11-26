@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import { tick } from 'svelte';
 import { nav } from '../lib/navegacion.svelte.ts';
 import { SECCION_INICIAL } from '../lib/carril.ts';
+import { SIN_FILTROS } from '../lib/bibliotecaVista.ts';
 
 // Mensajes de consola que son comportamiento legítimo de la app y no un fallo. Cada uno con su motivo.
 // Un mensaje por un falseo que falta se arregla falseando; nunca se añade aquí.
@@ -39,5 +40,5 @@ export function reiniciarNavegacion(): void {
   nav.seccion = SECCION_INICIAL;
   nav.superior = null;
   nav.catalogo = { texto: '', resultados: [], buscado: false, pendiente: false, listados: {}, abierto: null, enfoque: 0 };
-  nav.pestana = 'todos';
+  nav.biblioteca = { pestana: 'todos', filtros: { ...SIN_FILTROS } };
 }
