@@ -416,6 +416,9 @@
     border-bottom-color: var(--acento);
     color: var(--texto);
   }
+  .pestanas button:focus-visible {
+    outline-offset: -2px;
+  }
   .cuenta {
     margin-left: 6px;
     color: var(--texto-suave);
