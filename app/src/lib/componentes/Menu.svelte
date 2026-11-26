@@ -10,8 +10,16 @@
     etiqueta,
     alCerrar,
     arriba = false,
+    derecha = false,
     children,
-  }: { abierto: boolean; etiqueta: string; alCerrar: () => void; arriba?: boolean; children: Snippet } = $props();
+  }: {
+    abierto: boolean;
+    etiqueta: string;
+    alCerrar: () => void;
+    arriba?: boolean;
+    derecha?: boolean;
+    children: Snippet;
+  } = $props();
 
   let caja = $state<HTMLElement | null>(null);
 
@@ -43,7 +51,7 @@
 <svelte:window onclick={clicFuera} onkeydown={tecla} />
 
 {#if abierto}
-  <div class="menu" class:arriba role="menu" aria-label={etiqueta} bind:this={caja}>
+  <div class="menu" class:arriba class:derecha role="menu" aria-label={etiqueta} bind:this={caja}>
     {@render children()}
   </div>
 {/if}
@@ -61,6 +69,10 @@
     border-radius: var(--radio-control);
     background: var(--superficie);
     box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.6);
+  }
+  .menu.derecha {
+    left: auto;
+    right: 0;
   }
   .menu.arriba {
     top: auto;
