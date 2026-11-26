@@ -58,7 +58,9 @@ pub fn alternar_favorito(conn: &Connection, serie: &Serie) -> Resultado<bool> {
 }
 
 /// Una fila de la biblioteca. `ultimo_episodio` es el número más alto del historial de la serie; `visto_en`, la última
-/// actividad (episodio visto o progreso guardado, en ms); `total`, los episodios de AniList o, si la obra sigue en emisión
+/// actividad real (en ms): el progreso guardado o un episodio con marca de tiempo propia. Los episodios marcados de golpe
+/// («Visto» hasta aquí, importaciones) comparten la misma marca y no cuentan; una serie solo con esas marcas queda en
+/// `None`. `total`, los episodios de AniList o, si la obra sigue en emisión
 /// sin total, los ya emitidos. `puntuacion` y `generos` son los de AniList (vacíos sin vínculo).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -81,10 +83,12 @@ pub struct Biblioteca {
     pub favoritos: Vec<EntradaBiblioteca>,
 }
 
-/// Columnas comunes de las dos listas; `a` es `anime`, `s` es `siguiendo` y `m` es `anilist_media` (puede faltar).
+/// Columnas comunes de las dos listas. `vistoEn` ignora las marcas de historial compartidas por varios episodios de la
+/// misma serie (marcados de golpe) y suma el progreso del reproductor. `a` es `anime`, `s` es `siguiendo` y `m` es `anilist_media` (puede faltar).
 const COLUMNAS: &str = "a.aid, a.slug, a.titulo, s.estado,
     (SELECT MAX(h.numero) FROM historial h WHERE h.aid = a.aid),
-    NULLIF(MAX(COALESCE((SELECT MAX(h.visto_en) FROM historial h WHERE h.aid = a.aid), 0),
+    NULLIF(MAX(COALESCE((SELECT MAX(h.visto_en) FROM historial h WHERE h.aid = a.aid AND NOT EXISTS (
+                   SELECT 1 FROM historial h2 WHERE h2.aid = h.aid AND h2.visto_en = h.visto_en AND h2.numero <> h.numero)), 0),
                COALESCE((SELECT MAX(p.actualizado) FROM progreso p WHERE p.aid = a.aid), 0)), 0),
     (SELECT COUNT(*) FROM historial h WHERE h.aid = a.aid),
     m.episodios, m.siguiente_ep, m.puntuacion, m.generos";
@@ -313,6 +317,53 @@ mod pruebas {
         };
         assert_eq!(b.siguiendo, vec![one_piece.clone(), naruto]);
         assert_eq!(b.favoritos, vec![one_piece, akira]);
+    }
+
+    fn visto_en_de(conn: &Connection, aid: i64) -> Option<i64> {
+        listar_biblioteca(conn).unwrap().siguiendo.iter().find(|e| e.aid == aid).unwrap().visto_en
+    }
+
+    #[test]
+    fn visto_en_ignora_los_episodios_marcados_de_golpe() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        fijar_estado(&conn, &NARUTO, 1).unwrap();
+        // Un solo marcado con anteriores estampa todos los episodios con la misma marca.
+        marcar_visto(&conn, 9_000, &ONE_PIECE, 5.0, None, &[1.0, 2.0, 3.0, 4.0]).unwrap();
+        assert_eq!(contar(&conn, "historial"), 5);
+        assert_eq!(visto_en_de(&conn, 10), None);
+        // Varias filas con la misma marca (importación): tampoco cuentan.
+        marcar_visto(&conn, 7_000, &NARUTO, 1.0, None, &[]).unwrap();
+        marcar_visto(&conn, 7_000, &NARUTO, 2.0, None, &[]).unwrap();
+        assert_eq!(visto_en_de(&conn, 20), None);
+    }
+
+    #[test]
+    fn visto_en_cuenta_los_episodios_vistos_de_uno_en_uno() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
+        marcar_visto(&conn, 3_000, &ONE_PIECE, 2.0, None, &[]).unwrap();
+        assert_eq!(visto_en_de(&conn, 10), Some(3_000));
+    }
+
+    #[test]
+    fn visto_en_mezcla_marcado_de_golpe_posterior_con_una_marca_propia() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
+        // Más tarde se marcan de golpe los episodios 2 a 4 (el 4 con los anteriores 2 y 3).
+        marcar_visto(&conn, 8_000, &ONE_PIECE, 4.0, None, &[2.0, 3.0]).unwrap();
+        assert_eq!(visto_en_de(&conn, 10), Some(1_000));
+    }
+
+    #[test]
+    fn visto_en_suma_el_progreso_aunque_todo_el_historial_sea_de_golpe() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        marcar_visto(&conn, 9_000, &ONE_PIECE, 3.0, None, &[1.0, 2.0]).unwrap();
+        guardar_progreso(&conn, 4_000, &ONE_PIECE, 4.0, 60.0, 1400.0).unwrap();
+        assert_eq!(visto_en_de(&conn, 10), Some(4_000));
     }
 
     #[test]
