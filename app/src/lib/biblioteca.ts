@@ -14,24 +14,32 @@ export function nombreEstado(estado: number | null): string {
   return ESTADOS.find((x) => x.valor === estado)?.nombre ?? 'Sin estado';
 }
 
-export type Pestana = 'todos' | 'viendo' | 'considerando' | 'completado' | 'dropeado' | 'pausado' | 'favoritos';
+export type Pestana = 'todos' | 'viendo' | 'considerando' | 'completado' | 'dropeado' | 'pausado';
 
+/** El id `todos` se queda por compatibilidad (Catálogo, Emisión e Inicio lo usan con `entradasDe`). */
 export const PESTANAS: readonly { id: Pestana; nombre: string; estado?: number }[] = [
-  { id: 'todos', nombre: 'Todos' },
+  { id: 'todos', nombre: 'Todas' },
   { id: 'viendo', nombre: 'Viendo', estado: 1 },
   { id: 'considerando', nombre: 'Considerando', estado: 2 },
   { id: 'completado', nombre: 'Completado', estado: 3 },
   { id: 'dropeado', nombre: 'Dropeado', estado: 4 },
   { id: 'pausado', nombre: 'Pausado', estado: 5 },
-  { id: 'favoritos', nombre: 'Favoritos' },
 ];
 
-/** Las entradas de una pestaña, sin ordenar. Todos = todo `siguiendo`. */
+/** Las entradas seguidas de una pestaña, sin ordenar. Todos = todo `siguiendo` (los favoritos sin estado, no). */
 export function filtrar(b: Biblioteca, p: Pestana): EntradaBiblioteca[] {
-  if (p === 'favoritos') return b.favoritos;
   if (p === 'todos') return b.siguiendo;
   const estado = PESTANAS.find((x) => x.id === p)?.estado;
   return b.siguiendo.filter((x) => x.estado === estado);
+}
+
+/** Pestaña a la que lleva una tecla del `tablist` (flechas con vuelta, Inicio, Fin); `null` si la tecla no mueve. */
+export function pestanaVecina(actual: Pestana, tecla: string): Pestana | null {
+  const n = PESTANAS.length;
+  const i = PESTANAS.findIndex((p) => p.id === actual);
+  const destino =
+    tecla === 'ArrowRight' ? (i + 1) % n : tecla === 'ArrowLeft' ? (i - 1 + n) % n : tecla === 'Home' ? 0 : tecla === 'End' ? n - 1 : -1;
+  return destino < 0 ? null : PESTANAS[destino].id;
 }
 
 /** Copia ordenada por título según el español (la Ñ tras la N, los acentos con su letra). */
@@ -51,36 +59,4 @@ export function recuentos(b: Biblioteca): Record<Pestana, number> {
 /** "Último visto: Ep. N", o `null` si la serie no tiene ningún episodio en el historial. */
 export function textoUltimoVisto(n: number | null): string | null {
   return n === null ? null : `Último visto: Ep. ${n}`;
-}
-
-/** En Todos y Favoritos se mezclan estados, así que cada fila muestra el suyo. */
-export function muestraEstado(p: Pestana): boolean {
-  return p === 'todos' || p === 'favoritos';
-}
-
-export interface EstadoVacio {
-  titulo: string;
-  texto: string;
-  /** Adónde puede ir quien lo ve. */
-  acciones: ('catalogo' | 'ajustes')[];
-}
-
-/** Qué se le dice a quien abre una pestaña sin series: qué pasa, qué hacer y adónde ir. */
-export function estadoVacio(p: Pestana): EstadoVacio {
-  if (p === 'todos') {
-    return {
-      titulo: 'Tu biblioteca está vacía',
-      texto: 'Elige un estado en la Ficha de una serie, o trae tu historial desde una copia de Ukiku.',
-      acciones: ['catalogo', 'ajustes'],
-    };
-  }
-  if (p === 'favoritos') {
-    return { titulo: 'Sin favoritos todavía', texto: 'Marca una serie con ☆ en su Ficha y aparecerá aquí.', acciones: ['catalogo'] };
-  }
-  const nombre = PESTANAS.find((x) => x.id === p)?.nombre ?? '';
-  return {
-    titulo: `No hay series en «${nombre}»`,
-    texto: 'Cambia el estado de una serie en su Ficha para verla aquí.',
-    acciones: ['catalogo'],
-  };
 }

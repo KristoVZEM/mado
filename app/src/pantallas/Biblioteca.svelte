@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
+  import { abrir, nav } from '../lib/navegacion.svelte.ts';
   import {
     estadoDatos,
     listarBiblioteca,
@@ -16,11 +16,9 @@
   import Vacio from '../lib/componentes/Vacio.svelte';
   import {
     entradasDe,
-    muestraEstado,
     nombreEstado,
     PESTANAS,
     recuentos,
-    estadoVacio,
   } from '../lib/biblioteca.ts';
 
   let biblioteca = $state<Biblioteca | null>(null);
@@ -74,21 +72,12 @@
       {/each}
     </div>
     {#if lista.length === 0}
-      {@const vacio = estadoVacio(pestana)}
-      <Vacio titulo={vacio.titulo} texto={vacio.texto}>
-        {#each vacio.acciones as accion (accion)}
-          {#if accion === 'catalogo'}
-            <button class="principal" onclick={() => irASeccion('catalogo')}>Ir al Catálogo</button>
-          {:else}
-            <button onclick={() => irASeccion('ajustes')}>Importar copia de Ukiku</button>
-          {/if}
-        {/each}
-      </Vacio>
+      <Vacio titulo="Sin series" texto="" />
     {:else}
       <ul class="cuadricula">
         {#each lista as e (e.aid)}
           {@const ultimo = e.ultimoEpisodio !== null ? `Ep. ${e.ultimoEpisodio}` : null}
-          {@const partes = [muestraEstado(pestana) ? nombreEstado(e.estado) : '', ultimo ?? ''].filter(Boolean)}
+          {@const partes = [pestana === 'todos' ? nombreEstado(e.estado) : '', ultimo ?? ''].filter(Boolean)}
           <li>
             <TarjetaPoster aid={e.aid} titulo={e.titulo} subtitulo={partes.join(' · ')}
               etiqueta={etiquetaNuevo(porAid.get(e.aid), e.ultimoEpisodio)}

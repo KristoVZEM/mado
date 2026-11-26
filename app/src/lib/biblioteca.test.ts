@@ -4,13 +4,12 @@ import type { Biblioteca, EntradaBiblioteca } from './datos.ts';
 import {
   entradasDe,
   filtrar,
-  muestraEstado,
   nombreEstado,
   ordenarPorTitulo,
   PESTANAS,
+  pestanaVecina,
   recuentos,
   textoUltimoVisto,
-  estadoVacio,
 } from './biblioteca.ts';
 
 const e = (aid: number, titulo: string, estado: number | null, ultimoEpisodio: number | null = null): EntradaBiblioteca => ({
@@ -40,11 +39,21 @@ test('nombreEstado da el nombre de Ukiku y "Sin estado" para lo demás', () => {
   assert.equal(nombreEstado(9), 'Sin estado');
 });
 
-test('PESTANAS va de Todos a Favoritos con los cinco estados en medio', () => {
+test('PESTANAS: Todas y los cinco estados, sin Favoritos (ahora es un filtro)', () => {
   assert.deepEqual(
-    PESTANAS.map((p) => p.id),
-    ['todos', 'viendo', 'considerando', 'completado', 'dropeado', 'pausado', 'favoritos'],
+    PESTANAS.map((p) => [p.id, p.nombre]),
+    [['todos', 'Todas'], ['viendo', 'Viendo'], ['considerando', 'Considerando'], ['completado', 'Completado'],
+      ['dropeado', 'Dropeado'], ['pausado', 'Pausado']],
   );
+});
+
+test('pestanaVecina: flechas con vuelta, Inicio y Fin; otra tecla no mueve', () => {
+  assert.equal(pestanaVecina('todos', 'ArrowRight'), 'viendo');
+  assert.equal(pestanaVecina('pausado', 'ArrowRight'), 'todos');
+  assert.equal(pestanaVecina('todos', 'ArrowLeft'), 'pausado');
+  assert.equal(pestanaVecina('completado', 'Home'), 'todos');
+  assert.equal(pestanaVecina('viendo', 'End'), 'pausado');
+  assert.equal(pestanaVecina('viendo', 'Enter'), null);
 });
 
 test('filtrar separa por pestaña', () => {
@@ -52,7 +61,6 @@ test('filtrar separa por pestaña', () => {
   assert.deepEqual(filtrar(b, 'viendo').map((x) => x.aid), [1, 3]);
   assert.deepEqual(filtrar(b, 'considerando'), []);
   assert.deepEqual(filtrar(b, 'dropeado').map((x) => x.aid), [4]);
-  assert.deepEqual(filtrar(b, 'favoritos').map((x) => x.aid), [3, 6]);
 });
 
 test('ordenarPorTitulo sigue el orden del español y no modifica la lista', () => {
@@ -79,7 +87,6 @@ test('recuentos cuenta cada pestaña', () => {
     completado: 1,
     dropeado: 1,
     pausado: 1,
-    favoritos: 2,
   });
 });
 
@@ -88,24 +95,4 @@ test('textoUltimoVisto', () => {
   assert.equal(textoUltimoVisto(12.5), 'Último visto: Ep. 12.5');
   assert.equal(textoUltimoVisto(0), 'Último visto: Ep. 0');
   assert.equal(textoUltimoVisto(null), null);
-});
-
-test('muestraEstado solo en las pestañas que mezclan estados', () => {
-  assert.equal(muestraEstado('todos'), true);
-  assert.equal(muestraEstado('favoritos'), true);
-  assert.equal(muestraEstado('viendo'), false);
-});
-
-test('estadoVacio dice qué pasa, qué hacer y adónde ir en cada pestaña', () => {
-  const considerando = estadoVacio('considerando');
-  assert.equal(considerando.titulo, 'No hay series en «Considerando»');
-  assert.deepEqual(considerando.acciones, ['catalogo']);
-  const todos = estadoVacio('todos');
-  assert.ok(todos.texto.includes('Ukiku'));
-  assert.deepEqual(todos.acciones, ['catalogo', 'ajustes']);
-  assert.ok(estadoVacio('favoritos').texto.includes('☆'));
-  for (const p of ['todos', 'viendo', 'considerando', 'completado', 'dropeado', 'pausado', 'favoritos'] as const) {
-    const v = estadoVacio(p);
-    assert.ok(v.titulo && v.texto && v.acciones.length > 0, p);
-  }
 });
