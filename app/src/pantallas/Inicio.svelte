@@ -37,6 +37,7 @@
   import { precargarImagenes, urlsDeInicio } from '../lib/precargaInicio.ts';
   import { debeRefrescar } from '../lib/refrescoInicio.ts';
   import { abrir, irASeccion, nav } from '../lib/navegacion.svelte.ts';
+  import { SIN_FILTROS } from '../lib/bibliotecaVista.ts';
 
   /** Tope de tarjetas por fila; el resto se ve en Biblioteca. */
   const MAX_FILA = 12;
@@ -219,11 +220,13 @@
 
   function verTodoSiguiendo() {
     nav.biblioteca.pestana = 'viendo';
+    nav.biblioteca.filtros = { ...SIN_FILTROS };
     irASeccion('biblioteca');
   }
 
   function verTodoPendientes() {
     nav.biblioteca.pestana = 'considerando';
+    nav.biblioteca.filtros = { ...SIN_FILTROS };
     irASeccion('biblioteca');
   }
 

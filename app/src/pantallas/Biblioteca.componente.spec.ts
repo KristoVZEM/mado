@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render } from '@testing-library/svelte';
 import Biblioteca from './Biblioteca.svelte';
-import type { EntradaBiblioteca } from '../lib/datos.ts';
+import type { EntradaBiblioteca, ResumenSerie } from '../lib/datos.ts';
 import { ajustes } from '../lib/ajustes.svelte.ts';
 import { nav } from '../lib/navegacion.svelte.ts';
 import { backendVacio } from '../pruebas/datos.ts';
@@ -40,7 +40,7 @@ describe('Biblioteca', () => {
     const { container } = render(Biblioteca);
     await asentar();
     expect(titulos(container)).toEqual(['Bleach', 'Naruto', 'Akira', 'Pokémon']);
-    expect(container.querySelector('#pestana-todos')?.textContent).toContain('4');
+    expect(container.querySelector('#pestana-todos')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Todas (4)');
     expect(consola.mensajes()).toEqual([]);
   });
 
@@ -144,5 +144,49 @@ describe('Biblioteca', () => {
     expect(titulos(container)).toEqual(['Bleach', 'Akira']);
     expect(container.querySelector('[role="alert"]')?.textContent).toContain('No se pudo guardar el estado');
     expect(consola.mensajes().some((m) => m.includes('disco lleno'))).toBe(true);
+  });
+  const menuDe = async (container: HTMLElement, aid: number) => {
+    await fireEvent.click(container.querySelector(`li[data-aid="${aid}"] .mas`)!);
+    await asentar();
+  };
+  const opcion = (container: HTMLElement, aid: number, texto: string) =>
+    [...container.querySelectorAll(`li[data-aid="${aid}"] [role^="menuitem"]`)].find((b) => b.textContent?.includes(texto))!;
+
+  it('alternar favorito desde el menú lo guarda y lo anuncia', async () => {
+    responder('alternar_favorito', true);
+    const { container } = render(Biblioteca);
+    await asentar();
+    await menuDe(container, 1);
+    await fireEvent.click(opcion(container, 1, 'avorito'));
+    await asentar();
+    expect(llamadasA('alternar_favorito')).toHaveLength(1);
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toContain('Akira se añadió a favoritos');
+  });
+
+  it('quitar de la biblioteca un favorito con estado lo deja en Todas sin estado', async () => {
+    const { container } = render(Biblioteca);
+    await asentar();
+    await menuDe(container, 2);
+    await fireEvent.click(opcion(container, 2, 'Quitar de la biblioteca'));
+    await asentar();
+    await fireEvent.click(opcion(container, 2, 'Pulsa otra vez'));
+    await asentar();
+    expect(llamadasA('fijar_estado')).toContainEqual({ aid: 2, slug: 'serie-2', titulo: 'Bleach', estado: 0 });
+    expect(titulos(container)).toContain('Bleach');
+    expect(container.querySelector('#pestana-viendo')?.textContent?.replace(/\s+/g, ' ').trim()).toBe('Viendo (1)');
+  });
+
+  it('el aviso de episodios nuevos lleva a Todas y filtra', async () => {
+    responder('resumenes_vinculados', [
+      { aid: 3, anilistId: 30, confianza: 0.9, origen: 'auto', banner: null, portada: null, siguienteEp: 6, siguienteEn: null, episodios: null, estado: 'RELEASING' } satisfies ResumenSerie,
+    ]);
+    nav.biblioteca.pestana = 'viendo';
+    const { container } = render(Biblioteca);
+    await asentar();
+    const boton = [...container.querySelectorAll('button')].find((b) => b.textContent?.includes('con episodio nuevo'))!;
+    await fireEvent.click(boton);
+    await asentar();
+    expect(container.querySelector('#pestana-todos')!.getAttribute('aria-selected')).toBe('true');
+    expect(titulos(container)).toEqual(['Naruto']);
   });
 });

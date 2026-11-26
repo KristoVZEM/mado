@@ -71,6 +71,7 @@
       avisoDatos = (await estadoDatos()) ?? '';
       if (!avisoDatos) {
         entradas = unir(await listarBiblioteca());
+        cargando = false;
         // Extra opcional: si falla, simplemente no hay marcas «Nuevo».
         resumenes = await resumenesVinculados().catch((e) => {
           console.error(e);
@@ -106,6 +107,12 @@
     document.getElementById(`pestana-${destino}`)?.focus();
   }
 
+  /** El recuento de nuevos es de toda la biblioteca: se muestra en «Todas». */
+  function mostrarNuevos() {
+    elegirPestana('todos');
+    vista.filtros.soloNuevos = true;
+  }
+
   function cambiarOrden(o: Orden) {
     ajustes.ordenBiblioteca = o;
     guardarAjusteSilencioso('biblioteca_orden', valorDeOrden(o));
@@ -136,10 +143,12 @@
     entradas = cambio === null ? entradas.filter((x) => x.aid !== aid) : entradas.map((x) => (x.aid === aid ? { ...x, ...cambio } : x));
   }
 
-  /** Vuelve a dejar la serie como estaba antes de un cambio que falló. */
+  /** Deshace solo el estado de una serie tras un fallo: lo demás (p. ej. un favorito cambiado mientras tanto) se respeta. */
   function restaurar(e: EntradaVista) {
     if (!entradas) return;
-    entradas = [...entradas.filter((x) => x.aid !== e.aid), e];
+    entradas = entradas.some((x) => x.aid === e.aid)
+      ? entradas.map((x) => (x.aid === e.aid ? { ...x, estado: e.estado } : x))
+      : [...entradas, e];
   }
 
   /** El foco vuelve al «⋯» de la serie o, si salió de la cuadrícula, a la tarjeta que ocupa su sitio. */
@@ -159,6 +168,8 @@
     aviso = '';
     // Quitar de la biblioteca: un favorito se queda (sin estado); lo demás desaparece.
     reemplazar(e.aid, nuevo !== 0 ? { estado: nuevo } : e.favorito ? { estado: null } : null);
+    // El foco no se queda en <body> mientras el comando está pendiente.
+    void devolverFoco(e.aid, indice);
     try {
       await fijarEstado(serieDe(e), nuevo);
       avisarCambio(e.aid);
@@ -213,7 +224,7 @@
       <p class="resumen">
         {textoResumen(entradas.length, cuentas.viendo)}
         {#if nuevos > 0}
-          · <button class="enlace" onclick={() => (vista.filtros.soloNuevos = true)}>{textoNuevos(nuevos)}</button>
+          · <button class="enlace" onclick={mostrarNuevos}>{textoNuevos(nuevos)}</button>
         {/if}
       </p>
     {/if}
@@ -238,7 +249,7 @@
             onclick={() => elegirPestana(p.id)}
             onkeydown={teclaPestana}
           >
-            {p.nombre}<span class="cuenta">{cuentas[p.id]}</span>
+            {p.nombre} <span class="cuenta">({cuentas[p.id]})</span>
           </button>
         {/each}
       </div>
