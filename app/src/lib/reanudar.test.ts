@@ -56,3 +56,29 @@ test('principalDeSerie: a medias, primero sin ver o volver a empezar (como la Fi
   assert.deepEqual(await principalDeSerie(deps({ vistos: async () => [1, 2, 3, 4] }), SERIE), { tipo: 'repetir', numero: 1 });
   assert.equal(await principalDeSerie(deps({ pedir: async () => ficha() }), SERIE), null);
 });
+
+test('prepararReproduccion pide a la fuente si el episodio es el último de la lista guardada', async () => {
+  const d = deps({ leerCache: async () => JSON.stringify(ficha(1, 2, 3)) });
+  assert.deepEqual((await prepararReproduccion(d, SERIE, 3)).numeros, [1, 2, 3, 4]);
+  assert.deepEqual(d.pedidas, ['serie']);
+});
+
+test('principalDeSerie: todo visto en la guardada, la fuente trae un episodio nuevo', async () => {
+  const d = deps({ leerCache: async () => JSON.stringify(ficha(1, 2)), pedir: async () => ficha(1, 2, 3), vistos: async () => [1, 2] });
+  assert.deepEqual(await principalDeSerie(d, SERIE), { tipo: 'ver', numero: 3 });
+});
+
+test('principalDeSerie: todo visto y la fuente falla, se queda con la guardada sin lanzar', async () => {
+  const d = deps({
+    leerCache: async () => JSON.stringify(ficha(1, 2)),
+    pedir: async () => { throw new Error('red'); },
+    vistos: async () => [1, 2],
+  });
+  const original = console.error;
+  console.error = () => {};
+  try {
+    assert.deepEqual(await principalDeSerie(d, SERIE), { tipo: 'repetir', numero: 1 });
+  } finally {
+    console.error = original;
+  }
+});
