@@ -59,8 +59,8 @@ pub fn alternar_favorito(conn: &Connection, serie: &Serie) -> Resultado<bool> {
 
 /// Una fila de la biblioteca. `ultimo_episodio` es el número más alto del historial de la serie; `visto_en`, la última
 /// actividad real (en ms): el progreso guardado o un episodio con marca de tiempo propia. Los episodios marcados de golpe
-/// («Visto» hasta aquí, importaciones) comparten la misma marca y no cuentan; una serie solo con esas marcas queda en
-/// `None`. `total`, los episodios de AniList o, si la obra sigue en emisión
+/// («Visto» hasta aquí, importaciones) quedan a menos de un minuto unos de otros y no cuentan; una serie solo con esas
+/// marcas queda en `None`. `total`, los episodios de AniList o, si la obra sigue en emisión
 /// sin total, los ya emitidos. `puntuacion` y `generos` son los de AniList (vacíos sin vínculo).
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -83,15 +83,25 @@ pub struct Biblioteca {
     pub favoritos: Vec<EntradaBiblioteca>,
 }
 
-/// Columnas comunes de las dos listas. `vistoEn` ignora las marcas de historial compartidas por varios episodios de la
-/// misma serie (marcados de golpe) y suma el progreso del reproductor. `a` es `anime`, `s` es `siguiendo` y `m` es `anilist_media` (puede faltar).
-const COLUMNAS: &str = "a.aid, a.slug, a.titulo, s.estado,
+/// Ventana (ms) en que dos episodios de la misma serie se consideran un marcado de golpe: ver de verdad deja minutos
+/// entre uno y otro, y lo visto en el reproductor ya cuenta por `progreso.actualizado`. Un marcado masivo puede
+/// repartirse en varias escrituras seguidas (segundos de diferencia), de ahí una ventana y no la igualdad exacta.
+const VENTANA_MARCADO_MS: i64 = 60_000;
+
+/// Columnas comunes de las dos listas. `vistoEn` ignora las marcas de historial con otro episodio de la misma serie a
+/// menos de `VENTANA_MARCADO_MS` (marcados de golpe) y suma el progreso del reproductor. `a` es `anime`, `s` es
+/// `siguiendo` y `m` es `anilist_media` (puede faltar).
+fn columnas() -> String {
+    format!(
+        "a.aid, a.slug, a.titulo, s.estado,
     (SELECT MAX(h.numero) FROM historial h WHERE h.aid = a.aid),
     NULLIF(MAX(COALESCE((SELECT MAX(h.visto_en) FROM historial h WHERE h.aid = a.aid AND NOT EXISTS (
-                   SELECT 1 FROM historial h2 WHERE h2.aid = h.aid AND h2.visto_en = h.visto_en AND h2.numero <> h.numero)), 0),
+                   SELECT 1 FROM historial h2 WHERE h2.aid = h.aid AND ABS(h2.visto_en - h.visto_en) < {VENTANA_MARCADO_MS} AND h2.numero <> h.numero)), 0),
                COALESCE((SELECT MAX(p.actualizado) FROM progreso p WHERE p.aid = a.aid), 0)), 0),
     (SELECT COUNT(*) FROM historial h WHERE h.aid = a.aid),
-    m.episodios, m.siguiente_ep, m.puntuacion, m.generos";
+    m.episodios, m.siguiente_ep, m.puntuacion, m.generos"
+    )
+}
 
 /// Un vínculo `ninguno` no tiene `anilist_id`, así que no encuentra obra y deja `m` vacío.
 const CON_ANILIST: &str =
@@ -127,12 +137,13 @@ fn entradas(conn: &Connection, sql: &str) -> Resultado<Vec<EntradaBiblioteca>> {
 /// cientos de filas. En favoritos, `estado` es el de `siguiendo` si la serie también se sigue.
 pub fn listar_biblioteca(conn: &Connection) -> Resultado<Biblioteca> {
     let siguiendo =
-        entradas(conn, &format!("SELECT {COLUMNAS} FROM siguiendo s JOIN anime a ON a.aid = s.aid {CON_ANILIST}"))?;
+        entradas(conn, &format!("SELECT {} FROM siguiendo s JOIN anime a ON a.aid = s.aid {CON_ANILIST}", columnas()))?;
     let favoritos = entradas(
         conn,
         &format!(
-            "SELECT {COLUMNAS} FROM favoritos f JOIN anime a ON a.aid = f.aid
-             LEFT JOIN siguiendo s ON s.aid = f.aid {CON_ANILIST}"
+            "SELECT {} FROM favoritos f JOIN anime a ON a.aid = f.aid
+             LEFT JOIN siguiendo s ON s.aid = f.aid {CON_ANILIST}",
+            columnas()
         ),
     )?;
     Ok(Biblioteca { siguiendo, favoritos })
@@ -271,8 +282,8 @@ mod pruebas {
     fn listar_biblioteca_trae_titulo_estado_y_ultimo_episodio() {
         let conn = abrir_en_memoria().unwrap();
         fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
-        marcar_visto(&conn, 1, &ONE_PIECE, 3.0, None, &[]).unwrap();
-        marcar_visto(&conn, 2, &ONE_PIECE, 7.5, None, &[]).unwrap();
+        marcar_visto(&conn, 60_000, &ONE_PIECE, 3.0, None, &[]).unwrap();
+        marcar_visto(&conn, 120_000, &ONE_PIECE, 7.5, None, &[]).unwrap();
         fijar_estado(&conn, &NARUTO, 3).unwrap();
         alternar_favorito(&conn, &ONE_PIECE).unwrap();
         alternar_favorito(&conn, &AKIRA).unwrap();
@@ -285,7 +296,7 @@ mod pruebas {
             titulo: "One Piece".into(),
             estado: Some(1),
             ultimo_episodio: Some(7.5),
-            visto_en: Some(2),
+            visto_en: Some(120_000),
             vistos: 2,
             total: None,
             puntuacion: None,
@@ -339,12 +350,31 @@ mod pruebas {
     }
 
     #[test]
+    fn visto_en_ignora_un_marcado_repartido_en_dos_escrituras_seguidas() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        let anteriores: Vec<f64> = (1..=23).map(f64::from).collect();
+        marcar_visto(&conn, 100_000, &ONE_PIECE, 24.0, None, &anteriores).unwrap();
+        marcar_visto(&conn, 105_000, &ONE_PIECE, 25.0, None, &[]).unwrap();
+        assert_eq!(visto_en_de(&conn, 10), None);
+    }
+
+    #[test]
+    fn visto_en_cuenta_marcas_separadas_por_mas_de_un_minuto() {
+        let conn = abrir_en_memoria().unwrap();
+        fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
+        marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
+        marcar_visto(&conn, 1_000 + VENTANA_MARCADO_MS, &ONE_PIECE, 2.0, None, &[]).unwrap();
+        assert_eq!(visto_en_de(&conn, 10), Some(1_000 + VENTANA_MARCADO_MS));
+    }
+
+    #[test]
     fn visto_en_cuenta_los_episodios_vistos_de_uno_en_uno() {
         let conn = abrir_en_memoria().unwrap();
         fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
         marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
-        marcar_visto(&conn, 3_000, &ONE_PIECE, 2.0, None, &[]).unwrap();
-        assert_eq!(visto_en_de(&conn, 10), Some(3_000));
+        marcar_visto(&conn, 301_000, &ONE_PIECE, 2.0, None, &[]).unwrap();
+        assert_eq!(visto_en_de(&conn, 10), Some(301_000));
     }
 
     #[test]
@@ -353,7 +383,7 @@ mod pruebas {
         fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
         marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
         // Más tarde se marcan de golpe los episodios 2 a 4 (el 4 con los anteriores 2 y 3).
-        marcar_visto(&conn, 8_000, &ONE_PIECE, 4.0, None, &[2.0, 3.0]).unwrap();
+        marcar_visto(&conn, 600_000, &ONE_PIECE, 4.0, None, &[2.0, 3.0]).unwrap();
         assert_eq!(visto_en_de(&conn, 10), Some(1_000));
     }
 
@@ -372,10 +402,10 @@ mod pruebas {
         fijar_estado(&conn, &ONE_PIECE, 1).unwrap();
         fijar_estado(&conn, &NARUTO, 2).unwrap();
         fijar_estado(&conn, &AKIRA, 3).unwrap();
-        marcar_visto(&conn, 1_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
-        marcar_visto(&conn, 2_000, &ONE_PIECE, 2.0, None, &[]).unwrap();
+        marcar_visto(&conn, 100_000, &ONE_PIECE, 1.0, None, &[]).unwrap();
+        marcar_visto(&conn, 200_000, &ONE_PIECE, 2.0, None, &[]).unwrap();
         // El progreso de un episodio a medias es más reciente que el último visto: cuenta como actividad.
-        guardar_progreso(&conn, 5_000, &ONE_PIECE, 3.0, 600.0, 1400.0).unwrap();
+        guardar_progreso(&conn, 500_000, &ONE_PIECE, 3.0, 600.0, 1400.0).unwrap();
 
         // One Piece: en emisión, sin total; se usa el último emitido (siguiente_ep - 1).
         let op = MediaAnilist {
@@ -402,7 +432,7 @@ mod pruebas {
         let one_piece = de(10);
         assert_eq!(
             (one_piece.visto_en, one_piece.vistos, one_piece.total, one_piece.puntuacion),
-            (Some(5_000), 2, Some(1100), Some(87))
+            (Some(500_000), 2, Some(1100), Some(87))
         );
         assert_eq!(one_piece.generos, vec!["Action".to_string(), "Adventure".to_string()]);
         let naruto = de(20);
