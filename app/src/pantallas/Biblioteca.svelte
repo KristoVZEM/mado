@@ -393,12 +393,12 @@
   .pestanas {
     display: flex;
     gap: 2px;
-    overflow-x: auto;
+    overflow: auto hidden;
     margin: var(--espacio) 0 12px;
-    border-bottom: 1px solid var(--borde);
+    /* Separador por sombra interior: con un borde y margin-bottom: -1px en los botones la fila desbordaba 1 px y salía una barra vertical. */
+    box-shadow: inset 0 -1px 0 var(--borde);
   }
   .pestanas button {
-    margin-bottom: -1px;
     padding: 8px 12px;
     border: 0;
     border-bottom: 2px solid transparent;
