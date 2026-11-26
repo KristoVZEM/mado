@@ -17,6 +17,7 @@
     alCambiarEstado,
     alAlternarFavorito,
     alQuitar,
+    ocupado = false,
   }: {
     titulo: string;
     estado: number | null;
@@ -29,6 +30,8 @@
     alCambiarEstado: (estado: number) => void;
     alAlternarFavorito: () => void;
     alQuitar: () => void;
+    /** Hay algo en curso con esta serie (abriendo un episodio o guardando): las acciones no responden. */
+    ocupado?: boolean;
   } = $props();
 
   let boton = $state<HTMLButtonElement | null>(null);
@@ -59,8 +62,14 @@
   onDestroy(() => confirmarQuitar.cancelar());
 
   function quitar() {
+    if (ocupado) return;
     if (confirmarQuitar.pedir(true)) alQuitar();
   }
+
+  /** Un ítem «ocupado» sigue siendo enfocable (el menú abre con el foco dentro) pero no hace nada. */
+  const si = (accion: () => void) => () => {
+    if (!ocupado) accion();
+  };
 
   /** Esc cierra el menú (lo hace `Menu`); el foco vuelve al «⋯» para no perderse. */
   function tecla(e: KeyboardEvent) {
@@ -82,15 +91,19 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
   </button>
   <Menu {abierto} derecha etiqueta={`Opciones de ${titulo}`} {alCerrar}>
-    {#if principal === undefined}
-      <button role="menuitem" disabled>▶ Continuar</button>
-    {:else if principal}
-      {@const p = principal}
-      <button role="menuitem" onclick={() => alReproducir(p.numero)}>▶ {textoPrincipal(p)}</button>
+    {#if principal !== null}
+      <!-- Un solo botón en carga y listo: el foco que el menú le da al abrir no se pierde al llegar el episodio. -->
+      <button
+        role="menuitem"
+        aria-disabled={ocupado || principal === undefined}
+        onclick={si(() => principal && alReproducir(principal.numero))}
+      >
+        ▶ {principal ? textoPrincipal(principal) : 'Continuar'}
+      </button>
     {/if}
     <hr />
     {#each ESTADOS as e (e.valor)}
-      <button role="menuitemradio" aria-checked={estado === e.valor} onclick={() => alCambiarEstado(e.valor)}>
+      <button role="menuitemradio" aria-checked={estado === e.valor} aria-disabled={ocupado} onclick={si(() => alCambiarEstado(e.valor))}>
         <svg class="marca-menu" viewBox="0 0 24 24" aria-hidden="true">
           {#if estado === e.valor}<path d="M5 12.5l4.5 4.5L19 7.5" />{/if}
         </svg>
@@ -98,9 +111,9 @@
       </button>
     {/each}
     <hr />
-    <button role="menuitem" onclick={alAlternarFavorito}>{favorito ? '★ Quitar de favoritos' : '☆ Añadir a favoritos'}</button>
+    <button role="menuitem" aria-disabled={ocupado} onclick={si(alAlternarFavorito)}>{favorito ? '★ Quitar de favoritos' : '☆ Añadir a favoritos'}</button>
     {#if estado !== null}
-      <button role="menuitem" class="peligro" onclick={quitar}>
+      <button role="menuitem" class="peligro" aria-disabled={ocupado} onclick={quitar}>
         {pidiendoQuitar ? '¿Quitar? Pulsa otra vez' : 'Quitar de la biblioteca'}
       </button>
     {/if}
@@ -136,5 +149,11 @@
   }
   .ancla :global(.peligro) {
     color: var(--error);
+  }
+  .ancla :global(button[aria-disabled='true']),
+  .ancla :global(button[aria-disabled='true']:hover) {
+    background: none;
+    opacity: 0.5;
+    cursor: default;
   }
 </style>

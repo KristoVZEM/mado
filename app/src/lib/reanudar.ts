@@ -5,8 +5,12 @@ import { fichaDeCache } from './fichaCache.ts';
 
 /** Lo que hace falta para empezar un episodio fuera de la Ficha. La versión real está en `reanudarApp.ts`. */
 export interface DepsReanudar {
-  /** El JSON guardado de la lista de episodios (caché del #25), o `null`. */
-  leerCache(slug: string): Promise<string | null>;
+  /** La fila guardada de la lista de episodios (caché del #25) con su fecha (ms), o `null`. */
+  leerCache(slug: string): Promise<{ datos: string; consultadoEn: number } | null>;
+  /** Guarda la lista fresca (JSON) en esa caché. */
+  guardarCache(slug: string, datos: string): Promise<void>;
+  /** Hora actual en ms. */
+  ahora(): number;
   /** La lista fresca, de la fuente. */
   pedir(slug: string): Promise<Ficha>;
   /** Idioma recordado de la serie (`idioma:<aid>`). */
@@ -22,16 +26,20 @@ interface SerieMin {
   slug: string;
 }
 
+/** Más vieja que esto, la lista guardada ya no se da por buena: pudo salir un episodio y el reproductor se quedaría corto. */
+export const MAX_EDAD_CACHE_MS = 6 * 60 * 60 * 1000;
+
 const numerosDe = (f: Ficha) => f.episodes.map((e) => e.number).sort((a, b) => a - b);
 
 /**
- * La lista guardada si sirve; si no, la de la fuente. `deCache` dice de dónde salió.
- * Si se pide un episodio, la guardada sirve solo si lo contiene y no es el último: para encontrar el
- * siguiente el reproductor necesita la lista real, que una caché vieja no tendría.
+ * La lista guardada si sirve; si no, la de la fuente (que se guarda). `deCache` dice de dónde salió.
+ * La guardada sirve solo si tiene menos de `MAX_EDAD_CACHE_MS` y, si se pide un episodio, lo contiene y no es el
+ * último: para encontrar el siguiente el reproductor necesita la lista real, que una caché vieja no tendría.
  */
 async function lista(deps: DepsReanudar, slug: string, numero?: number): Promise<{ numeros: number[]; deCache: boolean }> {
   try {
-    const guardada = fichaDeCache(await deps.leerCache(slug));
+    const fila = await deps.leerCache(slug);
+    const guardada = fila && deps.ahora() - fila.consultadoEn < MAX_EDAD_CACHE_MS ? fichaDeCache(fila.datos) : null;
     if (guardada) {
       const numeros = numerosDe(guardada);
       const sirve = numero === undefined || (numeros.includes(numero) && numero !== numeros[numeros.length - 1]);
@@ -40,7 +48,13 @@ async function lista(deps: DepsReanudar, slug: string, numero?: number): Promise
   } catch (e) {
     console.error('reanudar: no se pudo leer la caché de episodios', e instanceof Error ? e.name : e);
   }
-  return { numeros: numerosDe(await deps.pedir(slug)), deCache: false };
+  const ficha = await deps.pedir(slug);
+  try {
+    await deps.guardarCache(slug, JSON.stringify(ficha));
+  } catch (e) {
+    console.error('reanudar: no se pudo guardar la caché de episodios', e instanceof Error ? e.name : e);
+  }
+  return { numeros: numerosDe(ficha), deCache: false };
 }
 
 /** Qué episodio ofrecer: el mismo criterio que el botón grande de la Ficha. `null` si la serie no tiene episodios. */

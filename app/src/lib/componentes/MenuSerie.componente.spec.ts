@@ -44,4 +44,34 @@ describe('MenuSerie', () => {
     expect(container.textContent).not.toContain('Continuar');
     errores.mockRestore();
   });
+
+  it('mientras calcula el episodio, «Continuar» no actúa pero tiene el foco', async () => {
+    let resolver!: (p: { tipo: 'continuar'; numero: number }) => void;
+    const { container, props } = montar({ cargarPrincipal: vi.fn(() => new Promise((r) => (resolver = r))) });
+    await asentar();
+    const continuar = container.querySelector<HTMLElement>('[role="menu"] button')!;
+    expect(continuar.textContent).toContain('Continuar');
+    expect(continuar.getAttribute('aria-disabled')).toBe('true');
+    expect(continuar.hasAttribute('disabled')).toBe(false);
+    expect(document.activeElement).toBe(continuar);
+    await fireEvent.click(continuar);
+    expect(props.alReproducir).not.toHaveBeenCalled();
+    resolver({ tipo: 'continuar', numero: 6 });
+    await asentar();
+    expect(container.querySelector('[role="menu"] button')!.getAttribute('aria-disabled')).toBe('false');
+    expect(document.activeElement).toBe(continuar);
+  });
+
+  it('ocupado: todas las acciones quedan inertes pero enfocables', async () => {
+    const { container, props } = montar({ ocupado: true });
+    await asentar();
+    const botones = [...container.querySelectorAll<HTMLElement>('[role="menu"] button')];
+    expect(botones.every((b) => b.getAttribute('aria-disabled') === 'true' && !b.hasAttribute('disabled'))).toBe(true);
+    expect(document.activeElement).toBe(botones[0]);
+    for (const b of botones) await fireEvent.click(b);
+    expect(props.alReproducir).not.toHaveBeenCalled();
+    expect(props.alCambiarEstado).not.toHaveBeenCalled();
+    expect(props.alAlternarFavorito).not.toHaveBeenCalled();
+    expect(props.alQuitar).not.toHaveBeenCalled();
+  });
 });

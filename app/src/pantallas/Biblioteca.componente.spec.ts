@@ -1,9 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render } from '@testing-library/svelte';
 import Biblioteca from './Biblioteca.svelte';
 import type { EntradaBiblioteca, ResumenSerie } from '../lib/datos.ts';
 import { ajustes } from '../lib/ajustes.svelte.ts';
-import { nav } from '../lib/navegacion.svelte.ts';
+import { irASeccion, nav } from '../lib/navegacion.svelte.ts';
+import { fuentes } from '../lib/fuentes.ts';
 import { backendVacio } from '../pruebas/datos.ts';
 import { llamadasA, reiniciarTauri, responder } from '../pruebas/tauriFalso.ts';
 import { asentar, reiniciarNavegacion, vigilarConsola } from '../pruebas/vigilar.ts';
@@ -22,6 +23,19 @@ const BASE = {
   favoritos: [e(2, 'Bleach', 1, { vistoEn: 300, generos: ['Action'] }), e(4, 'Pokémon', null)],
 };
 
+const FICHA = { title: 'Serie', episodes: [1, 2, 3, 4, 5].map((n) => ({ id: n, number: n })), synopsis: '', genres: [], status: '', anio: null };
+
+/** Una promesa que la prueba resuelve cuando quiere: para dejar una operación «en curso». */
+function pendiente<T = null>() {
+  let resolver!: (v: T) => void;
+  const promesa = new Promise<T>((r) => (resolver = r));
+  return { promesa, resolver };
+}
+
+const NUEVO_NARUTO: ResumenSerie = {
+  aid: 3, anilistId: 30, confianza: 0.9, origen: 'auto', banner: null, portada: null, siguienteEp: 6, siguienteEn: null, episodios: null, estado: 'RELEASING',
+};
+
 const titulos = (c: HTMLElement) => [...c.querySelectorAll('.cuadricula strong')].map((x) => x.textContent);
 
 describe('Biblioteca', () => {
@@ -32,6 +46,8 @@ describe('Biblioteca', () => {
     backendVacio();
     responder('listar_biblioteca', BASE);
     ajustes.ordenBiblioteca = 'ultimo';
+    vi.mocked(fuentes.episodios).mockReset();
+    vi.mocked(fuentes.episodios).mockResolvedValue(FICHA);
     consola = vigilarConsola();
   });
   afterEach(() => consola.parar());
@@ -188,5 +204,83 @@ describe('Biblioteca', () => {
     await asentar();
     expect(container.querySelector('#pestana-todos')!.getAttribute('aria-selected')).toBe('true');
     expect(titulos(container)).toEqual(['Naruto']);
+  });
+
+  it('«Continuar» avisa «Abriendo…» mientras prepara y luego abre el reproductor', async () => {
+    const { container } = render(Biblioteca);
+    await asentar();
+    await menuDe(container, 1);
+    const lenta = pendiente<typeof FICHA>();
+    vi.mocked(fuentes.episodios).mockImplementationOnce(() => lenta.promesa);
+    await fireEvent.click(container.querySelector('li[data-aid="1"] [role="menuitem"]')!);
+    await asentar();
+    expect(container.querySelector('.estado-apertura')?.textContent).toBe('Abriendo Akira, Ep. 1…');
+    expect(container.querySelector('.estado-apertura')?.getAttribute('role')).toBe('status');
+    expect(nav.superior).toBeNull();
+    lenta.resolver(FICHA);
+    await asentar();
+    expect(container.querySelector('.estado-apertura')).toBeNull();
+    expect(nav.superior?.tipo).toBe('reproducir');
+  });
+
+  it('si el usuario se va a otra sección mientras prepara, no se abre el reproductor', async () => {
+    const { container } = render(Biblioteca);
+    await asentar();
+    await menuDe(container, 1);
+    const lenta = pendiente<typeof FICHA>();
+    vi.mocked(fuentes.episodios).mockImplementationOnce(() => lenta.promesa);
+    await fireEvent.click(container.querySelector('li[data-aid="1"] [role="menuitem"]')!);
+    await asentar();
+    irASeccion('catalogo');
+    lenta.resolver(FICHA);
+    await asentar();
+    expect(nav.superior).toBeNull();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('con «Con nuevos» recordado, no enseña «Ninguna serie coincide» mientras llegan los resúmenes', async () => {
+    nav.biblioteca.filtros.soloNuevos = true;
+    const lentos = pendiente<ResumenSerie[]>();
+    responder('resumenes_vinculados', () => lentos.promesa);
+    const { container } = render(Biblioteca);
+    await asentar();
+    expect(titulos(container)).toHaveLength(4);
+    expect(container.textContent).not.toContain('Ninguna serie coincide');
+    lentos.resolver([NUEVO_NARUTO]);
+    await asentar();
+    expect(titulos(container)).toEqual(['Naruto']);
+  });
+
+  it('«K con episodios nuevos» borra la búsqueda y los demás filtros', async () => {
+    responder('resumenes_vinculados', [NUEVO_NARUTO]);
+    const { container } = render(Biblioteca);
+    await asentar();
+    const campo = container.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await fireEvent.input(campo, { target: { value: 'akira' } });
+    await asentar();
+    expect(titulos(container)).toEqual(['Akira']);
+    await fireEvent.click([...container.querySelectorAll('button')].find((b) => b.textContent?.includes('con episodio nuevo'))!);
+    await asentar();
+    expect(campo.value).toBe('');
+    expect(titulos(container)).toEqual(['Naruto']);
+  });
+
+  it('un segundo cambio de estado sobre la misma serie mientras el primero sigue pendiente se ignora', async () => {
+    const lento = pendiente();
+    responder('fijar_estado', () => lento.promesa);
+    const { container } = render(Biblioteca);
+    await asentar();
+    await menuDe(container, 1);
+    await fireEvent.click(opcion(container, 1, 'Completado'));
+    await asentar();
+    await menuDe(container, 1);
+    const pausado = opcion(container, 1, 'Pausado');
+    expect(pausado.getAttribute('aria-disabled')).toBe('true');
+    await fireEvent.click(pausado);
+    await asentar();
+    expect(llamadasA('fijar_estado')).toHaveLength(1);
+    lento.resolver(null);
+    await asentar();
+    expect(opcion(container, 1, 'Pausado').getAttribute('aria-disabled')).toBe('false');
   });
 });

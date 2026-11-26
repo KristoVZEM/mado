@@ -398,5 +398,8 @@ mod pruebas {
         let v = serde_json::to_value(&e).unwrap();
         assert_eq!(v["ultimoEpisodio"], 2.0);
         assert!(v["estado"].is_null());
+        for clave in ["vistoEn", "vistos", "total", "puntuacion", "generos"] {
+            assert!(v.get(clave).is_some(), "falta la clave {clave}");
+        }
     }
 }

@@ -40,7 +40,7 @@
 
 <div class="envoltura">
   <button class="tarjeta" onclick={alAbrir} oncontextmenu={contextual} onkeydown={tecla}>
-    <span class="marco">
+    <span class="marco" class:con-acciones={!!acciones}>
       <Portada {aid} {titulo} />
       {#if etiqueta}<span class="pastilla">{etiqueta}</span>{/if}
       {#if favorito}<span class="estrella" aria-hidden="true">★</span>{/if}
@@ -147,6 +147,10 @@
     font-size: 0.75rem;
     font-weight: 600;
     line-height: 1.3;
+  }
+  /* Deja libre la esquina del «⋯» para que una etiqueta larga no pase por debajo. */
+  .con-acciones .pastilla {
+    max-width: calc(100% - 48px);
   }
   strong {
     overflow: hidden;

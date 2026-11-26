@@ -43,7 +43,10 @@
   /** Lo que se anuncia a los lectores de pantalla tras una acción. */
   let anuncio = $state('');
   let menuAbierto = $state<number | null>(null);
-  let abriendo = $state<number | null>(null);
+  /** El episodio que se está preparando (la fuente puede tardar hasta ~15 s). */
+  let abriendo = $state<{ aid: number; titulo: string; numero: number } | null>(null);
+  /** Series con una acción de guardado en curso: otra sobre la misma se ignora hasta que termine. */
+  let enCurso = $state(new Set<number>());
   let campo = $state<HTMLInputElement | null>(null);
   let panel = $state<HTMLElement | null>(null);
   const ahora = Date.now();
@@ -54,9 +57,11 @@
   const cuentas = $derived(entradas ? recuentosVista(entradas) : null);
   const enPestana = $derived(entradas ? dePestana(entradas, vista.pestana) : []);
   const generos = $derived(generosOfrecidos(enPestana));
-  const lista = $derived(ordenar(aplicarFiltros(enPestana, vista.filtros, (e) => nuevoDe(e) !== undefined), ajustes.ordenBiblioteca));
+  // Un «Con nuevos» recordado de otra visita no filtra hasta que llegan los datos de AniList: sin ellos vaciaría la lista.
+  const filtros = $derived({ ...vista.filtros, soloNuevos: vista.filtros.soloNuevos && nuevosListos });
+  const lista = $derived(ordenar(aplicarFiltros(enPestana, filtros, (e) => nuevoDe(e) !== undefined), ajustes.ordenBiblioteca));
   const nuevos = $derived(entradas && nuevosListos ? entradas.filter((e) => nuevoDe(e) !== undefined).length : 0);
-  const filtrando = $derived(hayFiltros(vista.filtros));
+  const filtrando = $derived(hayFiltros(filtros));
 
   // Un género que la pestaña nueva no tiene dejaría la cuadrícula vacía sin motivo visible: se quita.
   $effect(() => {
@@ -110,7 +115,8 @@
   /** El recuento de nuevos es de toda la biblioteca: se muestra en «Todas». */
   function mostrarNuevos() {
     elegirPestana('todos');
-    vista.filtros.soloNuevos = true;
+    // Solo «con nuevos»: un texto o género previos harían que se vieran menos de los K anunciados.
+    vista.filtros = { ...SIN_FILTROS, soloNuevos: true };
   }
 
   function cambiarOrden(o: Orden) {
@@ -161,11 +167,19 @@
     destino?.focus();
   }
 
+  function marcarEnCurso(aid: number, activo: boolean) {
+    const copia = new Set(enCurso);
+    if (activo) copia.add(aid);
+    else copia.delete(aid);
+    enCurso = copia;
+  }
+
   async function cambiarEstado(e: EntradaVista, nuevo: number) {
     menuAbierto = null;
-    if ((e.estado ?? 0) === nuevo) return;
+    if (enCurso.has(e.aid) || (e.estado ?? 0) === nuevo) return;
     const indice = lista.findIndex((x) => x.aid === e.aid);
     aviso = '';
+    marcarEnCurso(e.aid, true);
     // Quitar de la biblioteca: un favorito se queda (sin estado); lo demás desaparece.
     reemplazar(e.aid, nuevo !== 0 ? { estado: nuevo } : e.favorito ? { estado: null } : null);
     // El foco no se queda en <body> mientras el comando está pendiente.
@@ -178,14 +192,18 @@
       console.error(err);
       restaurar(e);
       aviso = `No se pudo guardar el estado: ${textoDeError(err)}`;
+    } finally {
+      marcarEnCurso(e.aid, false);
     }
     await devolverFoco(e.aid, indice);
   }
 
   async function alternar(e: EntradaVista) {
     menuAbierto = null;
+    if (enCurso.has(e.aid)) return;
     const indice = lista.findIndex((x) => x.aid === e.aid);
     aviso = '';
+    marcarEnCurso(e.aid, true);
     try {
       const favorito = await alternarFavorito(serieDe(e));
       reemplazar(e.aid, !favorito && e.estado === null ? null : { favorito });
@@ -193,6 +211,8 @@
     } catch (err) {
       console.error(err);
       aviso = `No se pudo cambiar el favorito: ${textoDeError(err)}`;
+    } finally {
+      marcarEnCurso(e.aid, false);
     }
     await devolverFoco(e.aid, indice);
   }
@@ -200,10 +220,13 @@
   async function reproducir(e: EntradaVista, numero: number) {
     menuAbierto = null;
     if (abriendo !== null) return;
-    abriendo = e.aid;
+    abriendo = { aid: e.aid, titulo: e.titulo, numero };
     aviso = '';
+    const { seccion, superior } = nav;
     try {
       const r = await prepararReproduccion(depsReanudar, e, numero);
+      // Si el usuario se fue a otra parte mientras tanto, abrir el reproductor ahora sería un salto inesperado.
+      if (nav.seccion !== seccion || nav.superior !== superior) return;
       abrir({ tipo: 'reproducir', anime: { aid: e.aid, slug: e.slug, title: e.titulo }, ...r });
     } catch (err) {
       console.error(err);
@@ -302,12 +325,13 @@
       {/if}
     {/if}
 
+    {#if abriendo}<p class="estado-apertura" role="status">Abriendo {abriendo.titulo}, Ep. {abriendo.numero}…</p>{/if}
     {#if aviso}<p class="error" role="alert">{aviso}</p>{/if}
     <p class="solo-lectores" aria-live="polite">{anuncio}</p>
 
     <div role={entradas.length > 0 ? 'tabpanel' : undefined} id="panel-biblioteca" aria-labelledby={entradas.length > 0 ? `pestana-${vista.pestana}` : undefined} bind:this={panel}>
       {#if lista.length === 0}
-        {@const vacio = estadoVacioVista(vista.pestana, vista.filtros, entradas.length, enPestana.length)}
+        {@const vacio = estadoVacioVista(vista.pestana, filtros, entradas.length, enPestana.length)}
         <Vacio titulo={vacio.titulo} texto={vacio.texto}>
           {#each vacio.acciones as accion (accion)}
             {#if accion === 'catalogo'}
@@ -346,6 +370,7 @@
                     alCambiarEstado={(n) => cambiarEstado(e, n)}
                     alAlternarFavorito={() => alternar(e)}
                     alQuitar={() => cambiarEstado(e, 0)}
+                    ocupado={abriendo?.aid === e.aid || enCurso.has(e.aid)}
                   />
                 {/snippet}
               </TarjetaPoster>
@@ -419,6 +444,10 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    color: var(--texto-suave);
+  }
+  .estado-apertura {
+    margin: 0 0 12px;
     color: var(--texto-suave);
   }
   .linea-filtros {
