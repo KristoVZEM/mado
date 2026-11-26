@@ -60,6 +60,8 @@ const NUMERICOS: &[(&str, f64, f64)] = &[
     // Pedir a AniSkip el tramo del opening para el botón «Saltar intro»: 1 = sí; 0 o ausente = no. Apagado por defecto
     // porque cada consulta cuenta a ese servicio qué serie y episodio se ve.
     ("aniskip_activo", 0.0, 1.0),
+    // Orden de la Biblioteca: 0 último visto, 1 progreso, 2 puntuación, 3 título.
+    ("biblioteca_orden", 0.0, 3.0),
 ];
 
 /// Último servidor con el que se reprodujo un episodio (`HLS`, `MP4Upload`…); texto corto sin símbolos raros.
@@ -190,6 +192,14 @@ mod pruebas {
         assert_eq!(leer(&conn, "anilist_client_id").unwrap(), Some("12345".to_string()));
         assert!(guardar(&conn, "anilist_client_id", "0").is_err());
         assert!(guardar(&conn, "anilist_client_id", "abc").is_err());
+    }
+
+    #[test]
+    fn el_orden_de_la_biblioteca_va_de_0_a_3() {
+        let conn = abrir_en_memoria().unwrap();
+        guardar(&conn, "biblioteca_orden", "3").unwrap();
+        assert_eq!(leer(&conn, "biblioteca_orden").unwrap(), Some("3".to_string()));
+        assert!(guardar(&conn, "biblioteca_orden", "4").is_err());
     }
 
     #[test]
